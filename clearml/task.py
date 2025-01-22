@@ -1062,10 +1062,11 @@ class Task(_Task):
             that use this protocol
 
         :return: A list of dictionaries. Each dictionary contains the following values:
-            - endpoint - raw endpoint. One might need to authenticate in order to use this endpoint
-            - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
-            - port - the port exposed by the application
-            - protocol - the protocol used by the endpoint
+
+          - endpoint - raw endpoint. One might need to authenticate in order to use this endpoint
+          - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
+          - port - the port exposed by the application
+          - protocol - the protocol used by the endpoint
         """
         Session.verify_feature_set("advanced")
         runtime_props = self._get_runtime_properties()
@@ -1308,7 +1309,7 @@ class Task(_Task):
     ):
         # type: (...) -> List[TaskInstance]
         """
-        Get a list of Tasks objects matching the queries/filters
+        Get a list of Tasks objects matching the queries/filters:
 
         - A list of specific Task IDs.
         - Filter Tasks based on specific fields:
@@ -1844,7 +1845,7 @@ class Task(_Task):
             While by setting `name='Train'` the connected dictionary will be under the Train section in the hyperparameters section.
 
         :param ignore_remote_overrides: If True, ignore UI/backend overrides when running remotely.
-        Default is False, meaning that any changes made in the UI/backend will be applied in remote execution.
+            Default is False, meaning that any changes made in the UI/backend will be applied in remote execution.
 
         :return: It will return the same object that was passed as the `mutable` argument to the method, except if the type of the object is dict.
                  For dicts the :meth:`Task.connect` will return the dict decorated as a `ProxyDictPostWrite`.
@@ -1996,7 +1997,7 @@ class Task(_Task):
         :param str description: Configuration section description (text). default: None
 
         :param bool ignore_remote_overrides: If True, ignore UI/backend overrides when running remotely.
-        Default is False, meaning that any changes made in the UI/backend will be applied in remote execution.
+            Default is False, meaning that any changes made in the UI/backend will be applied in remote execution.
 
         :return: If a dictionary is specified, then a dictionary is returned. If pathlib2.Path / string is
             specified, then a path to a local configuration file is returned. Configuration object.

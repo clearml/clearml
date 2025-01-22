@@ -444,19 +444,19 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         Returns the current Task's type.
 
-            Valid task types:
+        Valid task types:
 
-            - ``TaskTypes.training`` (default)
-            - ``TaskTypes.testing``
-            - ``TaskTypes.inference``
-            - ``TaskTypes.data_processing``
-            - ``TaskTypes.application``
-            - ``TaskTypes.monitor``
-            - ``TaskTypes.controller``
-            - ``TaskTypes.optimizer``
-            - ``TaskTypes.service``
-            - ``TaskTypes.qc``
-            - ``TaskTypes.custom``
+        - ``TaskTypes.training`` (default)
+        - ``TaskTypes.testing``
+        - ``TaskTypes.inference``
+        - ``TaskTypes.data_processing``
+        - ``TaskTypes.application``
+        - ``TaskTypes.monitor``
+        - ``TaskTypes.controller``
+        - ``TaskTypes.optimizer``
+        - ``TaskTypes.service``
+        - ``TaskTypes.qc``
+        - ``TaskTypes.custom``
         """
         return self.data.type
 
