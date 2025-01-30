@@ -347,7 +347,7 @@ class Task(_Task):
             files_server will be used for model storage. In the default location, ClearML creates a subfolder for the
             output. If set to False, local runs will not upload output models and artifacts,
             and remote runs will not use any default values provided using ``default_output_uri``.
-            The subfolder structure is the following: \<output destination name\> / \<project name\> / \<task name\>.\<Task ID\>.
+            The subfolder structure is the following: \\<output destination name\\> / \\<project name\\> / \\<task name\\>.\\<Task ID\\>.
             Note that for cloud storage, you must install the **ClearML** package for your cloud storage type,
             and then configure your storage credentials. For detailed information, see "Storage" in the ClearML
             Documentation.
