@@ -251,6 +251,23 @@ class GitDetector(Detector):
         """
         info = super(GitDetector, self).get_info(
             path=path, include_diff=include_diff, diff_from_remote=diff_from_remote)
+
+        # check if for some reason we ended with the wrong branch name as HEAD (will happen when HEAD is detached)
+        if info and info.branch == "HEAD":
+            # noinspection PyBroadException
+            try:
+                # try to reparse the detached HEAD
+                commands = self._get_commands()
+                name = "branch"
+                command = commands.branch_fallback[:]
+                command[-1] = "origin"
+                info.branch = self._get_command_output(
+                    path, name, command, commands=commands, strip=bool(name != 'diff')) or info.branch
+                info = self._post_process_info(info)
+            except Exception:
+                # not sure what happened, just skip it.
+                pass
+
         # we could not locate the git because of some configuration issue, we need to try a more complex command
         if info and info.url == "origin":
             # noinspection PyBroadException

@@ -255,19 +255,19 @@ class PipelineController(object):
 
           - Integer: In case of node failure, retry the node the number of times indicated by this parameter.
           - Callable: A function called on node failure. Takes as parameters:
-              the PipelineController instance, the PipelineController.Node that failed and an int
-              representing the number of previous retries for the node that failed.
-              The function must return ``True`` if the node should be retried and ``False`` otherwise.
-              If True, the node will be re-queued and the number of retries left will be decremented by 1.
-              By default, if this callback is not specified, the function will be retried the number of
-              times indicated by `retry_on_failure`.
+            the PipelineController instance, the PipelineController.Node that failed and an int
+            representing the number of previous retries for the node that failed.
+            The function must return ``True`` if the node should be retried and ``False`` otherwise.
+            If True, the node will be re-queued and the number of retries left will be decremented by 1.
+            By default, if this callback is not specified, the function will be retried the number of
+            times indicated by `retry_on_failure`.
 
-                .. code-block:: py
+              .. code-block:: py
 
-                    def example_retry_on_failure_callback(pipeline, node, retries):
-                        print(node.name, ' failed')
-                        # allow up to 5 retries (total of 6 runs)
-                        return retries < 5
+                  def example_retry_on_failure_callback(pipeline, node, retries):
+                      print(node.name, ' failed')
+                      # allow up to 5 retries (total of 6 runs)
+                      return retries < 5
         :param docker: Select the docker image to be executed in by the remote session
         :param docker_args: Add docker arguments, pass a single string
         :param docker_bash_setup_script: Add bash script to be executed
@@ -495,45 +495,46 @@ class PipelineController(object):
           - Task ID ``parameter_override={'Args/input_file': '${stage3.id}' }``
         :param recursively_parse_parameters: If True, recursively parse parameters from parameter_override in lists, dicts, or tuples.
             Example:
-            - ``parameter_override={'Args/input_file': ['${<step_name>.artifacts.<artifact_name>.url}', 'file2.txt']}`` will be correctly parsed.
-            - ``parameter_override={'Args/input_file': ('${<step_name_1>.parameters.Args/input_file}', '${<step_name_2>.parameters.Args/input_file}')}`` will be correctly parsed.
+
+          - ``parameter_override={'Args/input_file': ['${<step_name>.artifacts.<artifact_name>.url}', 'file2.txt']}`` will be correctly parsed.
+          - ``parameter_override={'Args/input_file': ('${<step_name_1>.parameters.Args/input_file}', '${<step_name_2>.parameters.Args/input_file}')}`` will be correctly parsed.
         :param configuration_overrides: Optional, override Task configuration objects.
             Expected dictionary of configuration object name and configuration object content.
             Examples:
-                ``{'General': dict(key='value')}``
-                ``{'General': 'configuration file content'}``
-                ``{'OmegaConf': YAML.dumps(full_hydra_dict)}``
+
+          - ``{'General': dict(key='value')}``
+          - ``{'General': 'configuration file content'}``
+          - ``{'OmegaConf': YAML.dumps(full_hydra_dict)}``
         :param task_overrides: Optional task section overriding dictionary.
             The dict values can reference a previously executed step using the following form ``'${step_name}'``. Examples:
 
-          - get the latest commit from a specific branch ``task_overrides={'script.version_num': '', 'script.branch': 'main'}``
-          - match git repository branch to a previous step ``task_overrides={'script.branch': '${stage1.script.branch}', 'script.version_num': ''}``
-          - change container image ``task_overrides={'container.image': 'nvidia/cuda:11.6.0-devel-ubuntu20.04', 'container.arguments': '--ipc=host'}``
-          - match container image to a previous step ``task_overrides={'container.image': '${stage1.container.image}'}``
-          - reset requirements (the agent will use the "requirements.txt" inside the repo) ``task_overrides={'script.requirements.pip': ""}``
+          - Get the latest commit from a specific branch ``task_overrides={'script.version_num': '', 'script.branch': 'main'}``
+          - Match git repository branch to a previous step ``task_overrides={'script.branch': '${stage1.script.branch}', 'script.version_num': ''}``
+          - Change container image ``task_overrides={'container.image': 'nvidia/cuda:11.6.0-devel-ubuntu20.04', 'container.arguments': '--ipc=host'}``
+          - Match container image to a previous step ``task_overrides={'container.image': '${stage1.container.image}'}``
+          - Reset requirements (the agent will use the "requirements.txt" inside the repo) ``task_overrides={'script.requirements.pip': ""}``
         :param execution_queue: Optional, the queue to use for executing this specific step.
             If not provided, the task will be sent to the default execution queue, as defined on the class
         :param monitor_metrics: Optional, log the step's metrics on the pipeline Task.
-            Format is a list of pairs metric (title, series) to log:
-                [(step_metric_title, step_metric_series), ]
-                Example: [('test', 'accuracy'), ]
+            Format is a list of pairs metric (title, series) to log: ``[(step_metric_title, step_metric_series), ]``.
+            For example: ``[('test', 'accuracy'), ]``.
             Or a list of tuple pairs, to specify a different target metric for to use on the pipeline Task:
-                [((step_metric_title, step_metric_series), (target_metric_title, target_metric_series)), ]
-                Example: [[('test', 'accuracy'), ('model', 'accuracy')], ]
+            ``[((step_metric_title, step_metric_series), (target_metric_title, target_metric_series)), ]``.
+            For example: ``[[('test', 'accuracy'), ('model', 'accuracy')], ]``
         :param monitor_artifacts: Optional, log the step's artifacts on the pipeline Task.
             Provided a list of artifact names existing on the step's Task, they will also appear on the Pipeline itself.
-            Example: [('processed_data', 'final_processed_data'), ]
+            Example: ``[('processed_data', 'final_processed_data'), ]``.
             Alternatively user can also provide a list of artifacts to monitor
-            (target artifact name will be the same as original artifact name)
-            Example: ['processed_data', ]
+            (target artifact name will be the same as original artifact name).
+            Example: ``['processed_data', ]``
         :param monitor_models: Optional, log the step's output models on the pipeline Task.
             Provided a list of model names existing on the step's Task, they will also appear on the Pipeline itself.
-            Example: [('model_weights', 'final_model_weights'), ]
+            Example: ``[('model_weights', 'final_model_weights'), ]``.
             Alternatively user can also provide a list of models to monitor
-            (target models name will be the same as original model)
-            Example: ['model_weights', ]
-            To select the latest (lexicographic) model use "model_*", or the last created model with just "*"
-            Example:  ['model_weights_*', ]
+            (target models name will be the same as original model).
+            Example: ``['model_weights', ]``.
+            To select the latest (lexicographic) model use "model_*", or the last created model with just "*".
+            Example:  ``['model_weights_*', ]``
         :param time_limit: Default None, no time limit.
             Step execution time limit, if exceeded the Task is aborted and the pipeline is stopped and marked failed.
         :param base_task_project: If base_task_id is not given,
@@ -549,7 +550,7 @@ class PipelineController(object):
         :param pre_execute_callback: Callback function, called when the step (Task) is created
             and before it is sent for execution. Allows a user to modify the Task before launch.
             Use `node.job` to access the ClearmlJob object, or `node.job.task` to directly access the Task object.
-            `parameters` are the configuration arguments passed to the ClearmlJob.
+            ``parameters`` are the configuration arguments passed to the ClearmlJob.
 
             If the callback returned value is `False`,
             the Node is skipped and so is any node in the DAG that relies on this node.
@@ -589,19 +590,19 @@ class PipelineController(object):
 
           - Integer: In case of node failure, retry the node the number of times indicated by this parameter.
           - Callable: A function called on node failure. Takes as parameters:
-              the PipelineController instance, the PipelineController.Node that failed and an int
-              representing the number of previous retries for the node that failed.
-              The function must return ``True`` if the node should be retried and ``False`` otherwise.
-              If True, the node will be re-queued and the number of retries left will be decremented by 1.
-              By default, if this callback is not specified, the function will be retried the number of
-              times indicated by `retry_on_failure`.
+            the PipelineController instance, the PipelineController.Node that failed and an int
+            representing the number of previous retries for the node that failed.
+            The function must return ``True`` if the node should be retried and ``False`` otherwise.
+            If True, the node will be re-queued and the number of retries left will be decremented by 1.
+            By default, if this callback is not specified, the function will be retried the number of
+            times indicated by `retry_on_failure`.
 
-                .. code-block:: py
+              .. code-block:: py
 
-                    def example_retry_on_failure_callback(pipeline, node, retries):
-                        print(node.name, ' failed')
-                        # allow up to 5 retries (total of 6 runs)
-                        return retries < 5
+                  def example_retry_on_failure_callback(pipeline, node, retries):
+                      print(node.name, ' failed')
+                      # allow up to 5 retries (total of 6 runs)
+                      return retries < 5
 
         :param status_change_callback: Callback function, called when the status of a step (Task) changes.
             Use `node.job` to access the ClearmlJob object, or `node.job.task` to directly access the Task object.
@@ -618,19 +619,20 @@ class PipelineController(object):
 
         :param output_uri: The storage / output url for this step. This is the default location for output
             models and other artifacts. Check Task.init reference docs for more info (output_uri is a parameter).
-        :param continue_behaviour: Controls whether the pipeline will continue running after a
-            step failed/was aborted. Different behaviours can be set using a dictionary of boolean options. Supported options are:
-              - continue_on_fail - If True, the pipeline will continue even if the step failed.
-                 If False, the pipeline will stop
-              - continue_on_abort - If True, the pipeline will continue even if the step was aborted.
-                 If False, the pipeline will stop
-              - skip_children_on_fail - If True, the children of this step will be skipped if it failed.
-                 If False, the children will run even if this step failed.
-                 Any parameters passed from the failed step to its children will default to None
-              - skip_children_on_abort - If True, the children of this step will be skipped if it was aborted.
-                 If False, the children will run even if this step was aborted.
-                 Any parameters passed from the failed step to its children will default to None
-              If the keys are not present in the dictionary, their values will default to True
+        :param continue_behaviour: Controls whether the pipeline will continue running after a step failed/was aborted.
+            Different behaviours can be set using a dictionary of boolean options. Supported options are:
+
+          - continue_on_fail - If True, the pipeline will continue even if the step failed.
+            If False, the pipeline will stop
+          - continue_on_abort - If True, the pipeline will continue even if the step was aborted.
+            If False, the pipeline will stop
+          - skip_children_on_fail - If True, the children of this step will be skipped if it failed.
+            If False, the children will run even if this step failed.
+            Any parameters passed from the failed step to its children will default to None
+          - skip_children_on_abort - If True, the children of this step will be skipped if it was aborted.
+            If False, the children will run even if this step was aborted.
+            Any parameters passed from the failed step to its children will default to None
+          - If the keys are not present in the dictionary, their values will default to True
 
         :return: True if successful
         """
@@ -814,26 +816,25 @@ class PipelineController(object):
         :param execution_queue: Optional, the queue to use for executing this specific step.
             If not provided, the task will be sent to the default execution queue, as defined on the class
         :param monitor_metrics: Optional, log the step's metrics on the pipeline Task.
-            Format is a list of pairs metric (title, series) to log:
-                [(step_metric_title, step_metric_series), ]
-                Example: [('test', 'accuracy'), ]
+            Format is a list of pairs metric (title, series) to log: ``[(step_metric_title, step_metric_series), ]``.
+            For example: ``[('test', 'accuracy'), ]``.
             Or a list of tuple pairs, to specify a different target metric for to use on the pipeline Task:
-                [((step_metric_title, step_metric_series), (target_metric_title, target_metric_series)), ]
-                Example: [[('test', 'accuracy'), ('model', 'accuracy')], ]
+            ``[((step_metric_title, step_metric_series), (target_metric_title, target_metric_series)), ]``.
+            For example: ``[[('test', 'accuracy'), ('model', 'accuracy')], ]``
         :param monitor_artifacts: Optional, log the step's artifacts on the pipeline Task.
             Provided a list of artifact names existing on the step's Task, they will also appear on the Pipeline itself.
-            Example: [('processed_data', 'final_processed_data'), ]
+            Example: ``[('processed_data', 'final_processed_data'), ]``.
             Alternatively user can also provide a list of artifacts to monitor
-            (target artifact name will be the same as original artifact name)
-            Example: ['processed_data', ]
+            (target artifact name will be the same as original artifact name).
+            Example: ``['processed_data', ]``
         :param monitor_models: Optional, log the step's output models on the pipeline Task.
             Provided a list of model names existing on the step's Task, they will also appear on the Pipeline itself.
-            Example: [('model_weights', 'final_model_weights'), ]
+            Example: ``[('model_weights', 'final_model_weights'), ]``.
             Alternatively user can also provide a list of models to monitor
-            (target models name will be the same as original model)
-            Example: ['model_weights', ]
-            To select the latest (lexicographic) model use "model_*", or the last created model with just "*"
-            Example:  ['model_weights_*', ]
+            (target models name will be the same as original model).
+            Example: ``['model_weights', ]``.
+            To select the latest (lexicographic) model use "model_*", or the last created model with just "*".
+            Example:  ``['model_weights_*', ]``
         :param time_limit: Default None, no time limit.
             Step execution time limit, if exceeded the Task is aborted and the pipeline is stopped and marked failed.
         :param continue_on_fail: (Deprecated, use `continue_behaviour` instead).
@@ -843,7 +844,7 @@ class PipelineController(object):
         :param pre_execute_callback: Callback function, called when the step (Task) is created
             and before it is sent for execution. Allows a user to modify the Task before launch.
             Use `node.job` to access the ClearmlJob object, or `node.job.task` to directly access the Task object.
-            `parameters` are the configuration arguments passed to the ClearmlJob.
+            ``parameters`` are the configuration arguments passed to the ClearmlJob.
 
             If the callback returned value is `False`,
             the Node is skipped and so is any node in the DAG that relies on this node.
@@ -880,19 +881,19 @@ class PipelineController(object):
 
           - Integer: In case of node failure, retry the node the number of times indicated by this parameter.
           - Callable: A function called on node failure. Takes as parameters:
-              the PipelineController instance, the PipelineController.Node that failed and an int
-              representing the number of previous retries for the node that failed.
-              The function must return ``True`` if the node should be retried and ``False`` otherwise.
-              If True, the node will be re-queued and the number of retries left will be decremented by 1.
-              By default, if this callback is not specified, the function will be retried the number of
-              times indicated by `retry_on_failure`.
+            the PipelineController instance, the PipelineController.Node that failed and an int
+            representing the number of previous retries for the node that failed.
+            The function must return ``True`` if the node should be retried and ``False`` otherwise.
+            If True, the node will be re-queued and the number of retries left will be decremented by 1.
+            By default, if this callback is not specified, the function will be retried the number of
+            times indicated by `retry_on_failure`.
 
-                .. code-block:: py
+              .. code-block:: py
 
-                    def example_retry_on_failure_callback(pipeline, node, retries):
-                        print(node.name, ' failed')
-                        # allow up to 5 retries (total of 6 runs)
-                        return retries < 5
+                  def example_retry_on_failure_callback(pipeline, node, retries):
+                      print(node.name, ' failed')
+                      # allow up to 5 retries (total of 6 runs)
+                      return retries < 5
 
         :param status_change_callback: Callback function, called when the status of a step (Task) changes.
             Use `node.job` to access the ClearmlJob object, or `node.job.task` to directly access the Task object.
@@ -914,19 +915,20 @@ class PipelineController(object):
             models and other artifacts. Check Task.init reference docs for more info (output_uri is a parameter).
         :param draft: (default False). If True, the Task will be created as a draft task.
         :param working_dir: Working directory to launch the script from.
-        :param continue_behaviour: Controls whether the pipeline will continue running after a
-            step failed/was aborted. Different behaviours can be set using a dictionary of boolean options. Supported options are:
-              - continue_on_fail - If True, the pipeline will continue even if the step failed.
-                 If False, the pipeline will stop
-              - continue_on_abort - If True, the pipeline will continue even if the step was aborted.
-                 If False, the pipeline will stop
-              - skip_children_on_fail - If True, the children of this step will be skipped if it failed.
-                 If False, the children will run even if this step failed.
-                 Any parameters passed from the failed step to its children will default to None
-              - skip_children_on_abort - If True, the children of this step will be skipped if it was aborted.
-                 If False, the children will run even if this step was aborted.
-                 Any parameters passed from the failed step to its children will default to None
-              If the keys are not present in the dictionary, their values will default to True
+        :param continue_behaviour: Controls whether the pipeline will continue running after a step failed/was aborted.
+            Different behaviours can be set using a dictionary of boolean options. Supported options are:
+
+          - continue_on_fail - If True, the pipeline will continue even if the step failed.
+            If False, the pipeline will stop
+          - continue_on_abort - If True, the pipeline will continue even if the step was aborted.
+            If False, the pipeline will stop
+          - skip_children_on_fail - If True, the children of this step will be skipped if it failed.
+            If False, the children will run even if this step failed. Any parameters passed from the failed step to its
+            children will default to None
+          - skip_children_on_abort - If True, the children of this step will be skipped if it was aborted.
+            If False, the children will run even if this step was aborted.
+            Any parameters passed from the failed step to its children will default to None
+          - If the keys are not present in the dictionary, their values will default to True
 
         :return: True if successful
         """
@@ -1119,10 +1121,10 @@ class PipelineController(object):
             Specify one of the following:
 
           - A dictionary/list - A dictionary containing the configuration. ClearML stores the configuration in
-              the **ClearML Server** (backend), in a HOCON format (JSON-like format) which is editable.
+            the **ClearML Server** (backend), in a HOCON format (JSON-like format) which is editable.
           - A ``pathlib2.Path`` string - A path to the configuration file. ClearML stores the content of the file.
-              A local path must be relative path. When executing a pipeline remotely in a worker, the contents brought
-              from the **ClearML Server** (backend) overwrites the contents of the file.
+            A local path must be relative path. When executing a pipeline remotely in a worker, the contents brought
+            from the **ClearML Server** (backend) overwrites the contents of the file.
 
         :param str name: Configuration section name. default: 'General'
             Allowing users to store multiple configuration dicts/files
@@ -1238,8 +1240,8 @@ class PipelineController(object):
 
         :return: The status of the upload.
 
-        - ``True`` - Upload succeeded.
-        - ``False`` - Upload failed.
+          - ``True`` - Upload succeeded.
+          - ``False`` - Upload failed.
 
         :raise: If the artifact object type is not supported, raise a ``ValueError``.
         """
@@ -1441,6 +1443,7 @@ class PipelineController(object):
         # type: () -> dict
         """
         Return the pipeline parameters dictionary
+
         :return: Dictionary str -> str
         """
         return self._pipeline_args
@@ -2371,7 +2374,7 @@ class PipelineController(object):
         :param pre_execute_callback: Callback function, called when the step (Task) is created,
             and before it is sent for execution. Allows a user to modify the Task before launch.
             Use `node.job` to access the ClearmlJob object, or `node.job.task` to directly access the Task object.
-            `parameters` are the configuration arguments passed to the ClearmlJob.
+            ``parameters`` are the configuration arguments passed to the ClearmlJob.
 
             If the callback returned value is `False`,
             the Node is skipped and so is any node in the DAG that relies on this node.
@@ -2408,19 +2411,19 @@ class PipelineController(object):
         :param retry_on_failure: Integer (number of retries) or Callback function that returns True to allow a retry
             - Integer: In case of node failure, retry the node the number of times indicated by this parameter.
             - Callable: A function called on node failure. Takes as parameters:
-                the PipelineController instance, the PipelineController.Node that failed and an int
-                representing the number of previous retries for the node that failed
-                The function must return a `bool`: True if the node should be retried and False otherwise.
-                If True, the node will be re-queued and the number of retries left will be decremented by 1.
-                By default, if this callback is not specified, the function will be retried the number of
-                times indicated by `retry_on_failure`.
+              the PipelineController instance, the PipelineController.Node that failed and an int
+              representing the number of previous retries for the node that failed
+              The function must return a `bool`: True if the node should be retried and False otherwise.
+              If True, the node will be re-queued and the number of retries left will be decremented by 1.
+              By default, if this callback is not specified, the function will be retried the number of
+              times indicated by `retry_on_failure`.
 
-                .. code-block:: py
+              .. code-block:: py
 
-                    def example_retry_on_failure_callback(pipeline, node, retries):
-                        print(node.name, ' failed')
-                        # allow up to 5 retries (total of 6 runs)
-                        return retries < 5
+                  def example_retry_on_failure_callback(pipeline, node, retries):
+                      print(node.name, ' failed')
+                      # allow up to 5 retries (total of 6 runs)
+                      return retries < 5
 
         :param status_change_callback: Callback function, called when the status of a step (Task) changes.
             Use `node.job` to access the ClearmlJob object, or `node.job.task` to directly access the Task object.
@@ -2442,8 +2445,8 @@ class PipelineController(object):
             models and other artifacts. Check Task.init reference docs for more info (output_uri is a parameter).
         :param draft: (default False). If True, the Task will be created as a draft task.
         :param working_dir:  Working directory to launch the step from.
-        :param continue_behaviour: Controls whether the pipeline will continue running after a
-            step failed/was aborted. Different behaviours can be set using a dictionary of boolean options. Supported options are:
+        :param continue_behaviour: Controls whether the pipeline will continue running after a step failed/was aborted.
+            Different behaviours can be set using a dictionary of boolean options. Supported options are:
               - continue_on_fail - If True, the pipeline will continue even if the step failed.
                  If False, the pipeline will stop
               - continue_on_abort - If True, the pipeline will continue even if the step was aborted.
@@ -3706,19 +3709,19 @@ class PipelineDecorator(PipelineController):
 
           - Integer: In case of node failure, retry the node the number of times indicated by this parameter.
           - Callable: A function called on node failure. Takes as parameters:
-              the PipelineController instance, the PipelineController.Node that failed and an int
-              representing the number of previous retries for the node that failed.
-              The function must return ``True`` if the node should be retried and ``False`` otherwise.
-              If True, the node will be re-queued and the number of retries left will be decremented by 1.
-              By default, if this callback is not specified, the function will be retried the number of
-              times indicated by `retry_on_failure`.
+            the PipelineController instance, the PipelineController.Node that failed and an int
+            representing the number of previous retries for the node that failed.
+            The function must return ``True`` if the node should be retried and ``False`` otherwise.
+            If True, the node will be re-queued and the number of retries left will be decremented by 1.
+            By default, if this callback is not specified, the function will be retried the number of
+            times indicated by `retry_on_failure`.
 
-                .. code-block:: py
+              .. code-block:: py
 
-                    def example_retry_on_failure_callback(pipeline, node, retries):
-                        print(node.name, ' failed')
-                        # allow up to 5 retries (total of 6 runs)
-                        return retries < 5
+                  def example_retry_on_failure_callback(pipeline, node, retries):
+                      print(node.name, ' failed')
+                      # allow up to 5 retries (total of 6 runs)
+                      return retries < 5
         :param docker: Select the docker image to be executed in by the remote session
         :param docker_args: Add docker arguments, pass a single string
         :param docker_bash_setup_script: Add bash script to be executed
@@ -4218,51 +4221,51 @@ class PipelineDecorator(PipelineController):
             could call the additional functions.
             Example, assuming we have two functions parse_data(), and load_data(): [parse_data, load_data]
         :param monitor_metrics: Optional, Automatically log the step's reported metrics also on the pipeline Task.
-            The expected format is a list of pairs metric (title, series) to log:
-                [(step_metric_title, step_metric_series), ]
-                Example: [('test', 'accuracy'), ]
+            The expected format is a list of pairs metric (title, series) to log: ``[(step_metric_title, step_metric_series), ]``.
+            For example: ``[('test', 'accuracy'), ]``.
             Or a list of tuple pairs, to specify a different target metric to use on the pipeline Task:
-                [((step_metric_title, step_metric_series), (target_metric_title, target_metric_series)), ]
-                Example: [[('test', 'accuracy'), ('model', 'accuracy')], ]
+            ``[((step_metric_title, step_metric_series), (target_metric_title, target_metric_series)), ]``.
+            For example: ``[[('test', 'accuracy'), ('model', 'accuracy')], ]``
         :param monitor_artifacts: Optional, Automatically log the step's artifacts on the pipeline Task.
             Provided a list of artifact names created by the step function, these artifacts will be logged
             automatically also on the Pipeline Task itself.
-            Example: ['processed_data', ]
-            (target artifact name on the Pipeline Task will hav ethe same name as the original artifact)
-            Alternatively, provide a list of pairs (source_artifact_name, target_artifact_name):
+            Example: ``['processed_data', ]``
+            (target artifact name on the Pipeline Task will hav ethe same name as the original artifact).
+            Alternatively, provide a list of pairs ``(source_artifact_name, target_artifact_name)``:
             where the first string is the artifact name as it appears on the component Task,
-            and the second is the target artifact name to put on the Pipeline Task
-            Example: [('processed_data', 'final_processed_data'), ]
+            and the second is the target artifact name to put on the Pipeline Task.
+            Example: ``[('processed_data', 'final_processed_data'), ]``
         :param monitor_models: Optional, Automatically log the step's output models on the pipeline Task.
             Provided a list of model names created by the step's Task, they will also appear on the Pipeline itself.
-            Example: ['model_weights', ]
-            To select the latest (lexicographic) model use "model_*", or the last created model with just "*"
-            Example:  ['model_weights_*', ]
-            Alternatively, provide a list of pairs (source_model_name, target_model_name):
+            Example: ``['model_weights', ]``.
+            To select the latest (lexicographic) model use "model_*", or the last created model with just "*".
+            Example:  ``['model_weights_*', ]``.
+            Alternatively, provide a list of pairs ``(source_model_name, target_model_name)``:
             where the first string is the model name as it appears on the component Task,
-            and the second is the target model name to put on the Pipeline Task
-            Example: [('model_weights', 'final_model_weights'), ]
+            and the second is the target model name to put on the Pipeline Task.
+            Example: ``[('model_weights', 'final_model_weights'), ]``
         :param retry_on_failure: Integer (number of retries) or Callback function that returns True to allow a retry
-            - Integer: In case of node failure, retry the node the number of times indicated by this parameter.
-            - Callable: A function called on node failure. Takes as parameters:
-                the PipelineController instance, the PipelineController.Node that failed and an int
-                representing the number of previous retries for the node that failed
-                The function must return a `bool`: True if the node should be retried and False otherwise.
-                If True, the node will be re-queued and the number of retries left will be decremented by 1.
-                By default, if this callback is not specified, the function will be retried the number of
-                times indicated by `retry_on_failure`.
 
-                .. code-block:: py
+          - Integer: In case of node failure, retry the node the number of times indicated by this parameter.
+          - Callable: A function called on node failure. Takes as parameters:
+            the PipelineController instance, the PipelineController.Node that failed and an int
+            representing the number of previous retries for the node that failed
+            The function must return a `bool`: True if the node should be retried and False otherwise.
+            If True, the node will be re-queued and the number of retries left will be decremented by 1.
+            By default, if this callback is not specified, the function will be retried the number of
+            times indicated by `retry_on_failure`.
 
-                    def example_retry_on_failure_callback(pipeline, node, retries):
-                        print(node.name, ' failed')
-                        # allow up to 5 retries (total of 6 runs)
-                        return retries < 5
+            .. code-block:: py
+
+                def example_retry_on_failure_callback(pipeline, node, retries):
+                    print(node.name, ' failed')
+                    # allow up to 5 retries (total of 6 runs)
+                    return retries < 5
 
         :param pre_execute_callback: Callback function, called when the step (Task) is created,
-             and before it is sent for execution. Allows a user to modify the Task before launch.
+            and before it is sent for execution. Allows a user to modify the Task before launch.
             Use `node.job` to access the ClearmlJob object, or `node.job.task` to directly access the Task object.
-            `parameters` are the configuration arguments passed to the ClearmlJob.
+            ``parameters`` are the configuration arguments passed to the ClearmlJob.
 
             If the callback returned value is `False`,
             the Node is skipped and so is any node in the DAG that relies on this node.
@@ -4310,19 +4313,20 @@ class PipelineDecorator(PipelineController):
             models and other artifacts. Check Task.init reference docs for more info (output_uri is a parameter).
         :param draft: (default False). If True, the Task will be created as a draft task.
         :param working_dir:  Working directory to launch the step from.
-        :param continue_behaviour: Controls whether the pipeline will continue running after a
-            step failed/was aborted. Different behaviours can be set using a dictionary of boolean options. Supported options are:
-              - continue_on_fail - If True, the pipeline will continue even if the step failed.
-                 If False, the pipeline will stop
-              - continue_on_abort - If True, the pipeline will continue even if the step was aborted.
-                 If False, the pipeline will stop
-              - skip_children_on_fail - If True, the children of this step will be skipped if it failed.
-                 If False, the children will run even if this step failed.
-                 Any parameters passed from the failed step to its children will default to None
-              - skip_children_on_abort - If True, the children of this step will be skipped if it was aborted.
-                 If False, the children will run even if this step was aborted.
-                 Any parameters passed from the failed step to its children will default to None
-              If the keys are not present in the dictionary, their values will default to True
+        :param continue_behaviour: Controls whether the pipeline will continue running after a step failed/was aborted.
+            Different behaviours can be set using a dictionary of boolean options. Supported options are:
+
+          - continue_on_fail - If True, the pipeline will continue even if the step failed.
+            If False, the pipeline will stop
+          - continue_on_abort - If True, the pipeline will continue even if the step was aborted.
+            If False, the pipeline will stop
+          - skip_children_on_fail - If True, the children of this step will be skipped if it failed.
+            If False, the children will run even if this step failed.
+            Any parameters passed from the failed step to its children will default to None
+          - skip_children_on_abort - If True, the children of this step will be skipped if it was aborted.
+            If False, the children will run even if this step was aborted.
+           Any parameters passed from the failed step to its children will default to None
+          - If the keys are not present in the dictionary, their values will default to True
 
         :return: function wrapper
         """
@@ -4675,19 +4679,19 @@ class PipelineDecorator(PipelineController):
 
           - Integer: In case of node failure, retry the node the number of times indicated by this parameter.
           - Callable: A function called on node failure. Takes as parameters:
-              the PipelineController instance, the PipelineController.Node that failed and an int
-              representing the number of previous retries for the node that failed.
-              The function must return ``True`` if the node should be retried and ``False`` otherwise.
-              If True, the node will be re-queued and the number of retries left will be decremented by 1.
-              By default, if this callback is not specified, the function will be retried the number of
-              times indicated by `retry_on_failure`.
+            the PipelineController instance, the PipelineController.Node that failed and an int
+            representing the number of previous retries for the node that failed.
+            The function must return ``True`` if the node should be retried and ``False`` otherwise.
+            If True, the node will be re-queued and the number of retries left will be decremented by 1.
+            By default, if this callback is not specified, the function will be retried the number of
+            times indicated by `retry_on_failure`.
 
-                .. code-block:: py
+              .. code-block:: py
 
-                    def example_retry_on_failure_callback(pipeline, node, retries):
-                        print(node.name, ' failed')
-                        # allow up to 5 retries (total of 6 runs)
-                        return retries < 5
+                  def example_retry_on_failure_callback(pipeline, node, retries):
+                      print(node.name, ' failed')
+                      # allow up to 5 retries (total of 6 runs)
+                      return retries < 5
         :param docker: Select the docker image to be executed in by the remote session
         :param docker_args: Add docker arguments, pass a single string
         :param docker_bash_setup_script: Add bash script to be executed
@@ -4962,9 +4966,10 @@ class PipelineDecorator(PipelineController):
         """
         Set debugging mode, run all functions locally as functions (serially)
         Run the full pipeline DAG locally, where steps are executed as functions
-        Notice:
-            running the DAG locally assumes the local code execution (i.e. it will not clone & apply git diff)
-            Pipeline steps are executed as functions (no Task will be created), fo ease debugging J
+
+        .. note::
+            Running the DAG locally assumes local code execution (i.e. it will not clone & apply git diff).
+            Pipeline steps are executed as functions (no Task will be created).
         """
         cls._debug_execute_step_process = True
         cls._debug_execute_step_function = True

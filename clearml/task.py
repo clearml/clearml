@@ -2025,10 +2025,10 @@ class Task(_Task):
             Specify one of the following:
 
           - A dictionary/list - A dictionary containing the configuration. ClearML stores the configuration in
-              the **ClearML Server** (backend), in a HOCON format (JSON-like format) which is editable.
+            the **ClearML Server** (backend), in a HOCON format (JSON-like format) which is editable.
           - A ``pathlib2.Path`` string - A path to the configuration file. ClearML stores the content of the file.
-              A local path must be relative path. When executing a Task remotely in a worker, the contents brought
-              from the **ClearML Server** (backend) overwrites the contents of the file.
+            A local path must be relative path. When executing a Task remotely in a worker, the contents brought
+            from the **ClearML Server** (backend) overwrites the contents of the file.
 
         :param str name: Configuration section name. default: 'General'
             Allowing users to store multiple configuration dicts/files
