@@ -66,9 +66,7 @@ class S3BucketConfig(object):
 
     @classmethod
     def from_list(cls, dict_list, log=None):
-        if not isinstance(dict_list, (tuple, list)) or not all(
-            isinstance(x, dict) for x in dict_list
-        ):
+        if not isinstance(dict_list, (tuple, list)) or not all(isinstance(x, dict) for x in dict_list):
             raise ValueError("Expecting a list of configurations dictionaries")
         configs = [cls(**entry) for entry in dict_list]
         valid_configs = [conf for conf in configs if conf.is_valid()]
@@ -76,9 +74,7 @@ class S3BucketConfig(object):
             log.warning(
                 "Invalid bucket configurations detected for {}".format(
                     ", ".join(
-                        "/".join((config.host, config.bucket))
-                        for config in configs
-                        if config not in valid_configs
+                        "/".join((config.host, config.bucket)) for config in configs if config not in valid_configs
                     )
                 )
             )
@@ -97,10 +93,7 @@ class BaseBucketConfigurations(object):
     def _update_prefixes(self, refresh=True):
         if self._prefixes and not refresh:
             return
-        prefixes = (
-            (config, self._get_prefix_from_bucket_config(config))
-            for config in self._buckets
-        )
+        prefixes = ((config, self._get_prefix_from_bucket_config(config)) for config in self._buckets)
         self._prefixes = sorted(prefixes, key=itemgetter(1), reverse=True)
 
     @abc.abstractmethod
@@ -179,9 +172,7 @@ class S3BucketConfigurations(BaseBucketConfigurations):
     def get_config_by_bucket(self, bucket, host=None):
         try:
             return next(
-                bucket_config
-                for bucket_config in self._buckets
-                if (bucket, host) == bucket_config.get_bucket_host()
+                bucket_config for bucket_config in self._buckets if (bucket, host) == bucket_config.get_bucket_host()
             )
         except StopIteration:
             pass
@@ -198,7 +189,7 @@ class S3BucketConfigurations(BaseBucketConfigurations):
             token=self._default_token,
             extra_args=self._default_extra_args,
             profile=self._default_profile,
-            secure=self._default_secure
+            secure=self._default_secure,
         )
 
     def _get_prefix_from_bucket_config(self, config):
@@ -225,14 +216,11 @@ class S3BucketConfigurations(BaseBucketConfigurations):
         :param uri: URI of bucket, directory or file
         :return: S3BucketConfig: bucket config
         """
+
         def find_match(uri):
             self._update_prefixes(refresh=False)
             uri = uri.lower()
-            res = (
-                config
-                for config, prefix in self._prefixes
-                if prefix is not None and uri.startswith(prefix)
-            )
+            res = (config for config, prefix in self._prefixes if prefix is not None and uri.startswith(prefix))
 
             try:
                 return next(res)
@@ -294,12 +282,12 @@ class GSBucketConfig(object):
 
 class GSBucketConfigurations(BaseBucketConfigurations):
     def __init__(
-            self,
-            buckets=None,
-            default_project=None,
-            default_credentials=None,
-            default_pool_connections=None,
-            default_pool_maxsize=None
+        self,
+        buckets=None,
+        default_project=None,
+        default_credentials=None,
+        default_pool_connections=None,
+        default_pool_maxsize=None
     ):
         super(GSBucketConfigurations, self).__init__(buckets)
         self._default_project = default_project
@@ -339,8 +327,7 @@ class GSBucketConfigurations(BaseBucketConfigurations):
     def update_config_with_defaults(self, bucket_config):
         bucket_config.update(
             project=bucket_config.project or self._default_project,
-            credentials_json=bucket_config.credentials_json
-            or self._default_credentials,
+            credentials_json=bucket_config.credentials_json or self._default_credentials,
             pool_connections=bucket_config.pool_connections or self._default_pool_connections,
             pool_maxsize=bucket_config.pool_maxsize or self._default_pool_maxsize
         )
@@ -354,11 +341,7 @@ class GSBucketConfigurations(BaseBucketConfigurations):
         :return: GSBucketConfig: bucket config
         """
 
-        res = (
-            config
-            for config, prefix in self._prefixes
-            if prefix is not None and uri.lower().startswith(prefix)
-        )
+        res = (config for config, prefix in self._prefixes if prefix is not None and uri.lower().startswith(prefix))
 
         try:
             return next(res)
@@ -413,16 +396,12 @@ class AzureContainerConfigurations(object):
 
         default_container_configs = []
         if default_account and default_key:
-            default_container_configs.append(AzureContainerConfig(
-                account_name=default_account, account_key=default_key
-            ))
+            default_container_configs.append(
+                AzureContainerConfig(account_name=default_account, account_key=default_key)
+            )
 
         if configuration is None:
-            return cls(
-                default_container_configs,
-                default_account=default_account,
-                default_key=default_key
-            )
+            return cls(default_container_configs, default_account=default_account, default_key=default_key)
 
         containers = configuration.get("containers", list())
         container_configs = [AzureContainerConfig(**entry) for entry in containers] + default_container_configs
@@ -441,9 +420,7 @@ class AzureContainerConfigurations(object):
         if not f.path.segments:
             raise ValueError(
                 "URI {} is missing a container name (expected "
-                "[https/azure]://<account-name>.../<container-name>)".format(
-                    uri
-                )
+                "[https/azure]://<account-name>.../<container-name>)".format(uri)
             )
 
         container = f.path.segments[0]
@@ -460,10 +437,8 @@ class AzureContainerConfigurations(object):
             (
                 config
                 for config in self._container_configs
-                if config.account_name == account_name and (
-                    not config.container_name
-                    or config.container_name == container
-                )
+                if config.account_name == account_name
+                and (not config.container_name or config.container_name == container)
             ),
             None
         )
