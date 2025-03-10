@@ -86,10 +86,16 @@ while True:
                 ):
                     logging.info(f'successfully deleted task with id {task.id}')
                 else:
-                    logging.warning(f'could not delete task with id {task.id}, task.delete() returned false')
+                    logging.warning(f'could not delete task with id {task.id}')
             except ValueError as e:
                 logging.warning(
                     "Could not find Task ID={}, {}".format(
+                        task.id, e.message if hasattr(e, "message") else e
+                    )
+                )
+            except Exception as e:
+                logging.warning(
+                    "Error while deleting Task ID={}, {}".format(
                         task.id, e.message if hasattr(e, "message") else e
                     )
                 )
