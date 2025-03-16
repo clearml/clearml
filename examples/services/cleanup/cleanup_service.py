@@ -79,15 +79,24 @@ while True:
             # noinspection PyBroadException
             try:
                 deleted_task = Task.get_task(task_id=task.id)
-                deleted_task.delete(
+                if deleted_task.delete(
                     delete_artifacts_and_models=True,
                     skip_models_used_by_other_tasks=True,
                     raise_on_error=False
-                )
-            except Exception as ex:
+                ):
+                    logging.info(f'successfully deleted task with id {task.id}')
+                else:
+                    logging.warning(f'could not delete task with id {task.id}')
+            except ValueError as e:
                 logging.warning(
-                    "Could not delete Task ID={}, {}".format(
-                        task.id, ex.message if hasattr(ex, "message") else ex
+                    "Could not find Task ID={}, {}".format(
+                        task.id, e.message if hasattr(e, "message") else e
+                    )
+                )
+            except Exception as e:
+                logging.warning(
+                    "Error while deleting Task ID={}, {}".format(
+                        task.id, e.message if hasattr(e, "message") else e
                     )
                 )
                 continue
