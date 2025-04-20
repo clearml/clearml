@@ -2,7 +2,7 @@ import base64
 import os
 from os.path import expandvars, expanduser
 from pathlib2 import Path
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, ValuesView, Dict, Any
 
 from ..utilities.pyhocon import HOCONConverter, ConfigTree
 
@@ -10,18 +10,17 @@ if TYPE_CHECKING:
     from .config import Config
 
 
-def get_items(cls):
+def get_items(cls) -> Dict[str, Any]:
     """get key/value items from an enum-like class (members represent enumeration key/value)"""
     return {k: v for k, v in vars(cls).items() if not k.startswith("_")}
 
 
-def get_options(cls):
+def get_options(cls) -> ValuesView:
     """get options from an enum-like class (members represent enumeration key/value)"""
     return get_items(cls).values()
 
 
-def apply_environment(config):
-    # type: (Config) -> List[str]
+def apply_environment(config: "Config") -> List[str]:
     env_vars = config.get("environment", None)
     if not env_vars:
         return []
@@ -36,8 +35,7 @@ def apply_environment(config):
     return keys
 
 
-def apply_files(config):
-    # type: (Config) -> None
+def apply_files(config: "Config") -> None:
     files = config.get("files", None)
     if not files:
         return

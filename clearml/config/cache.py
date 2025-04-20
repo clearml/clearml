@@ -18,7 +18,7 @@ class SessionCache(object):
     SESSION_CACHE_FOLDER = "~/.clearml"
 
     @classmethod
-    def _load_cache(cls):
+    def _load_cache(cls) -> dict:
         # noinspection PyBroadException
         try:
             flag = "rb" if six.PY2 else "rt"
@@ -28,7 +28,7 @@ class SessionCache(object):
             return {}
 
     @classmethod
-    def _store_cache(cls, cache):
+    def _store_cache(cls, cache: dict) -> None:
         # noinspection PyBroadException
         try:
             Path(expanduser(cls.SESSION_CACHE_FOLDER)).mkdir(parents=True, exist_ok=True)
@@ -39,8 +39,7 @@ class SessionCache(object):
             pass
 
     @classmethod
-    def store_dict(cls, unique_cache_name, dict_object):
-        # type: (str, dict) -> None
+    def store_dict(cls, unique_cache_name: str, dict_object: dict) -> None:
         # disable session cache when running in remote execution mode
         if running_remotely():
             return
@@ -49,8 +48,7 @@ class SessionCache(object):
         cls._store_cache(cache)
 
     @classmethod
-    def load_dict(cls, unique_cache_name):
-        # type: (str) -> dict
+    def load_dict(cls, unique_cache_name: str) -> dict:
         # disable session cache when running in remote execution mode
         if running_remotely():
             return {}

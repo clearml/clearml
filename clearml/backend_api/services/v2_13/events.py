@@ -3,8 +3,8 @@ events service
 
 Provides an API for running tasks to report events collected by the system.
 """
+from typing import List, Optional, Any
 import enum
-
 import six
 from clearml.backend_api.session import (
     Request,
@@ -64,14 +64,14 @@ class MetricsScalarEvent(NonStrictDataModel):
 
     def __init__(
         self,
-        task,
-        timestamp=None,
-        iter=None,
-        metric=None,
-        variant=None,
-        value=None,
-        **kwargs
-    ):
+        task: str,
+        timestamp: Optional[float] = None,
+        iter: Optional[int] = None,
+        metric: Optional[str] = None,
+        variant: Optional[str] = None,
+        value: Optional[float] = None,
+        **kwargs: Any
+    ) -> None:
         super(MetricsScalarEvent, self).__init__(**kwargs)
         self.timestamp = timestamp
         self.task = task
@@ -81,86 +81,80 @@ class MetricsScalarEvent(NonStrictDataModel):
         self.value = value
 
     @schema_property("timestamp")
-    def timestamp(self):
+    def timestamp(self) -> Optional[float]:
         return self._property_timestamp
 
     @timestamp.setter
-    def timestamp(self, value):
+    def timestamp(self, value: Optional[float]) -> None:
         if value is None:
             self._property_timestamp = None
             return
-
         self.assert_isinstance(value, "timestamp", six.integer_types + (float,))
         self._property_timestamp = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return "training_stats_scalar"
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("iter")
-    def iter(self):
+    def iter(self) -> Optional[int]:
         return self._property_iter
 
     @iter.setter
-    def iter(self, value):
+    def iter(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iter = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iter", six.integer_types)
         self._property_iter = value
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> Optional[str]:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: Optional[str]) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
     @schema_property("value")
-    def value(self):
+    def value(self) -> Optional[float]:
         return self._property_value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: Optional[float]) -> None:
         if value is None:
             self._property_value = None
             return
-
         self.assert_isinstance(value, "value", six.integer_types + (float,))
         self._property_value = value
 
@@ -216,14 +210,14 @@ class MetricsVectorEvent(NonStrictDataModel):
 
     def __init__(
         self,
-        task,
-        timestamp=None,
-        iter=None,
-        metric=None,
-        variant=None,
-        values=None,
-        **kwargs
-    ):
+        task: str,
+        timestamp: Optional[float] = None,
+        iter: Optional[int] = None,
+        metric: Optional[str] = None,
+        variant: Optional[str] = None,
+        values: Optional[List[float]] = None,
+        **kwargs: Any
+    ) -> None:
         super(MetricsVectorEvent, self).__init__(**kwargs)
         self.timestamp = timestamp
         self.task = task
@@ -233,91 +227,82 @@ class MetricsVectorEvent(NonStrictDataModel):
         self.values = values
 
     @schema_property("timestamp")
-    def timestamp(self):
+    def timestamp(self) -> Optional[float]:
         return self._property_timestamp
 
     @timestamp.setter
-    def timestamp(self, value):
+    def timestamp(self, value: Optional[float]) -> None:
         if value is None:
             self._property_timestamp = None
             return
-
         self.assert_isinstance(value, "timestamp", six.integer_types + (float,))
         self._property_timestamp = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return "training_stats_vector"
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("iter")
-    def iter(self):
+    def iter(self) -> Optional[int]:
         return self._property_iter
 
     @iter.setter
-    def iter(self, value):
+    def iter(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iter = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iter", six.integer_types)
         self._property_iter = value
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> Optional[str]:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: Optional[str]) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
     @schema_property("values")
-    def values(self):
+    def values(self) -> Optional[List[float]]:
         return self._property_values
 
     @values.setter
-    def values(self, value):
+    def values(self, value: Optional[List[float]]) -> None:
         if value is None:
             self._property_values = None
             return
-
         self.assert_isinstance(value, "values", (list, tuple))
-
-        self.assert_isinstance(
-            value, "values", six.integer_types + (float,), is_array=True
-        )
+        self.assert_isinstance(value, "values", six.integer_types + (float,), is_array=True)
         self._property_values = value
 
 
@@ -368,15 +353,15 @@ class MetricsImageEvent(NonStrictDataModel):
 
     def __init__(
         self,
-        task,
-        timestamp=None,
-        iter=None,
-        metric=None,
-        variant=None,
-        key=None,
-        url=None,
-        **kwargs
-    ):
+        task: str,
+        timestamp: Optional[float] = None,
+        iter: Optional[int] = None,
+        metric: Optional[str] = None,
+        variant: Optional[str] = None,
+        key: Optional[str] = None,
+        url: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(MetricsImageEvent, self).__init__(**kwargs)
         self.timestamp = timestamp
         self.task = task
@@ -387,99 +372,92 @@ class MetricsImageEvent(NonStrictDataModel):
         self.url = url
 
     @schema_property("timestamp")
-    def timestamp(self):
+    def timestamp(self) -> Optional[float]:
         return self._property_timestamp
 
     @timestamp.setter
-    def timestamp(self, value):
+    def timestamp(self, value: Optional[float]) -> None:
         if value is None:
             self._property_timestamp = None
             return
-
         self.assert_isinstance(value, "timestamp", six.integer_types + (float,))
         self._property_timestamp = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return "training_debug_image"
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("iter")
-    def iter(self):
+    def iter(self) -> Optional[int]:
         return self._property_iter
 
     @iter.setter
-    def iter(self, value):
+    def iter(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iter = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iter", six.integer_types)
         self._property_iter = value
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> Optional[str]:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: Optional[str]) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
     @schema_property("key")
-    def key(self):
+    def key(self) -> Optional[str]:
         return self._property_key
 
     @key.setter
-    def key(self, value):
+    def key(self, value: Optional[str]) -> None:
         if value is None:
             self._property_key = None
             return
-
         self.assert_isinstance(value, "key", six.string_types)
         self._property_key = value
 
     @schema_property("url")
-    def url(self):
+    def url(self) -> Optional[str]:
         return self._property_url
 
     @url.setter
-    def url(self, value):
+    def url(self, value: Optional[str]) -> None:
         if value is None:
             self._property_url = None
             return
-
         self.assert_isinstance(value, "url", six.string_types)
         self._property_url = value
 
@@ -540,15 +518,15 @@ class MetricsPlotEvent(NonStrictDataModel):
 
     def __init__(
         self,
-        task,
-        timestamp=None,
-        iter=None,
-        metric=None,
-        variant=None,
-        plot_str=None,
-        skip_validation=None,
-        **kwargs
-    ):
+        task: str,
+        timestamp: Optional[float] = None,
+        iter: Optional[int] = None,
+        metric: Optional[str] = None,
+        variant: Optional[str] = None,
+        plot_str: Optional[str] = None,
+        skip_validation: Optional[bool] = None,
+        **kwargs: Any
+    ) -> None:
         super(MetricsPlotEvent, self).__init__(**kwargs)
         self.timestamp = timestamp
         self.task = task
@@ -559,99 +537,92 @@ class MetricsPlotEvent(NonStrictDataModel):
         self.skip_validation = skip_validation
 
     @schema_property("timestamp")
-    def timestamp(self):
+    def timestamp(self) -> Optional[float]:
         return self._property_timestamp
 
     @timestamp.setter
-    def timestamp(self, value):
+    def timestamp(self, value: Optional[float]) -> None:
         if value is None:
             self._property_timestamp = None
             return
-
         self.assert_isinstance(value, "timestamp", six.integer_types + (float,))
         self._property_timestamp = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return "plot"
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("iter")
-    def iter(self):
+    def iter(self) -> Optional[int]:
         return self._property_iter
 
     @iter.setter
-    def iter(self, value):
+    def iter(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iter = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iter", six.integer_types)
         self._property_iter = value
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> Optional[str]:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: Optional[str]) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
     @schema_property("plot_str")
-    def plot_str(self):
+    def plot_str(self) -> Optional[str]:
         return self._property_plot_str
 
     @plot_str.setter
-    def plot_str(self, value):
+    def plot_str(self, value: Optional[str]) -> None:
         if value is None:
             self._property_plot_str = None
             return
-
         self.assert_isinstance(value, "plot_str", six.string_types)
         self._property_plot_str = value
 
     @schema_property("skip_validation")
-    def skip_validation(self):
+    def skip_validation(self) -> Optional[bool]:
         return self._property_skip_validation
 
     @skip_validation.setter
-    def skip_validation(self, value):
+    def skip_validation(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_skip_validation = None
             return
-
         self.assert_isinstance(value, "skip_validation", (bool,))
         self._property_skip_validation = value
 
@@ -703,34 +674,32 @@ class TaskMetric(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, task, metric=None, **kwargs):
+    def __init__(self, task: str, metric: Optional[str] = None, **kwargs: Any) -> None:
         super(TaskMetric, self).__init__(**kwargs)
         self.task = task
         self.metric = metric
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
@@ -775,8 +744,14 @@ class TaskLogEvent(NonStrictDataModel):
     }
 
     def __init__(
-        self, task, timestamp=None, level=None, worker=None, msg=None, **kwargs
-    ):
+        self,
+        task: str,
+        timestamp: Optional[float] = None,
+        level: Any = None,
+        worker: Optional[str] = None,
+        msg: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(TaskLogEvent, self).__init__(**kwargs)
         self.timestamp = timestamp
         self.task = task
@@ -785,41 +760,39 @@ class TaskLogEvent(NonStrictDataModel):
         self.msg = msg
 
     @schema_property("timestamp")
-    def timestamp(self):
+    def timestamp(self) -> Optional[float]:
         return self._property_timestamp
 
     @timestamp.setter
-    def timestamp(self, value):
+    def timestamp(self, value: Optional[float]) -> None:
         if value is None:
             self._property_timestamp = None
             return
-
         self.assert_isinstance(value, "timestamp", six.integer_types + (float,))
         self._property_timestamp = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return "log"
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("level")
-    def level(self):
+    def level(self) -> Any:
         return self._property_level
 
     @level.setter
-    def level(self, value):
+    def level(self, value: Any) -> None:
         if value is None:
             self._property_level = None
             return
@@ -833,28 +806,26 @@ class TaskLogEvent(NonStrictDataModel):
         self._property_level = value
 
     @schema_property("worker")
-    def worker(self):
+    def worker(self) -> Optional[str]:
         return self._property_worker
 
     @worker.setter
-    def worker(self, value):
+    def worker(self, value: Optional[str]) -> None:
         if value is None:
             self._property_worker = None
             return
-
         self.assert_isinstance(value, "worker", six.string_types)
         self._property_worker = value
 
     @schema_property("msg")
-    def msg(self):
+    def msg(self) -> Optional[str]:
         return self._property_msg
 
     @msg.setter
-    def msg(self, value):
+    def msg(self, value: Optional[str]) -> None:
         if value is None:
             self._property_msg = None
             return
-
         self.assert_isinstance(value, "msg", six.string_types)
         self._property_msg = value
 
@@ -901,10 +872,7 @@ class AddRequest(CompoundRequest):
                         "description": "Metric name, e.g. 'count', 'loss', 'accuracy'",
                         "type": "string",
                     },
-                    "task": {
-                        "description": "Task ID (required)",
-                        "type": "string",
-                    },
+                    "task": {"description": "Task ID (required)", "type": "string"},
                     "timestamp": {
                         "description": "Epoch milliseconds UTC, will be set by the server if not set.",
                         "type": ["number", "null"],
@@ -935,10 +903,7 @@ class AddRequest(CompoundRequest):
                         "description": "If set then plot_str is not checked for a valid json. The default is False",
                         "type": "boolean",
                     },
-                    "task": {
-                        "description": "Task ID (required)",
-                        "type": "string",
-                    },
+                    "task": {"description": "Task ID (required)", "type": "string"},
                     "timestamp": {
                         "description": "Epoch milliseconds UTC, will be set by the server if not set.",
                         "type": ["number", "null"],
@@ -960,10 +925,7 @@ class AddRequest(CompoundRequest):
                         "description": "Metric name, e.g. 'count', 'loss', 'accuracy'",
                         "type": "string",
                     },
-                    "task": {
-                        "description": "Task ID (required)",
-                        "type": "string",
-                    },
+                    "task": {"description": "Task ID (required)", "type": "string"},
                     "timestamp": {
                         "description": "Epoch milliseconds UTC, will be set by the server if not set.",
                         "type": ["number", "null"],
@@ -989,10 +951,7 @@ class AddRequest(CompoundRequest):
                         "description": "Metric name, e.g. 'count', 'loss', 'accuracy'",
                         "type": "string",
                     },
-                    "task": {
-                        "description": "Task ID (required)",
-                        "type": "string",
-                    },
+                    "task": {"description": "Task ID (required)", "type": "string"},
                     "timestamp": {
                         "description": "Epoch milliseconds UTC, will be set by the server if not set.",
                         "type": ["number", "null"],
@@ -1022,10 +981,7 @@ class AddRequest(CompoundRequest):
                         "description": "Log level.",
                     },
                     "msg": {"description": "Log message.", "type": "string"},
-                    "task": {
-                        "description": "Task ID (required)",
-                        "type": "string",
-                    },
+                    "task": {"description": "Task ID (required)", "type": "string"},
                     "timestamp": {
                         "description": "Epoch milliseconds UTC, will be set by the server if not set.",
                         "type": ["number", "null"],
@@ -1043,16 +999,16 @@ class AddRequest(CompoundRequest):
         "type": "object",
     }
 
-    def __init__(self, event):
+    def __init__(self, event: Any) -> None:
         super(AddRequest, self).__init__()
         self.event = event
 
     @property
-    def event(self):
+    def event(self) -> None:
         return self._property_event
 
     @event.setter
-    def event(self, value):
+    def event(self, value: Any) -> None:
         self.assert_isinstance(
             value,
             "event",
@@ -1076,7 +1032,6 @@ class AddResponse(Response):
     _service = "events"
     _action = "add"
     _version = "2.13"
-
     _schema = {"additionalProperties": True, "definitions": {}, "type": "object"}
 
 
@@ -1107,7 +1062,6 @@ class AddBatchResponse(Response):
     _service = "events"
     _action = "add_batch"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -1118,52 +1072,55 @@ class AddBatchResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, added=None, errors=None, errors_info=None, **kwargs):
+    def __init__(
+        self,
+        added: Optional[int] = None,
+        errors: Optional[int] = None,
+        errors_info: Optional[dict] = None,
+        **kwargs: Any
+    ) -> None:
         super(AddBatchResponse, self).__init__(**kwargs)
         self.added = added
         self.errors = errors
         self.errors_info = errors_info
 
     @schema_property("added")
-    def added(self):
+    def added(self) -> Optional[int]:
         return self._property_added
 
     @added.setter
-    def added(self, value):
+    def added(self, value: Optional[int]) -> None:
         if value is None:
             self._property_added = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "added", six.integer_types)
         self._property_added = value
 
     @schema_property("errors")
-    def errors(self):
+    def errors(self) -> Optional[int]:
         return self._property_errors
 
     @errors.setter
-    def errors(self, value):
+    def errors(self, value: Optional[int]) -> None:
         if value is None:
             self._property_errors = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "errors", six.integer_types)
         self._property_errors = value
 
     @schema_property("errors_info")
-    def errors_info(self):
+    def errors_info(self) -> Optional[dict]:
         return self._property_errors_info
 
     @errors_info.setter
-    def errors_info(self, value):
+    def errors_info(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_errors_info = None
             return
-
         self.assert_isinstance(value, "errors_info", (dict,))
         self._property_errors_info = value
 
@@ -1233,13 +1190,13 @@ class DebugImagesRequest(Request):
 
     def __init__(
         self,
-        metrics,
-        iters=None,
-        navigate_earlier=None,
-        refresh=None,
-        scroll_id=None,
-        **kwargs
-    ):
+        metrics: List[Any],
+        iters: Optional[int] = None,
+        navigate_earlier: Optional[bool] = None,
+        refresh: Optional[bool] = None,
+        scroll_id: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(DebugImagesRequest, self).__init__(**kwargs)
         self.metrics = metrics
         self.iters = iters
@@ -1248,75 +1205,68 @@ class DebugImagesRequest(Request):
         self.scroll_id = scroll_id
 
     @schema_property("metrics")
-    def metrics(self):
+    def metrics(self) -> List[Any]:
         return self._property_metrics
 
     @metrics.setter
-    def metrics(self, value):
+    def metrics(self, value: List[Any]) -> None:
         if value is None:
             self._property_metrics = None
             return
-
         self.assert_isinstance(value, "metrics", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
-            value = [
-                TaskMetric.from_dict(v) if isinstance(v, dict) else v for v in value
-            ]
+        if any((isinstance(v, dict) for v in value)):
+            value = [TaskMetric.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "metrics", TaskMetric, is_array=True)
         self._property_metrics = value
 
     @schema_property("iters")
-    def iters(self):
+    def iters(self) -> Optional[int]:
         return self._property_iters
 
     @iters.setter
-    def iters(self, value):
+    def iters(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iters = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iters", six.integer_types)
         self._property_iters = value
 
     @schema_property("navigate_earlier")
-    def navigate_earlier(self):
+    def navigate_earlier(self) -> Optional[bool]:
         return self._property_navigate_earlier
 
     @navigate_earlier.setter
-    def navigate_earlier(self, value):
+    def navigate_earlier(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_navigate_earlier = None
             return
-
         self.assert_isinstance(value, "navigate_earlier", (bool,))
         self._property_navigate_earlier = value
 
     @schema_property("refresh")
-    def refresh(self):
+    def refresh(self) -> Optional[bool]:
         return self._property_refresh
 
     @refresh.setter
-    def refresh(self, value):
+    def refresh(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_refresh = None
             return
-
         self.assert_isinstance(value, "refresh", (bool,))
         self._property_refresh = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -1334,7 +1284,6 @@ class DebugImagesResponse(Response):
     _service = "events"
     _action = "debug_images"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -1351,36 +1300,33 @@ class DebugImagesResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, metrics=None, scroll_id=None, **kwargs):
+    def __init__(self, metrics: Optional[List[dict]] = None, scroll_id: Optional[str] = None, **kwargs: Any) -> None:
         super(DebugImagesResponse, self).__init__(**kwargs)
         self.metrics = metrics
         self.scroll_id = scroll_id
 
     @schema_property("metrics")
-    def metrics(self):
+    def metrics(self) -> Optional[List[dict]]:
         return self._property_metrics
 
     @metrics.setter
-    def metrics(self, value):
+    def metrics(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_metrics = None
             return
-
         self.assert_isinstance(value, "metrics", (list, tuple))
-
         self.assert_isinstance(value, "metrics", (dict,), is_array=True)
         self._property_metrics = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -1412,34 +1358,32 @@ class DeleteForTaskRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, allow_locked=False, **kwargs):
+    def __init__(self, task: str, allow_locked: Optional[bool] = False, **kwargs: Any) -> None:
         super(DeleteForTaskRequest, self).__init__(**kwargs)
         self.task = task
         self.allow_locked = allow_locked
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("allow_locked")
-    def allow_locked(self):
+    def allow_locked(self) -> Optional[bool]:
         return self._property_allow_locked
 
     @allow_locked.setter
-    def allow_locked(self, value):
+    def allow_locked(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_allow_locked = None
             return
-
         self.assert_isinstance(value, "allow_locked", (bool,))
         self._property_allow_locked = value
 
@@ -1455,7 +1399,6 @@ class DeleteForTaskResponse(Response):
     _service = "events"
     _action = "delete_for_task"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -1467,20 +1410,19 @@ class DeleteForTaskResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, deleted=None, **kwargs):
+    def __init__(self, deleted: Optional[bool] = None, **kwargs: Any) -> None:
         super(DeleteForTaskResponse, self).__init__(**kwargs)
         self.deleted = deleted
 
     @schema_property("deleted")
-    def deleted(self):
+    def deleted(self) -> Optional[bool]:
         return self._property_deleted
 
     @deleted.setter
-    def deleted(self, value):
+    def deleted(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_deleted = None
             return
-
         self.assert_isinstance(value, "deleted", (bool,))
         self._property_deleted = value
 
@@ -1521,52 +1463,49 @@ class DownloadTaskLogRequest(Request):
 
     def __init__(
         self,
-        task,
-        line_type=None,
-        line_format="{asctime} {worker} {level} {msg}",
-        **kwargs
-    ):
+        task: str,
+        line_type: Optional[str] = None,
+        line_format: Optional[str] = "{asctime} {worker} {level} {msg}",
+        **kwargs: Any
+    ) -> None:
         super(DownloadTaskLogRequest, self).__init__(**kwargs)
         self.task = task
         self.line_type = line_type
         self.line_format = line_format
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("line_type")
-    def line_type(self):
+    def line_type(self) -> Optional[str]:
         return self._property_line_type
 
     @line_type.setter
-    def line_type(self, value):
+    def line_type(self, value: Optional[str]) -> None:
         if value is None:
             self._property_line_type = None
             return
-
         self.assert_isinstance(value, "line_type", six.string_types)
         self._property_line_type = value
 
     @schema_property("line_format")
-    def line_format(self):
+    def line_format(self) -> Optional[str]:
         return self._property_line_format
 
     @line_format.setter
-    def line_format(self, value):
+    def line_format(self, value: Optional[str]) -> None:
         if value is None:
             self._property_line_format = None
             return
-
         self.assert_isinstance(value, "line_format", six.string_types)
         self._property_line_format = value
 
@@ -1580,7 +1519,6 @@ class DownloadTaskLogResponse(Response):
     _service = "events"
     _action = "download_task_log"
     _version = "2.13"
-
     _schema = {"definitions": {}, "type": "string"}
 
 
@@ -1633,14 +1571,14 @@ class GetDebugImageSampleRequest(Request):
 
     def __init__(
         self,
-        task,
-        metric,
-        variant,
-        iteration=None,
-        refresh=None,
-        scroll_id=None,
-        **kwargs
-    ):
+        task: str,
+        metric: str,
+        variant: str,
+        iteration: Optional[int] = None,
+        refresh: Optional[bool] = None,
+        scroll_id: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetDebugImageSampleRequest, self).__init__(**kwargs)
         self.task = task
         self.metric = metric
@@ -1650,82 +1588,76 @@ class GetDebugImageSampleRequest(Request):
         self.scroll_id = scroll_id
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> str:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: str) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> str:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: str) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
     @schema_property("iteration")
-    def iteration(self):
+    def iteration(self) -> Optional[int]:
         return self._property_iteration
 
     @iteration.setter
-    def iteration(self, value):
+    def iteration(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iteration = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iteration", six.integer_types)
         self._property_iteration = value
 
     @schema_property("refresh")
-    def refresh(self):
+    def refresh(self) -> Optional[bool]:
         return self._property_refresh
 
     @refresh.setter
-    def refresh(self, value):
+    def refresh(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_refresh = None
             return
-
         self.assert_isinstance(value, "refresh", (bool,))
         self._property_refresh = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -1739,7 +1671,6 @@ class GetDebugImageSampleResponse(Response):
     _service = "events"
     _action = "get_debug_image_sample"
     _version = "2.13"
-
     _schema = {
         "$ref": "#/definitions/debug_image_sample_reposnse",
         "definitions": {
@@ -1804,52 +1735,50 @@ class GetMultiTaskPlotsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, tasks, iters=None, scroll_id=None, **kwargs):
+    def __init__(
+        self, tasks: List[str], iters: Optional[int] = None, scroll_id: Optional[str] = None, **kwargs: Any
+    ) -> None:
         super(GetMultiTaskPlotsRequest, self).__init__(**kwargs)
         self.tasks = tasks
         self.iters = iters
         self.scroll_id = scroll_id
 
     @schema_property("tasks")
-    def tasks(self):
+    def tasks(self) -> List[str]:
         return self._property_tasks
 
     @tasks.setter
-    def tasks(self, value):
+    def tasks(self, value: List[str]) -> None:
         if value is None:
             self._property_tasks = None
             return
-
         self.assert_isinstance(value, "tasks", (list, tuple))
-
         self.assert_isinstance(value, "tasks", six.string_types, is_array=True)
         self._property_tasks = value
 
     @schema_property("iters")
-    def iters(self):
+    def iters(self) -> Optional[int]:
         return self._property_iters
 
     @iters.setter
-    def iters(self, value):
+    def iters(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iters = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iters", six.integer_types)
         self._property_iters = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -1871,7 +1800,6 @@ class GetMultiTaskPlotsResponse(Response):
     _service = "events"
     _action = "get_multi_task_plots"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -1895,7 +1823,14 @@ class GetMultiTaskPlotsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, plots=None, returned=None, total=None, scroll_id=None, **kwargs):
+    def __init__(
+        self,
+        plots: Optional[dict] = None,
+        returned: Optional[int] = None,
+        total: Optional[float] = None,
+        scroll_id: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetMultiTaskPlotsResponse, self).__init__(**kwargs)
         self.plots = plots
         self.returned = returned
@@ -1903,56 +1838,52 @@ class GetMultiTaskPlotsResponse(Response):
         self.scroll_id = scroll_id
 
     @schema_property("plots")
-    def plots(self):
+    def plots(self) -> Optional[dict]:
         return self._property_plots
 
     @plots.setter
-    def plots(self, value):
+    def plots(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_plots = None
             return
-
         self.assert_isinstance(value, "plots", (dict,))
         self._property_plots = value
 
     @schema_property("returned")
-    def returned(self):
+    def returned(self) -> Optional[int]:
         return self._property_returned
 
     @returned.setter
-    def returned(self, value):
+    def returned(self, value: Optional[int]) -> None:
         if value is None:
             self._property_returned = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "returned", six.integer_types)
         self._property_returned = value
 
     @schema_property("total")
-    def total(self):
+    def total(self) -> Optional[float]:
         return self._property_total
 
     @total.setter
-    def total(self, value):
+    def total(self, value: Optional[float]) -> None:
         if value is None:
             self._property_total = None
             return
-
         self.assert_isinstance(value, "total", six.integer_types + (float,))
         self._property_total = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -1979,34 +1910,32 @@ class GetScalarMetricDataRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task=None, metric=None, **kwargs):
+    def __init__(self, task: Optional[str] = None, metric: Optional[str] = None, **kwargs: Any) -> None:
         super(GetScalarMetricDataRequest, self).__init__(**kwargs)
         self.task = task
         self.metric = metric
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> Optional[str]:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: Optional[str]) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
@@ -2028,7 +1957,6 @@ class GetScalarMetricDataResponse(Response):
     _service = "events"
     _action = "get_scalar_metric_data"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2054,8 +1982,13 @@ class GetScalarMetricDataResponse(Response):
     }
 
     def __init__(
-        self, events=None, returned=None, total=None, scroll_id=None, **kwargs
-    ):
+        self,
+        events: Optional[List[dict]] = None,
+        returned: Optional[int] = None,
+        total: Optional[int] = None,
+        scroll_id: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetScalarMetricDataResponse, self).__init__(**kwargs)
         self.events = events
         self.returned = returned
@@ -2063,60 +1996,55 @@ class GetScalarMetricDataResponse(Response):
         self.scroll_id = scroll_id
 
     @schema_property("events")
-    def events(self):
+    def events(self) -> Optional[List[dict]]:
         return self._property_events
 
     @events.setter
-    def events(self, value):
+    def events(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_events = None
             return
-
         self.assert_isinstance(value, "events", (list, tuple))
-
         self.assert_isinstance(value, "events", (dict,), is_array=True)
         self._property_events = value
 
     @schema_property("returned")
-    def returned(self):
+    def returned(self) -> Optional[int]:
         return self._property_returned
 
     @returned.setter
-    def returned(self, value):
+    def returned(self, value: Optional[int]) -> None:
         if value is None:
             self._property_returned = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "returned", six.integer_types)
         self._property_returned = value
 
     @schema_property("total")
-    def total(self):
+    def total(self) -> Optional[int]:
         return self._property_total
 
     @total.setter
-    def total(self, value):
+    def total(self, value: Optional[int]) -> None:
         if value is None:
             self._property_total = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "total", six.integer_types)
         self._property_total = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -2139,20 +2067,19 @@ class GetScalarMetricsAndVariantsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, **kwargs):
+    def __init__(self, task: str, **kwargs: Any) -> None:
         super(GetScalarMetricsAndVariantsRequest, self).__init__(**kwargs)
         self.task = task
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -2168,29 +2095,25 @@ class GetScalarMetricsAndVariantsResponse(Response):
     _service = "events"
     _action = "get_scalar_metrics_and_variants"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
-        "properties": {
-            "metrics": {"additionalProperties": True, "type": ["object", "null"]}
-        },
+        "properties": {"metrics": {"additionalProperties": True, "type": ["object", "null"]}},
         "type": "object",
     }
 
-    def __init__(self, metrics=None, **kwargs):
+    def __init__(self, metrics: Optional[dict] = None, **kwargs: Any) -> None:
         super(GetScalarMetricsAndVariantsResponse, self).__init__(**kwargs)
         self.metrics = metrics
 
     @schema_property("metrics")
-    def metrics(self):
+    def metrics(self) -> Optional[dict]:
         return self._property_metrics
 
     @metrics.setter
-    def metrics(self, value):
+    def metrics(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_metrics = None
             return
-
         self.assert_isinstance(value, "metrics", (dict,))
         self._property_metrics = value
 
@@ -2242,13 +2165,13 @@ class GetTaskEventsRequest(Request):
 
     def __init__(
         self,
-        task,
-        order=None,
-        scroll_id=None,
-        batch_size=None,
-        event_type=None,
-        **kwargs
-    ):
+        task: str,
+        order: Optional[str] = None,
+        scroll_id: Optional[str] = None,
+        batch_size: Optional[int] = None,
+        event_type: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetTaskEventsRequest, self).__init__(**kwargs)
         self.task = task
         self.order = order
@@ -2257,69 +2180,64 @@ class GetTaskEventsRequest(Request):
         self.event_type = event_type
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("order")
-    def order(self):
+    def order(self) -> Optional[str]:
         return self._property_order
 
     @order.setter
-    def order(self, value):
+    def order(self, value: Optional[str]) -> None:
         if value is None:
             self._property_order = None
             return
-
         self.assert_isinstance(value, "order", six.string_types)
         self._property_order = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
     @schema_property("batch_size")
-    def batch_size(self):
+    def batch_size(self) -> Optional[int]:
         return self._property_batch_size
 
     @batch_size.setter
-    def batch_size(self, value):
+    def batch_size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_batch_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "batch_size", six.integer_types)
         self._property_batch_size = value
 
     @schema_property("event_type")
-    def event_type(self):
+    def event_type(self) -> Optional[str]:
         return self._property_event_type
 
     @event_type.setter
-    def event_type(self, value):
+    def event_type(self, value: Optional[str]) -> None:
         if value is None:
             self._property_event_type = None
             return
-
         self.assert_isinstance(value, "event_type", six.string_types)
         self._property_event_type = value
 
@@ -2341,7 +2259,6 @@ class GetTaskEventsResponse(Response):
     _service = "events"
     _action = "get_task_events"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2367,8 +2284,13 @@ class GetTaskEventsResponse(Response):
     }
 
     def __init__(
-        self, events=None, returned=None, total=None, scroll_id=None, **kwargs
-    ):
+        self,
+        events: Optional[List[dict]] = None,
+        returned: Optional[int] = None,
+        total: Optional[float] = None,
+        scroll_id: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetTaskEventsResponse, self).__init__(**kwargs)
         self.events = events
         self.returned = returned
@@ -2376,58 +2298,53 @@ class GetTaskEventsResponse(Response):
         self.scroll_id = scroll_id
 
     @schema_property("events")
-    def events(self):
+    def events(self) -> Optional[List[dict]]:
         return self._property_events
 
     @events.setter
-    def events(self, value):
+    def events(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_events = None
             return
-
         self.assert_isinstance(value, "events", (list, tuple))
-
         self.assert_isinstance(value, "events", (dict,), is_array=True)
         self._property_events = value
 
     @schema_property("returned")
-    def returned(self):
+    def returned(self) -> Optional[int]:
         return self._property_returned
 
     @returned.setter
-    def returned(self, value):
+    def returned(self, value: Optional[int]) -> None:
         if value is None:
             self._property_returned = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "returned", six.integer_types)
         self._property_returned = value
 
     @schema_property("total")
-    def total(self):
+    def total(self) -> Optional[float]:
         return self._property_total
 
     @total.setter
-    def total(self, value):
+    def total(self, value: Optional[float]) -> None:
         if value is None:
             self._property_total = None
             return
-
         self.assert_isinstance(value, "total", six.integer_types + (float,))
         self._property_total = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -2450,20 +2367,19 @@ class GetTaskLatestScalarValuesRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, **kwargs):
+    def __init__(self, task: str, **kwargs: Any) -> None:
         super(GetTaskLatestScalarValuesRequest, self).__init__(**kwargs)
         self.task = task
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -2479,7 +2395,6 @@ class GetTaskLatestScalarValuesResponse(Response):
     _service = "events"
     _action = "get_task_latest_scalar_values"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2516,22 +2431,20 @@ class GetTaskLatestScalarValuesResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, metrics=None, **kwargs):
+    def __init__(self, metrics: Optional[List[dict]] = None, **kwargs: Any) -> None:
         super(GetTaskLatestScalarValuesResponse, self).__init__(**kwargs)
         self.metrics = metrics
 
     @schema_property("metrics")
-    def metrics(self):
+    def metrics(self) -> Optional[List[dict]]:
         return self._property_metrics
 
     @metrics.setter
-    def metrics(self, value):
+    def metrics(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_metrics = None
             return
-
         self.assert_isinstance(value, "metrics", (list, tuple))
-
         self.assert_isinstance(value, "metrics", (dict,), is_array=True)
         self._property_metrics = value
 
@@ -2590,13 +2503,13 @@ class GetTaskLogRequest(Request):
 
     def __init__(
         self,
-        task,
-        batch_size=None,
-        navigate_earlier=None,
-        from_timestamp=None,
-        order=None,
-        **kwargs
-    ):
+        task: str,
+        batch_size: Optional[int] = None,
+        navigate_earlier: Optional[bool] = None,
+        from_timestamp: Optional[float] = None,
+        order: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetTaskLogRequest, self).__init__(**kwargs)
         self.task = task
         self.batch_size = batch_size
@@ -2605,69 +2518,64 @@ class GetTaskLogRequest(Request):
         self.order = order
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("batch_size")
-    def batch_size(self):
+    def batch_size(self) -> Optional[int]:
         return self._property_batch_size
 
     @batch_size.setter
-    def batch_size(self, value):
+    def batch_size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_batch_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "batch_size", six.integer_types)
         self._property_batch_size = value
 
     @schema_property("navigate_earlier")
-    def navigate_earlier(self):
+    def navigate_earlier(self) -> Optional[bool]:
         return self._property_navigate_earlier
 
     @navigate_earlier.setter
-    def navigate_earlier(self, value):
+    def navigate_earlier(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_navigate_earlier = None
             return
-
         self.assert_isinstance(value, "navigate_earlier", (bool,))
         self._property_navigate_earlier = value
 
     @schema_property("from_timestamp")
-    def from_timestamp(self):
+    def from_timestamp(self) -> Optional[float]:
         return self._property_from_timestamp
 
     @from_timestamp.setter
-    def from_timestamp(self, value):
+    def from_timestamp(self, value: Optional[float]) -> None:
         if value is None:
             self._property_from_timestamp = None
             return
-
         self.assert_isinstance(value, "from_timestamp", six.integer_types + (float,))
         self._property_from_timestamp = value
 
     @schema_property("order")
-    def order(self):
+    def order(self) -> Optional[str]:
         return self._property_order
 
     @order.setter
-    def order(self, value):
+    def order(self, value: Optional[str]) -> None:
         if value is None:
             self._property_order = None
             return
-
         self.assert_isinstance(value, "order", six.string_types)
         self._property_order = value
 
@@ -2687,7 +2595,6 @@ class GetTaskLogResponse(Response):
     _service = "events"
     _action = "get_task_log"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2708,52 +2615,54 @@ class GetTaskLogResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, events=None, returned=None, total=None, **kwargs):
+    def __init__(
+        self,
+        events: Optional[List[dict]] = None,
+        returned: Optional[int] = None,
+        total: Optional[float] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetTaskLogResponse, self).__init__(**kwargs)
         self.events = events
         self.returned = returned
         self.total = total
 
     @schema_property("events")
-    def events(self):
+    def events(self) -> Optional[List[dict]]:
         return self._property_events
 
     @events.setter
-    def events(self, value):
+    def events(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_events = None
             return
-
         self.assert_isinstance(value, "events", (list, tuple))
-
         self.assert_isinstance(value, "events", (dict,), is_array=True)
         self._property_events = value
 
     @schema_property("returned")
-    def returned(self):
+    def returned(self) -> Optional[int]:
         return self._property_returned
 
     @returned.setter
-    def returned(self, value):
+    def returned(self, value: Optional[int]) -> None:
         if value is None:
             self._property_returned = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "returned", six.integer_types)
         self._property_returned = value
 
     @schema_property("total")
-    def total(self):
+    def total(self) -> Optional[float]:
         return self._property_total
 
     @total.setter
-    def total(self, value):
+    def total(self, value: Optional[float]) -> None:
         if value is None:
             self._property_total = None
             return
-
         self.assert_isinstance(value, "total", six.integer_types + (float,))
         self._property_total = value
 
@@ -2799,32 +2708,30 @@ class GetTaskMetricsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, tasks, event_type=None, **kwargs):
+    def __init__(self, tasks: List[str], event_type: Any = None, **kwargs: Any) -> None:
         super(GetTaskMetricsRequest, self).__init__(**kwargs)
         self.tasks = tasks
         self.event_type = event_type
 
     @schema_property("tasks")
-    def tasks(self):
+    def tasks(self) -> List[str]:
         return self._property_tasks
 
     @tasks.setter
-    def tasks(self, value):
+    def tasks(self, value: List[str]) -> None:
         if value is None:
             self._property_tasks = None
             return
-
         self.assert_isinstance(value, "tasks", (list, tuple))
-
         self.assert_isinstance(value, "tasks", six.string_types, is_array=True)
         self._property_tasks = value
 
     @schema_property("event_type")
-    def event_type(self):
+    def event_type(self) -> Any:
         return self._property_event_type
 
     @event_type.setter
-    def event_type(self, value):
+    def event_type(self, value: Any) -> None:
         if value is None:
             self._property_event_type = None
             return
@@ -2849,7 +2756,6 @@ class GetTaskMetricsResponse(Response):
     _service = "events"
     _action = "get_task_metrics"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2862,22 +2768,20 @@ class GetTaskMetricsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, metrics=None, **kwargs):
+    def __init__(self, metrics: Optional[List[dict]] = None, **kwargs: Any) -> None:
         super(GetTaskMetricsResponse, self).__init__(**kwargs)
         self.metrics = metrics
 
     @schema_property("metrics")
-    def metrics(self):
+    def metrics(self) -> Optional[List[dict]]:
         return self._property_metrics
 
     @metrics.setter
-    def metrics(self, value):
+    def metrics(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_metrics = None
             return
-
         self.assert_isinstance(value, "metrics", (list, tuple))
-
         self.assert_isinstance(value, "metrics", (dict,), is_array=True)
         self._property_metrics = value
 
@@ -2914,50 +2818,47 @@ class GetTaskPlotsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, iters=None, scroll_id=None, **kwargs):
+    def __init__(self, task: str, iters: Optional[int] = None, scroll_id: Optional[str] = None, **kwargs: Any) -> None:
         super(GetTaskPlotsRequest, self).__init__(**kwargs)
         self.task = task
         self.iters = iters
         self.scroll_id = scroll_id
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("iters")
-    def iters(self):
+    def iters(self) -> Optional[int]:
         return self._property_iters
 
     @iters.setter
-    def iters(self, value):
+    def iters(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iters = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iters", six.integer_types)
         self._property_iters = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -2979,7 +2880,6 @@ class GetTaskPlotsResponse(Response):
     _service = "events"
     _action = "get_task_plots"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -3004,7 +2904,14 @@ class GetTaskPlotsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, plots=None, returned=None, total=None, scroll_id=None, **kwargs):
+    def __init__(
+        self,
+        plots: Optional[List[dict]] = None,
+        returned: Optional[int] = None,
+        total: Optional[float] = None,
+        scroll_id: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetTaskPlotsResponse, self).__init__(**kwargs)
         self.plots = plots
         self.returned = returned
@@ -3012,58 +2919,53 @@ class GetTaskPlotsResponse(Response):
         self.scroll_id = scroll_id
 
     @schema_property("plots")
-    def plots(self):
+    def plots(self) -> Optional[List[dict]]:
         return self._property_plots
 
     @plots.setter
-    def plots(self, value):
+    def plots(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_plots = None
             return
-
         self.assert_isinstance(value, "plots", (list, tuple))
-
         self.assert_isinstance(value, "plots", (dict,), is_array=True)
         self._property_plots = value
 
     @schema_property("returned")
-    def returned(self):
+    def returned(self) -> Optional[int]:
         return self._property_returned
 
     @returned.setter
-    def returned(self, value):
+    def returned(self, value: Optional[int]) -> None:
         if value is None:
             self._property_returned = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "returned", six.integer_types)
         self._property_returned = value
 
     @schema_property("total")
-    def total(self):
+    def total(self) -> Optional[float]:
         return self._property_total
 
     @total.setter
-    def total(self, value):
+    def total(self, value: Optional[float]) -> None:
         if value is None:
             self._property_total = None
             return
-
         self.assert_isinstance(value, "total", six.integer_types + (float,))
         self._property_total = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -3084,20 +2986,19 @@ class GetVectorMetricsAndVariantsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, **kwargs):
+    def __init__(self, task: str, **kwargs: Any) -> None:
         super(GetVectorMetricsAndVariantsRequest, self).__init__(**kwargs)
         self.task = task
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -3113,7 +3014,6 @@ class GetVectorMetricsAndVariantsResponse(Response):
     _service = "events"
     _action = "get_vector_metrics_and_variants"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -3126,22 +3026,20 @@ class GetVectorMetricsAndVariantsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, metrics=None, **kwargs):
+    def __init__(self, metrics: Optional[List[dict]] = None, **kwargs: Any) -> None:
         super(GetVectorMetricsAndVariantsResponse, self).__init__(**kwargs)
         self.metrics = metrics
 
     @schema_property("metrics")
-    def metrics(self):
+    def metrics(self) -> Optional[List[dict]]:
         return self._property_metrics
 
     @metrics.setter
-    def metrics(self, value):
+    def metrics(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_metrics = None
             return
-
         self.assert_isinstance(value, "metrics", (list, tuple))
-
         self.assert_isinstance(value, "metrics", (dict,), is_array=True)
         self._property_metrics = value
 
@@ -3190,48 +3088,45 @@ class MultiTaskScalarMetricsIterHistogramRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, tasks, samples=None, key=None, **kwargs):
+    def __init__(self, tasks: List[str], samples: Optional[int] = None, key: Any = None, **kwargs: Any) -> None:
         super(MultiTaskScalarMetricsIterHistogramRequest, self).__init__(**kwargs)
         self.tasks = tasks
         self.samples = samples
         self.key = key
 
     @schema_property("tasks")
-    def tasks(self):
+    def tasks(self) -> List[str]:
         return self._property_tasks
 
     @tasks.setter
-    def tasks(self, value):
+    def tasks(self, value: List[str]) -> None:
         if value is None:
             self._property_tasks = None
             return
-
         self.assert_isinstance(value, "tasks", (list, tuple))
-
         self.assert_isinstance(value, "tasks", six.string_types, is_array=True)
         self._property_tasks = value
 
     @schema_property("samples")
-    def samples(self):
+    def samples(self) -> Optional[int]:
         return self._property_samples
 
     @samples.setter
-    def samples(self, value):
+    def samples(self, value: Optional[int]) -> None:
         if value is None:
             self._property_samples = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "samples", six.integer_types)
         self._property_samples = value
 
     @schema_property("key")
-    def key(self):
+    def key(self) -> Any:
         return self._property_key
 
     @key.setter
-    def key(self, value):
+    def key(self, value: Any) -> None:
         if value is None:
             self._property_key = None
             return
@@ -3254,7 +3149,6 @@ class MultiTaskScalarMetricsIterHistogramResponse(Response):
     _service = "events"
     _action = "multi_task_scalar_metrics_iter_histogram"
     _version = "2.13"
-
     _schema = {"additionalProperties": True, "definitions": {}, "type": "object"}
 
 
@@ -3293,48 +3187,45 @@ class NextDebugImageSampleRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, scroll_id, navigate_earlier=None, **kwargs):
+    def __init__(self, task: str, scroll_id: str, navigate_earlier: Optional[bool] = None, **kwargs: Any) -> None:
         super(NextDebugImageSampleRequest, self).__init__(**kwargs)
         self.task = task
         self.scroll_id = scroll_id
         self.navigate_earlier = navigate_earlier
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> str:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: str) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
     @schema_property("navigate_earlier")
-    def navigate_earlier(self):
+    def navigate_earlier(self) -> Optional[bool]:
         return self._property_navigate_earlier
 
     @navigate_earlier.setter
-    def navigate_earlier(self, value):
+    def navigate_earlier(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_navigate_earlier = None
             return
-
         self.assert_isinstance(value, "navigate_earlier", (bool,))
         self._property_navigate_earlier = value
 
@@ -3348,7 +3239,6 @@ class NextDebugImageSampleResponse(Response):
     _service = "events"
     _action = "next_debug_image_sample"
     _version = "2.13"
-
     _schema = {
         "$ref": "#/definitions/debug_image_sample_reposnse",
         "definitions": {
@@ -3417,46 +3307,44 @@ class ScalarMetricsIterHistogramRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, samples=None, key=None, **kwargs):
+    def __init__(self, task: str, samples: Optional[int] = None, key: Any = None, **kwargs: Any) -> None:
         super(ScalarMetricsIterHistogramRequest, self).__init__(**kwargs)
         self.task = task
         self.samples = samples
         self.key = key
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("samples")
-    def samples(self):
+    def samples(self) -> Optional[int]:
         return self._property_samples
 
     @samples.setter
-    def samples(self, value):
+    def samples(self, value: Optional[int]) -> None:
         if value is None:
             self._property_samples = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "samples", six.integer_types)
         self._property_samples = value
 
     @schema_property("key")
-    def key(self):
+    def key(self) -> Any:
         return self._property_key
 
     @key.setter
-    def key(self, value):
+    def key(self, value: Any) -> None:
         if value is None:
             self._property_key = None
             return
@@ -3481,31 +3369,26 @@ class ScalarMetricsIterHistogramResponse(Response):
     _service = "events"
     _action = "scalar_metrics_iter_histogram"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
-        "properties": {
-            "images": {"items": {"type": "object"}, "type": ["array", "null"]}
-        },
+        "properties": {"images": {"items": {"type": "object"}, "type": ["array", "null"]}},
         "type": "object",
     }
 
-    def __init__(self, images=None, **kwargs):
+    def __init__(self, images: Optional[List[dict]] = None, **kwargs: Any) -> None:
         super(ScalarMetricsIterHistogramResponse, self).__init__(**kwargs)
         self.images = images
 
     @schema_property("images")
-    def images(self):
+    def images(self) -> Optional[List[dict]]:
         return self._property_images
 
     @images.setter
-    def images(self, value):
+    def images(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_images = None
             return
-
         self.assert_isinstance(value, "images", (list, tuple))
-
         self.assert_isinstance(value, "images", (dict,), is_array=True)
         self._property_images = value
 
@@ -3536,48 +3419,45 @@ class VectorMetricsIterHistogramRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, metric, variant, **kwargs):
+    def __init__(self, task: str, metric: str, variant: str, **kwargs: Any) -> None:
         super(VectorMetricsIterHistogramRequest, self).__init__(**kwargs)
         self.task = task
         self.metric = metric
         self.variant = variant
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> str:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: str) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> str:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: str) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
@@ -3593,31 +3473,26 @@ class VectorMetricsIterHistogramResponse(Response):
     _service = "events"
     _action = "vector_metrics_iter_histogram"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
-        "properties": {
-            "images": {"items": {"type": "object"}, "type": ["array", "null"]}
-        },
+        "properties": {"images": {"items": {"type": "object"}, "type": ["array", "null"]}},
         "type": "object",
     }
 
-    def __init__(self, images=None, **kwargs):
+    def __init__(self, images: Optional[List[dict]] = None, **kwargs: Any) -> None:
         super(VectorMetricsIterHistogramResponse, self).__init__(**kwargs)
         self.images = images
 
     @schema_property("images")
-    def images(self):
+    def images(self) -> Optional[List[dict]]:
         return self._property_images
 
     @images.setter
-    def images(self, value):
+    def images(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_images = None
             return
-
         self.assert_isinstance(value, "images", (list, tuple))
-
         self.assert_isinstance(value, "images", (dict,), is_array=True)
         self._property_images = value
 

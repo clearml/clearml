@@ -9,8 +9,7 @@ try:
     from typing import Text
 except ImportError:
     # windows conda-less hack
-    Text = Any
-
+    Text = object
 
 NotSet = object()
 
@@ -24,15 +23,13 @@ class Entry(object):
     """
 
     @classmethod
-    def default_conversions(cls):
-        # type: () -> Dict[Any, Converter]
+    def default_conversions(cls) -> Dict[Any, Converter]:
         return {
             bool: any_to_bool,
             six.text_type: lambda s: six.text_type(s).strip(),
         }
 
-    def __init__(self, key, *more_keys, **kwargs):
-        # type: (Text, Text, Any) -> None
+    def __init__(self, key: Text, *more_keys: Text, **kwargs: Any) -> None:
         """
         :param key: Entry's key (at least one).
         :param more_keys: More alternate keys for this entry.
@@ -50,22 +47,20 @@ class Entry(object):
         self.default = kwargs.pop("default", None)
         self.help = kwargs.pop("help", None)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.key)
 
     @property
-    def key(self):
+    def key(self) -> Text:
         return self.keys[0]
 
-    def convert(self, value, converter=None):
-        # type: (Any, Converter) -> Optional[Any]
+    def convert(self, value: Any, converter: Converter = None) -> Optional[Any]:
         converter = converter or self.converter
         if not converter:
             converter = self.default_conversions().get(self.type, self.type)
         return converter(value)
 
-    def get_pair(self, default=NotSet, converter=None):
-        # type: (Any, Converter) -> Optional[Tuple[Text, Any]]
+    def get_pair(self, default: Any = NotSet, converter: Converter = None) -> Optional[Tuple[Text, Any]]:
         for key in self.keys:
             value = self._get(key)
             if value is NotSet:
@@ -80,30 +75,24 @@ class Entry(object):
         result = self.default if default is NotSet else default
         return self.key, result
 
-    def get(self, default=NotSet, converter=None):
-        # type: (Any, Converter) -> Optional[Any]
+    def get(self, default: Any = NotSet, converter: Converter = None) -> Optional[Any]:
         return self.get_pair(default=default, converter=converter)[1]
 
-    def set(self, value):
-        # type: (Any) -> ()
+    def set(self, value: Any) -> ():
         # key, _ = self.get_pair(default=None, converter=None)
         for k in self.keys:
             self._set(k, str(value))
 
-    def _set(self, key, value):
-        # type: (Text, Text) -> None
+    def _set(self, key: Text, value: Text) -> None:
         pass
 
     @abc.abstractmethod
-    def _get(self, key):
-        # type: (Text) -> Any
+    def _get(self, key: Text) -> Any:
         pass
 
     @abc.abstractmethod
-    def error(self, message):
-        # type: (Text) -> None
+    def error(self, message: Text) -> None:
         pass
 
-    def exists(self):
-        # type: () -> bool
+    def exists(self) -> bool:
         return any(key for key in self.keys if self._get(key) is not NotSet)

@@ -3,8 +3,8 @@ organization service
 
 This service provides organization level operations
 """
+from typing import List, Optional, Any
 import six
-
 from clearml.backend_api.session import Request, Response, schema_property
 
 
@@ -50,34 +50,32 @@ class GetTagsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, include_system=False, filter=None, **kwargs):
+    def __init__(self, include_system: Optional[bool] = False, filter: Optional[dict] = None, **kwargs: Any) -> None:
         super(GetTagsRequest, self).__init__(**kwargs)
         self.include_system = include_system
         self.filter = filter
 
     @schema_property("include_system")
-    def include_system(self):
+    def include_system(self) -> Optional[bool]:
         return self._property_include_system
 
     @include_system.setter
-    def include_system(self, value):
+    def include_system(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_include_system = None
             return
-
         self.assert_isinstance(value, "include_system", (bool,))
         self._property_include_system = value
 
     @schema_property("filter")
-    def filter(self):
+    def filter(self) -> Optional[dict]:
         return self._property_filter
 
     @filter.setter
-    def filter(self, value):
+    def filter(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_filter = None
             return
-
         self.assert_isinstance(value, "filter", (dict,))
         self._property_filter = value
 
@@ -96,7 +94,6 @@ class GetTagsResponse(Response):
     _service = "organization"
     _action = "get_tags"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -114,42 +111,38 @@ class GetTagsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, tags=None, system_tags=None, **kwargs):
+    def __init__(
+        self, tags: Optional[List[str]] = None, system_tags: Optional[List[str]] = None, **kwargs: Any
+    ) -> None:
         super(GetTagsResponse, self).__init__(**kwargs)
         self.tags = tags
         self.system_tags = system_tags
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
 
-response_mapping = {
-    GetTagsRequest: GetTagsResponse,
-}
+response_mapping = {GetTagsRequest: GetTagsResponse}

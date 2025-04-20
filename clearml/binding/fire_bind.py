@@ -1,3 +1,5 @@
+from typing import Optional, Callable, List, Dict, Tuple, TYPE_CHECKING, Any
+
 try:
     import fire
     import fire.core
@@ -6,21 +8,26 @@ except ImportError:
     fire = None
 
 import inspect
+
 from .frameworks import _patched_call_no_recursion_guard  # noqa
 from ..config import get_remote_task_id, running_remotely
 from ..utilities.dicts import cast_str_to_bool
 
+if TYPE_CHECKING:
+    from .. import Task
+    import fire
+
 
 class SimpleNamespace(object):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         self.__dict__.update(kwargs)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         keys = sorted(self.__dict__)
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
-    def __eq__(self, other):
+    def __eq__(self, other: "SimpleNamespace") -> bool:
         return self.__dict__ == other.__dict__
 
 
@@ -39,14 +46,19 @@ class PatchFire:
     __groups = []
     __commands = {}
     __default_args = SimpleNamespace(
-        completion=None, help=False, interactive=False, separator="-", trace=False, verbose=False
+        completion=None,
+        help=False,
+        interactive=False,
+        separator="-",
+        trace=False,
+        verbose=False,
     )
     __current_command = None
     __fetched_current_command = False
     __command_args = {}
 
     @classmethod
-    def patch(cls, task=None):
+    def patch(cls, task: Optional["Task"] = None) -> None:
         if fire is None:
             return
 
@@ -64,7 +76,7 @@ class PatchFire:
                 )
 
     @classmethod
-    def _update_task_args(cls):
+    def _update_task_args(cls) -> None:
         if running_remotely() or not cls._current_task:
             return
         args = {}
@@ -139,7 +151,16 @@ class PatchFire:
         )
 
     @staticmethod
-    def __Fire(original_fn, component, args_, parsed_flag_args, context, name, *args, **kwargs):  # noqa
+    def __Fire(
+        original_fn: Callable,
+        component: Any,
+        args_: List[str],
+        parsed_flag_args: Dict[str, Any],
+        context: Dict[str, Any],
+        name: str,
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:  # noqa
         if not running_remotely():
             return original_fn(component, args_, parsed_flag_args, context, name, *args, **kwargs)
         command = PatchFire._load_task_params()
@@ -149,7 +170,7 @@ class PatchFire:
             replaced_args = []
         for param in PatchFire.__remote_task_params[PatchFire._section_name].values():
             if command is not None and param.type == PatchFire._command_arg_type_template % command:
-                replaced_args.append("--" + param.name[len(command + PatchFire._args_sep):])
+                replaced_args.append("--" + param.name[len(command + PatchFire._args_sep) :])
                 value = PatchFire.__remote_task_params_dict[param.name]
                 if len(value) > 0:
                     replaced_args.append(value)
@@ -162,22 +183,33 @@ class PatchFire:
 
     @staticmethod
     def __CallAndUpdateTrace(  # noqa
-        original_fn, component, args_, component_trace, treatment, target=None, *args, **kwargs
-    ):
+        original_fn: Callable,
+        component: Any,
+        args_: List[str],
+        component_trace: "fire.trace.FireTrace",
+        treatment: str,
+        target: Optional[Any] = None,
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:
         if running_remotely():
             return original_fn(component, args_, component_trace, treatment, target, *args, **kwargs)
         if not PatchFire.__fetched_current_command:
             PatchFire.__fetched_current_command = True
             context, component_context = PatchFire.__get_context_and_component(component)
-            PatchFire.__groups, PatchFire.__commands = PatchFire.__get_all_groups_and_commands(
-                component_context, context
-            )
+            (
+                PatchFire.__groups,
+                PatchFire.__commands,
+            ) = PatchFire.__get_all_groups_and_commands(component_context, context)
             PatchFire.__current_command = PatchFire.__get_current_command(
                 args_, PatchFire.__groups, PatchFire.__commands
             )
             for command in PatchFire.__commands:
                 PatchFire.__command_args[command] = PatchFire.__get_command_args(
-                    component_context, command.split(PatchFire._commands_sep), PatchFire.__default_args, context
+                    component_context,
+                    command.split(PatchFire._commands_sep),
+                    PatchFire.__default_args,
+                    context,
                 )
             PatchFire.__command_args[None] = PatchFire.__get_command_args(
                 component_context,
@@ -206,7 +238,9 @@ class PatchFire:
         return original_fn(component, args_, component_trace, treatment, target, *args, **kwargs)
 
     @staticmethod
-    def __get_context_and_component(component):
+    def __get_context_and_component(
+        component: Any,
+    ) -> Tuple[Dict[str, Any], Any]:
         context = {}
         component_context = component
         # Walk through the stack to find the arguments with fire.Fire() has been called.
@@ -232,7 +266,7 @@ class PatchFire:
         return context, component_context
 
     @staticmethod
-    def __get_all_groups_and_commands(component, context):
+    def __get_all_groups_and_commands(component: Any, context: Dict[str, Any]) -> Tuple[List[str], Dict[str, Any]]:
         groups = []
         commands = {}
         # skip modules
@@ -244,7 +278,10 @@ class PatchFire:
             query_group = group_args[-1]
             groups.append(PatchFire._commands_sep.join(query_group))
             group_args = group_args[:-1]
-            current_groups, current_commands = PatchFire.__get_groups_and_commands_for_args(
+            (
+                current_groups,
+                current_commands,
+            ) = PatchFire.__get_groups_and_commands_for_args(
                 component_trace_result, query_group, PatchFire.__default_args, context
             )
             for command in current_commands:
@@ -257,7 +294,13 @@ class PatchFire:
         return groups, commands
 
     @staticmethod
-    def __get_groups_and_commands_for_args(component, args_, parsed_flag_args, context, name=None):
+    def __get_groups_and_commands_for_args(
+        component: Any,
+        args_: List[str],
+        parsed_flag_args: Dict[str, Any],
+        context: Dict[str, Any],
+        name: Optional[str] = None,
+    ) -> Tuple[List[Tuple[str, Any]], List[Tuple[str, Any]]]:
         component_trace = PatchFire.__safe_Fire(component, args_, parsed_flag_args, context, name=name)
         # set verbose to True or else we might miss some commands
         groups, commands, _, _ = fire.helptext._GetActionsGroupedByKind(component_trace, verbose=True)  # noqa
@@ -266,7 +309,7 @@ class PatchFire:
         return groups, commands
 
     @staticmethod
-    def __get_current_command(args_, groups, commands):
+    def __get_current_command(args_: List[str], groups: List[str], commands: Dict[str, Any]) -> Optional[str]:
         current_command = ""
         for arg in args_:
             prefix = (current_command + PatchFire._commands_sep) if len(current_command) > 0 else ""
@@ -280,18 +323,30 @@ class PatchFire:
         return None
 
     @staticmethod
-    def __get_command_args(component, args_, parsed_flag_args, context, name=None):
+    def __get_command_args(
+        component: Any,
+        args_: List[str],
+        parsed_flag_args: Dict[str, Any],
+        context: Dict[str, Any],
+        name: Optional[str] = None,
+    ) -> List[str]:
         component_trace = PatchFire.__safe_Fire(component, args_, parsed_flag_args, context, name=None)
         fn_spec = fire.inspectutils.GetFullArgSpec(component_trace)
         return fn_spec.args
 
     @staticmethod
-    def __safe_Fire(component, args_, parsed_flag_args, context, name=None):
+    def __safe_Fire(
+        component: Any,
+        args_: List[str],
+        parsed_flag_args: Dict[str, Any],
+        context: Dict[str, Any],
+        name: Optional[str] = None,
+    ) -> Any:
         orig = None
         # noinspection PyBroadException
         try:
 
-            def __CallAndUpdateTrace_rogue_call_guard(*args, **kwargs):
+            def __CallAndUpdateTrace_rogue_call_guard(*args: Any, **kwargs: Any) -> None:
                 raise fire.core.FireError()
 
             orig = fire.core._CallAndUpdateTrace  # noqa
@@ -305,7 +360,7 @@ class PatchFire:
         return result
 
     @staticmethod
-    def _load_task_params():
+    def _load_task_params() -> Optional[str]:
         if not PatchFire.__remote_task_params:
             from clearml import Task
 

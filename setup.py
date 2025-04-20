@@ -61,8 +61,6 @@ setup(
         'Topic :: Software Development :: Version Control',
         'Topic :: System :: Logging',
         'Topic :: System :: Monitoring',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
@@ -105,7 +103,8 @@ setup(
             'clearml-init = clearml.cli.config.__main__:main',
             'clearml-data = clearml.cli.data.__main__:main',
             'clearml-task = clearml.cli.task.__main__:main',
-            'clearml-param-search = clearml.cli.hpo.__main__:main'
+            'clearml-param-search = clearml.cli.hpo.__main__:main',
+            'clearml-debug = clearml.cli.debug.__main__:main'
         ],
     },
 )

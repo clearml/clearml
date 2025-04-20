@@ -1,17 +1,24 @@
 """ ClearML configuration wizard"""
 from __future__ import print_function
 
-import six
 import argparse
 import os
+import urllib
+from typing import Tuple, List, Dict, Optional, Any
+from urllib.parse import ParseResult
 
+import six
 from pathlib2 import Path
 from six.moves import input
 from six.moves.urllib.parse import urlparse
 
 from clearml.backend_api.session import Session
 from clearml.backend_api.session.defs import ENV_HOST
-from clearml.backend_config.defs import LOCAL_CONFIG_FILES, LOCAL_CONFIG_FILE_OVERRIDE_VAR
+from clearml.backend_config import Config
+from clearml.backend_config.defs import (
+    LOCAL_CONFIG_FILES,
+    LOCAL_CONFIG_FILE_OVERRIDE_VAR,
+)
 from clearml.config import config_obj
 from clearml.utilities.pyhocon import ConfigFactory, ConfigMissingException
 
@@ -37,13 +44,13 @@ except Exception:
     def_host = "http://localhost:8080"
 
 
-def validate_file(string):
+def validate_file(string: str) -> str:
     if not string:
         raise argparse.ArgumentTypeError("expected a valid file path")
     return string
 
 
-def main():
+def main() -> None:
     default_config_file = LOCAL_CONFIG_FILE_OVERRIDE_VAR.get()
     if not default_config_file:
         for f in LOCAL_CONFIG_FILES:
@@ -145,7 +152,11 @@ def main():
             else:
                 hosts_dict[host_type] = input_url(host_type)
 
-    api_host, files_host, web_host = hosts_dict["API"], hosts_dict["Files"], hosts_dict["Web"]
+    api_host, files_host, web_host = (
+        hosts_dict["API"],
+        hosts_dict["Files"],
+        hosts_dict["Web"],
+    )
 
     # one of these two we configured
     if not web_input:
@@ -196,7 +207,14 @@ def main():
                 '    credentials {"access_key": "%s", "secret_key": "%s"}\n'
                 "}\n"
                 "sdk "
-                % (api_host, web_host, files_host, web_host, credentials["access_key"], credentials["secret_key"])
+                % (
+                    api_host,
+                    web_host,
+                    files_host,
+                    web_host,
+                    credentials["access_key"],
+                    credentials["secret_key"],
+                )
             )
             f.write(header)
             f.write(default_sdk)
@@ -208,7 +226,7 @@ def main():
     print("ClearML setup completed successfully.")
 
 
-def parse_known_host(parsed_host):
+def parse_known_host(parsed_host: Any) -> Tuple[str, str, str]:
     if parsed_host.netloc.startswith("demoapp."):
         # this is our demo server
         api_host = parsed_host.scheme + "://" + parsed_host.netloc.replace("demoapp.", "demoapi.", 1) + parsed_host.path
@@ -262,7 +280,7 @@ def parse_known_host(parsed_host):
     return api_host, files_host, web_host
 
 
-def verify_credentials(api_host, credentials):
+def verify_credentials(api_host: str, credentials: dict) -> bool:
     """check if the credentials are valid"""
     # noinspection PyBroadException
     try:
@@ -288,7 +306,7 @@ def verify_credentials(api_host, credentials):
         return False
 
 
-def get_parsed_field(parsed_config, fields):
+def get_parsed_field(parsed_config: Config, fields: List[str]) -> Any:
     """
     Parsed the value from web profile page, 'copy to clipboard' option
     :param parsed_config: The parsed value from the web ui
@@ -308,7 +326,7 @@ def get_parsed_field(parsed_config, fields):
             return None
 
 
-def read_manual_credentials():
+def read_manual_credentials() -> Dict[str, str]:
     print("Enter user access key: ", end="")
     access_key = input()
     print("Enter user secret: ", end="")
@@ -316,9 +334,12 @@ def read_manual_credentials():
     return {"access_key": access_key, "secret_key": secret_key}
 
 
-def input_url(host_type, host=None):
+def input_url(host_type: str, host: str = None) -> str:
     while True:
-        print("{} configured to: {}".format(host_type, "[{}] ".format(host) if host else ""), end="")
+        print(
+            "{} configured to: {}".format(host_type, "[{}] ".format(host) if host else ""),
+            end="",
+        )
         parse_input = input()
         if host and (not parse_input or parse_input.lower() == "yes" or parse_input.lower() == "y"):
             break
@@ -329,7 +350,7 @@ def input_url(host_type, host=None):
     return host
 
 
-def input_host_port(host_type, parsed_host):
+def input_host_port(host_type: str, parsed_host: urllib.parse.ParseResult) -> str:
     print("Enter port for {} host ".format(host_type), end="")
     replace_port = input().lower()
     return (
@@ -341,7 +362,7 @@ def input_host_port(host_type, parsed_host):
     )
 
 
-def verify_url(parse_input):
+def verify_url(parse_input: str) -> Optional[ParseResult]:
     # noinspection PyBroadException
     try:
         if not parse_input.startswith("http://") and not parse_input.startswith("https://"):
@@ -355,7 +376,10 @@ def verify_url(parse_input):
             parsed_host = None
     except Exception:
         parsed_host = None
-        print("Could not parse url {}\nEnter your clearml-server host: ".format(parse_input), end="")
+        print(
+            "Could not parse url {}\nEnter your clearml-server host: ".format(parse_input),
+            end="",
+        )
     return parsed_host
 
 

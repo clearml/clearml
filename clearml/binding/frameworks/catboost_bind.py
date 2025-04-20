@@ -1,8 +1,8 @@
 import sys
-
-from pathlib2 import Path
+from typing import Callable, Union, IO, Any
 
 import six
+from pathlib2 import Path
 
 from ..frameworks import WeightsFileHandler, _Empty, _patched_call
 from ..frameworks.base_bind import PatchBaseModelIO
@@ -16,7 +16,7 @@ class PatchCatBoostModelIO(PatchBaseModelIO):
     __callback_cls = None
 
     @staticmethod
-    def update_current_task(task, **kwargs):
+    def update_current_task(task: Framework, **kwargs: Any) -> None:
         PatchCatBoostModelIO._current_task = task
         if not task:
             return
@@ -24,7 +24,7 @@ class PatchCatBoostModelIO(PatchBaseModelIO):
         PostImportHookPatching.add_on_import("catboost", PatchCatBoostModelIO._patch_model_io)
 
     @staticmethod
-    def _patch_model_io():
+    def _patch_model_io() -> None:
         if PatchCatBoostModelIO.__patched:
             return
         if "catboost" not in sys.modules:
@@ -32,7 +32,12 @@ class PatchCatBoostModelIO(PatchBaseModelIO):
         PatchCatBoostModelIO.__patched = True
         # noinspection PyBroadException
         try:
-            from catboost import CatBoost, CatBoostClassifier, CatBoostRegressor, CatBoostRanker
+            from catboost import (
+                CatBoost,
+                CatBoostClassifier,
+                CatBoostRegressor,
+                CatBoostRanker,
+            )
 
             CatBoost.save_model = _patched_call(CatBoost.save_model, PatchCatBoostModelIO._save)
             CatBoost.load_model = _patched_call(CatBoost.load_model, PatchCatBoostModelIO._load)
@@ -46,7 +51,13 @@ class PatchCatBoostModelIO(PatchBaseModelIO):
             logger.report_text("Failed patching Catboost. Exception is: '" + str(e) + "'")
 
     @staticmethod
-    def _save(original_fn, obj, f, *args, **kwargs):
+    def _save(
+        original_fn: Callable,
+        obj: Any,
+        f: Union[str, IO],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         # see https://catboost.ai/en/docs/concepts/python-reference_catboost_save_model
         ret = original_fn(obj, f, *args, **kwargs)
         if not PatchCatBoostModelIO._current_task:
@@ -62,12 +73,17 @@ class PatchCatBoostModelIO(PatchBaseModelIO):
         except Exception:
             model_name = None
         WeightsFileHandler.create_output_model(
-            obj, filename, Framework.catboost, PatchCatBoostModelIO._current_task, singlefile=True, model_name=model_name
+            obj,
+            filename,
+            Framework.catboost,
+            PatchCatBoostModelIO._current_task,
+            singlefile=True,
+            model_name=model_name,
         )
         return ret
 
     @staticmethod
-    def _load(original_fn, f, *args, **kwargs):
+    def _load(original_fn: Callable, f: Union[str, Any], *args: Any, **kwargs: Any) -> Any:
         # see https://catboost.ai/en/docs/concepts/python-reference_catboost_load_model
         if not PatchCatBoostModelIO._current_task:
             return original_fn(f, *args, **kwargs)
@@ -92,7 +108,7 @@ class PatchCatBoostModelIO(PatchBaseModelIO):
         return model
 
     @staticmethod
-    def _fit(original_fn, obj, *args, **kwargs):
+    def _fit(original_fn: Callable, obj: Any, *args: Any, **kwargs: Any) -> Any:
         if not PatchCatBoostModelIO._current_task:
             return original_fn(obj, *args, **kwargs)
         callbacks = kwargs.get("callbacks") or []
@@ -110,16 +126,16 @@ class PatchCatBoostModelIO(PatchBaseModelIO):
             return original_fn(obj, *args, **kwargs)
 
     @staticmethod
-    def _generate_training_callback_class():
+    def _generate_training_callback_class() -> Any:
         class ClearMLCallback:
             _scalar_index_counter = 0
 
-            def __init__(self, task):
+            def __init__(self, task: Any) -> None:
                 self._logger = task.get_logger()
                 self._scalar_index = ClearMLCallback._scalar_index_counter
                 ClearMLCallback._scalar_index_counter += 1
 
-            def after_iteration(self, info):
+            def after_iteration(self, info: Any) -> bool:
                 info = vars(info)
                 iteration = info.get("iteration")
                 for title, metric in (info.get("metrics") or {}).items():

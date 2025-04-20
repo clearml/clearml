@@ -1,10 +1,11 @@
 import sys
+from typing import Callable, Union, IO, Any
 
 import six
 from pathlib2 import Path
 
-from ..frameworks.base_bind import PatchBaseModelIO
 from ..frameworks import _patched_call, WeightsFileHandler, _Empty
+from ..frameworks.base_bind import PatchBaseModelIO
 from ..import_bind import PostImportHookPatching
 from ...model import Framework
 
@@ -14,21 +15,19 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
     __patched = None
 
     @staticmethod
-    def update_current_task(task, **_):
+    def update_current_task(task: Any, **_: Any) -> None:
         PatchMegEngineModelIO._current_task = task
         if not task:
             return
         PatchMegEngineModelIO._patch_model_io()
-        PostImportHookPatching.add_on_import(
-            'megengine', PatchMegEngineModelIO._patch_model_io
-        )
+        PostImportHookPatching.add_on_import("megengine", PatchMegEngineModelIO._patch_model_io)
 
     @staticmethod
-    def _patch_model_io():
+    def _patch_model_io() -> None:
         if PatchMegEngineModelIO.__patched:
             return
 
-        if 'megengine' not in sys.modules:
+        if "megengine" not in sys.modules:
             return
 
         PatchMegEngineModelIO.__patched = True
@@ -36,17 +35,17 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
         # noinspection PyBroadException
         try:
             import megengine as mge  # noqa
+
             mge.save = _patched_call(mge.save, PatchMegEngineModelIO._save)
             mge.load = _patched_call(mge.load, PatchMegEngineModelIO._load)
 
             # no need to worry about recursive calls, _patched_call takes care of that  # noqa
-            if hasattr(mge, 'serialization') and hasattr(mge.serialization, 'save'):  # noqa
-                mge.serialization.save = _patched_call(
-                    mge.serialization.save, PatchMegEngineModelIO._save
-                )
-            if hasattr(mge, 'serialization') and hasattr(mge.serialization, 'load'):  # noqa
+            if hasattr(mge, "serialization") and hasattr(mge.serialization, "save"):  # noqa
+                mge.serialization.save = _patched_call(mge.serialization.save, PatchMegEngineModelIO._save)
+            if hasattr(mge, "serialization") and hasattr(mge.serialization, "load"):  # noqa
                 mge.serialization.load = _patched_call(
-                    mge.serialization.load, PatchMegEngineModelIO._load,
+                    mge.serialization.load,
+                    PatchMegEngineModelIO._load,
                 )
         except ImportError:
             pass
@@ -54,7 +53,7 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
             pass
 
     @staticmethod
-    def _save(original_fn, obj, f, *args, **kwargs):
+    def _save(original_fn: Callable, obj: Any, f: Union[str, Path, IO], *args: Any, **kwargs: Any) -> Any:
         ret = original_fn(obj, f, *args, **kwargs)
 
         # if there is no main task or this is a nested call
@@ -65,9 +64,9 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
         try:
             if isinstance(f, six.string_types):
                 filename = f
-            elif hasattr(f, 'as_posix'):
+            elif hasattr(f, "as_posix"):
                 filename = f.as_posix()
-            elif hasattr(f, 'name'):
+            elif hasattr(f, "name"):
                 # noinspection PyBroadException
                 try:
                     f.flush()
@@ -92,15 +91,18 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
             model_name = None
 
         WeightsFileHandler.create_output_model(
-            obj, filename, Framework.megengine,
+            obj,
+            filename,
+            Framework.megengine,
             PatchMegEngineModelIO._current_task,
-            singlefile=True, model_name=model_name,
+            singlefile=True,
+            model_name=model_name,
         )
 
         return ret
 
     @staticmethod
-    def _load(original_fn, f, *args, **kwargs):
+    def _load(original_fn: Callable, f: Union[str, Path, IO], *args: Any, **kwargs: Any) -> Any:
         # if there is no main task or this is a nested call
         if not PatchMegEngineModelIO._current_task:
             return original_fn(f, *args, **kwargs)
@@ -109,9 +111,9 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
         try:
             if isinstance(f, six.string_types):
                 filename = f
-            elif hasattr(f, 'as_posix'):
+            elif hasattr(f, "as_posix"):
                 filename = f.as_posix()
-            elif hasattr(f, 'name'):
+            elif hasattr(f, "name"):
                 filename = f.name
             else:
                 filename = None
@@ -123,8 +125,7 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
         # try to load model before registering, in case we fail
         model = original_fn(f, *args, **kwargs)
         WeightsFileHandler.restore_weights_file(
-            empty, filename, Framework.megengine,
-            PatchMegEngineModelIO._current_task
+            empty, filename, Framework.megengine, PatchMegEngineModelIO._current_task
         )
 
         if empty.trains_in_model:
@@ -137,7 +138,7 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
         return model
 
     @staticmethod
-    def _load_from_obj(original_fn, obj, f, *args, **kwargs):
+    def _load_from_obj(original_fn: Callable, obj: Any, f: Union[str, Path, IO], *args: Any, **kwargs: Any) -> Any:
         # if there is no main task or this is a nested call
         if not PatchMegEngineModelIO._current_task:
             return original_fn(obj, f, *args, **kwargs)
@@ -146,9 +147,9 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
         try:
             if isinstance(f, six.string_types):
                 filename = f
-            elif hasattr(f, 'as_posix'):
+            elif hasattr(f, "as_posix"):
                 filename = f.as_posix()
-            elif hasattr(f, 'name'):
+            elif hasattr(f, "name"):
                 filename = f.name
             else:
                 filename = None
@@ -160,7 +161,9 @@ class PatchMegEngineModelIO(PatchBaseModelIO):
         # try to load model before registering, in case we fail
         model = original_fn(obj, f, *args, **kwargs)
         WeightsFileHandler.restore_weights_file(
-            empty, filename, Framework.megengine,
+            empty,
+            filename,
+            Framework.megengine,
             PatchMegEngineModelIO._current_task,
         )
 

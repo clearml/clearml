@@ -1,15 +1,14 @@
-from typing import Optional
+from typing import Optional, List, Tuple
 
 
 def get_input(
-    key,  # type: str
-    description="",  # type: str
-    question="Enter",  # type: str
-    required=False,  # type: bool
-    default=None,  # type: Optional[str]
-    new_line=False,  # type: bool
-):
-    # type: (...) -> Optional[str]
+    key: str,
+    description: str = "",
+    question: str = "Enter",
+    required: bool = False,
+    default: Optional[str] = None,
+    new_line: bool = False,
+) -> Optional[str]:
     if new_line:
         print()
     while True:
@@ -23,13 +22,12 @@ def get_input(
 
 
 def input_int(
-    key,  # type: str
-    description="",  # type: str
-    required=False,  # type: bool
-    default=None,  # type: Optional[int]
-    new_line=False,  # type: bool
-):
-    # type: (...) -> Optional[int]
+    key: str,
+    description: str = "",
+    required: bool = False,
+    default: Optional[int] = None,
+    new_line: bool = False,
+) -> Optional[int]:
     while True:
         try:
             value = int(
@@ -46,8 +44,7 @@ def input_int(
             print("Invalid input: {} should be a number. Please enter an integer".format(key))
 
 
-def input_bool(question, default=False):
-    # type: (str, bool) -> bool
+def input_bool(question: str, default: bool = False) -> bool:
     """
     :param question: string to display
     :param default: default boolean value
@@ -68,13 +65,13 @@ def input_bool(question, default=False):
 
 
 def input_list(
-    key,  # type: str
-    description="",  # type: str
-    question="Enter",  # type: str
-    required=False,  # type: bool
-    default=None,  # type: Optional[str]
-    new_line=False,  # type: bool
-):
+    key: str,
+    description: str = "",
+    question: str = "Enter",
+    required: bool = False,
+    default: Optional[str] = None,
+    new_line: bool = False,
+) -> Optional[List[str]]:
     res = get_input(key, description, question, required, default, new_line)
     if not res:
         return None
@@ -94,7 +91,7 @@ def input_list(
     return res_list
 
 
-def multiline_input(description=""):
+def multiline_input(description: str = "") -> Tuple[str, int]:
     print("{} \nNote: two consecutive empty lines would terminate the input : ".format(description))
     lines = []
     empty_lines = 0

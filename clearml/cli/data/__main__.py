@@ -3,7 +3,7 @@ import os
 import shutil
 from argparse import ArgumentParser, HelpFormatter
 from functools import partial
-from typing import Sequence
+from typing import Sequence, Optional, Dict, Any
 
 from pathlib2 import Path
 
@@ -14,13 +14,12 @@ from clearml.version import __version__
 clearml.backend_api.session.Session.add_client("clearml-data", __version__)
 
 
-def check_null_id(args):
+def check_null_id(args: Any) -> None:
     if not getattr(args, "id", None):
         raise ValueError("Dataset ID not specified, add --id <dataset_id>")
 
 
-def print_args(args, exclude=("command", "func", "verbose")):
-    # type: (object, Sequence[str]) -> ()
+def print_args(args: Any, exclude: Sequence[str] = ("command", "func", "verbose")) -> ():
     if not getattr(args, "verbose", None):
         return
     for arg in args.__dict__:
@@ -29,7 +28,7 @@ def print_args(args, exclude=("command", "func", "verbose")):
         print("{}={}".format(arg, args.__dict__[arg]))
 
 
-def restore_state(args):
+def restore_state(args: Any) -> Any:
     session_state_file = os.path.expanduser("~/.clearml_data.json")
     # noinspection PyBroadException
     try:
@@ -51,7 +50,7 @@ def restore_state(args):
     return args
 
 
-def clear_state(state=None):
+def clear_state(state: Optional[Dict] = None) -> None:
     session_state_file = os.path.expanduser("~/.clearml_data.json")
     # noinspection PyBroadException
     try:
@@ -61,8 +60,7 @@ def clear_state(state=None):
         pass
 
 
-def cli():
-    # type: () -> int
+def cli() -> int:
     title = "clearml-data - Dataset Management & Versioning CLI"
     print(title)
     parser = ArgumentParser(  # noqa
@@ -130,7 +128,12 @@ def cli():
             "Example: s3://bucket/data azure://bucket/folder"
         ),
     )
-    add.add_argument("--non-recursive", action="store_true", default=False, help="Disable recursive scan of files")
+    add.add_argument(
+        "--non-recursive",
+        action="store_true",
+        default=False,
+        help="Disable recursive scan of files",
+    )
     add.add_argument("--verbose", action="store_true", default=False, help="Verbose reporting")
     add.add_argument(
         "--max-workers",
@@ -172,7 +175,7 @@ def cli():
         "--folder",
         type=str,
         required=True,
-        help="Local folder to sync (support for wildcard selection). " "Example: ~/data/*.jpg",
+        help="Local folder to sync (support for wildcard selection). Example: ~/data/*.jpg",
     )
     sync.add_argument(
         "--parents",
@@ -181,9 +184,27 @@ def cli():
         help="[Optional] Specify dataset parents IDs (i.e. merge all parents). "
         "Example: a17b4fID1 f0ee5ID2 a17b4f09eID3",
     )
-    sync.add_argument("--project", type=str, required=False, default=None, help="[Optional] Dataset project name")
-    sync.add_argument("--name", type=str, required=False, default=None, help="[Optional] Dataset project name")
-    sync.add_argument("--version", type=str, required=False, default=None, help="[Optional] Dataset version")
+    sync.add_argument(
+        "--project",
+        type=str,
+        required=False,
+        default=None,
+        help="[Optional] Dataset project name",
+    )
+    sync.add_argument(
+        "--name",
+        type=str,
+        required=False,
+        default=None,
+        help="[Optional] Dataset project name",
+    )
+    sync.add_argument(
+        "--version",
+        type=str,
+        required=False,
+        default=None,
+        help="[Optional] Dataset version",
+    )
     sync.add_argument(
         "--output-uri",
         type=str,
@@ -201,7 +222,10 @@ def cli():
         "'/mnt/shared/folder/data'",
     )
     sync.add_argument(
-        "--skip-close", action="store_true", default=False, help="Do not auto close dataset after syncing folders"
+        "--skip-close",
+        action="store_true",
+        default=False,
+        help="Do not auto close dataset after syncing folders",
     )
     sync.add_argument(
         "--chunk-size",
@@ -229,7 +253,12 @@ def cli():
         "Notice: File path is the dataset path not the local path. "
         "Example: data/*.jpg data/jsons/",
     )
-    remove.add_argument("--non-recursive", action="store_true", default=False, help="Disable recursive scan of files")
+    remove.add_argument(
+        "--non-recursive",
+        action="store_true",
+        default=False,
+        help="Disable recursive scan of files",
+    )
     remove.add_argument("--verbose", action="store_true", default=False, help="Verbose reporting")
     remove.set_defaults(func=ds_remove)
 
@@ -280,7 +309,10 @@ def cli():
         "'/mnt/shared/folder/data'",
     )
     finalize.add_argument(
-        "--disable-upload", action="store_true", default=False, help="Disable automatic upload when closing the dataset"
+        "--disable-upload",
+        action="store_true",
+        default=False,
+        help="Disable automatic upload when closing the dataset",
     )
     finalize.add_argument(
         "--chunk-size",
@@ -310,49 +342,103 @@ def cli():
         help="Previously created dataset id. Default: previously created/accessed dataset",
     )
     delete.add_argument(
-        "--project", type=str, required=False, help="The project the dataset(s) to be deleted belong(s) to"
+        "--project",
+        type=str,
+        required=False,
+        help="The project the dataset(s) to be deleted belong(s) to",
     )
-    delete.add_argument("--name", type=str, required=False, help="The name of the dataset(s) to be deleted")
-    delete.add_argument("--version", type=str, required=False, help="The version of the dataset(s) to be deleted")
+    delete.add_argument(
+        "--name",
+        type=str,
+        required=False,
+        help="The name of the dataset(s) to be deleted",
+    )
+    delete.add_argument(
+        "--version",
+        type=str,
+        required=False,
+        help="The version of the dataset(s) to be deleted",
+    )
     delete.add_argument(
         "--force",
         action="store_true",
         default=False,
         help="Force dataset deletion even if other dataset versions depend on it. Must also be used if entire-dataset flag is used",
     )
-    delete.add_argument("--entire-dataset", action="store_true", default=False, help="Delete all found datasets")
+    delete.add_argument(
+        "--entire-dataset",
+        action="store_true",
+        default=False,
+        help="Delete all found datasets",
+    )
     delete.set_defaults(func=ds_delete)
 
     rename = subparsers.add_parser("rename", help="Rename a dataset")
     rename.add_argument("--new-name", type=str, required=True, help="The new name of the dataset(s)")
     rename.add_argument(
-        "--project", type=str, required=True, help="The project the dataset(s) to be renamed belong(s) to"
+        "--project",
+        type=str,
+        required=True,
+        help="The project the dataset(s) to be renamed belong(s) to",
     )
-    rename.add_argument("--name", type=str, required=True, help="The name of the dataset(s) to be renamed")
+    rename.add_argument(
+        "--name",
+        type=str,
+        required=True,
+        help="The name of the dataset(s) to be renamed",
+    )
     rename.set_defaults(func=ds_rename)
 
     move = subparsers.add_parser("move", help="Move a dataset to another project")
-    move.add_argument("--new-project", type=str, required=True, help="The new project of the dataset(s)")
-    move.add_argument("--project", type=str, required=True, help="The project the dataset(s) to be moved belong(s) to")
+    move.add_argument(
+        "--new-project",
+        type=str,
+        required=True,
+        help="The new project of the dataset(s)",
+    )
+    move.add_argument(
+        "--project",
+        type=str,
+        required=True,
+        help="The project the dataset(s) to be moved belong(s) to",
+    )
     move.add_argument("--name", type=str, required=True, help="The name of the dataset(s) to be moved")
     move.set_defaults(func=ds_move)
 
     compare = subparsers.add_parser("compare", help="Compare two datasets (target vs source)")
     compare.add_argument("--source", type=str, required=True, help="Source dataset id (used as baseline)")
     compare.add_argument(
-        "--target", type=str, required=True, help="Target dataset id (compare against the source baseline dataset)"
+        "--target",
+        type=str,
+        required=True,
+        help="Target dataset id (compare against the source baseline dataset)",
     )
     compare.add_argument(
-        "--verbose", default=False, action="store_true", help="Verbose report all file changes (instead of summary)"
+        "--verbose",
+        default=False,
+        action="store_true",
+        help="Verbose report all file changes (instead of summary)",
     )
     compare.set_defaults(func=ds_compare)
 
-    squash = subparsers.add_parser("squash", help="Squash multiple datasets into a single dataset version (merge down)")
+    squash = subparsers.add_parser(
+        "squash",
+        help="Squash multiple datasets into a single dataset version (merge down)",
+    )
     squash.add_argument("--name", type=str, required=True, help="Create squashed dataset name")
-    squash.add_argument("--ids", type=str, required=True, nargs="*", help="Source dataset IDs to squash (merge down)")
+    squash.add_argument(
+        "--ids",
+        type=str,
+        required=True,
+        nargs="*",
+        help="Source dataset IDs to squash (merge down)",
+    )
     squash.add_argument("--storage", type=str, default=None, help="See `upload storage`")
     squash.add_argument(
-        "--verbose", default=False, action="store_true", help="Verbose report all file changes (instead of summary)"
+        "--verbose",
+        default=False,
+        action="store_true",
+        help="Verbose report all file changes (instead of summary)",
     )
     squash.set_defaults(func=ds_squash)
 
@@ -368,13 +454,19 @@ def cli():
         help="If set, return datasets that are still in progress as well",
     )
     search.add_argument(
-        "--non-recursive-project-search", action="store_true", default=False, help="Don't search inside subprojects"
+        "--non-recursive-project-search",
+        action="store_true",
+        default=False,
+        help="Don't search inside subprojects",
     )
     search.set_defaults(func=ds_search)
 
     verify = subparsers.add_parser("verify", help="Verify local dataset content")
     verify.add_argument(
-        "--id", type=str, required=False, help="Specify dataset id. Default: previously created/accessed dataset"
+        "--id",
+        type=str,
+        required=False,
+        help="Specify dataset id. Default: previously created/accessed dataset",
     )
     verify.add_argument(
         "--folder",
@@ -423,19 +515,22 @@ def cli():
         help="Previously created dataset id. Default: previously created/accessed dataset",
     )
     get.add_argument(
-        "--copy", type=str, default=None, help="Get a writable copy of the dataset to a specific output folder"
+        "--copy",
+        type=str,
+        default=None,
+        help="Get a writable copy of the dataset to a specific output folder",
     )
     get.add_argument(
         "--link",
         type=str,
         default=None,
-        help="Create a soft link (not supported on Windows) to a " "read-only cached folder containing the dataset",
+        help="Create a soft link (not supported on Windows) to a read-only cached folder containing the dataset",
     )
     get.add_argument(
         "--part",
         type=int,
         default=None,
-        help="Retrieve a partial copy of the dataset. " "Part number (0 to `num-parts`-1) of total parts --num-parts.",
+        help="Retrieve a partial copy of the dataset. Part number (0 to `num-parts`-1) of total parts --num-parts.",
     )
     get.add_argument(
         "--num-parts",
@@ -446,7 +541,12 @@ def cli():
         "Example: Dataset gen4, with 3 parents, each with a single chunk, "
         "can be divided into 4 parts",
     )
-    get.add_argument("--overwrite", action="store_true", default=False, help="If True, overwrite the target folder")
+    get.add_argument(
+        "--overwrite",
+        action="store_true",
+        default=False,
+        help="If True, overwrite the target folder",
+    )
     get.add_argument("--verbose", action="store_true", default=False, help="Verbose reporting")
     get.add_argument(
         "--max-workers",
@@ -466,7 +566,7 @@ def cli():
     return 0
 
 
-def ds_delete(args):
+def ds_delete(args: Any) -> int:
     if args.id:
         print("Deleting dataset id {}".format(args.id))
     else:
@@ -485,7 +585,7 @@ def ds_delete(args):
     return 0
 
 
-def ds_rename(args):
+def ds_rename(args: Any) -> int:
     print("Renaming dataset with project={}, name={} to {}".format(args.project, args.name, args.new_name))
     print_args(args)
     Dataset.rename(
@@ -498,7 +598,7 @@ def ds_rename(args):
     return 0
 
 
-def ds_move(args):
+def ds_move(args: Any) -> int:
     print("Moving dataset with project={}, name={} to {}".format(args.project, args.name, args.new_project))
     print_args(args)
     Dataset.move_to_project(
@@ -511,13 +611,15 @@ def ds_move(args):
     return 0
 
 
-def ds_verify(args):
+def ds_verify(args: Any) -> None:
     print("Verify dataset id {}".format(args.id))
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
     files_error = ds.verify_dataset_hash(
-        local_copy_path=args.folder or None, skip_hash=args.filesize, verbose=args.verbose
+        local_copy_path=args.folder or None,
+        skip_hash=args.filesize,
+        verbose=args.verbose,
     )
     if files_error:
         print("Dataset verification completed, {} errors found!".format(len(files_error)))
@@ -525,7 +627,7 @@ def ds_verify(args):
         print("Dataset verification completed successfully, no errors found.")
 
 
-def ds_get(args):
+def ds_get(args: Any) -> int:
     print("Download dataset id {}".format(args.id))
     check_null_id(args)
     print_args(args)
@@ -547,7 +649,10 @@ def ds_get(args):
     if args.copy:
         ds_folder = args.copy
         ds.get_mutable_local_copy(
-            target_folder=ds_folder, part=args.part, num_parts=args.num_parts, max_workers=args.max_workers
+            target_folder=ds_folder,
+            part=args.part,
+            num_parts=args.num_parts,
+            max_workers=args.max_workers,
         )
     else:
         if args.link:
@@ -568,7 +673,7 @@ def ds_get(args):
     return 0
 
 
-def ds_list(args):
+def ds_list(args: Any) -> int:
     print("List dataset content: {}".format(args.id or (args.project, args.name)))
     print_args(args)
     ds = Dataset.get(
@@ -610,7 +715,7 @@ def ds_list(args):
     return 0
 
 
-def ds_squash(args):
+def ds_squash(args: Any) -> int:
     print("Squashing datasets ids={} into target dataset named '{}'".format(args.ids, args.name))
     print_args(args)
     ds = Dataset.squash(dataset_name=args.name, dataset_ids=args.ids, output_url=args.storage or None)
@@ -618,7 +723,7 @@ def ds_squash(args):
     return 0
 
 
-def ds_search(args):
+def ds_search(args: Any) -> int:
     print("Search datasets")
     print_args(args)
     datasets = Dataset.list_datasets(
@@ -629,7 +734,13 @@ def ds_search(args):
         only_completed=not args.not_only_completed,
         recursive_project_search=not args.non_recursive_project_search,
     )
-    projects_col_len, name_col_len, tags_col_len, created_col_len, id_col_len = 16, 32, 19, 19, 32
+    projects_col_len, name_col_len, tags_col_len, created_col_len, id_col_len = (
+        16,
+        32,
+        19,
+        19,
+        32,
+    )
     for d in datasets:
         projects_col_len = max(projects_col_len, len(d["project"]))
         name_col_len = max(name_col_len, len(d["name"]))
@@ -665,7 +776,7 @@ def ds_search(args):
     return 0
 
 
-def ds_compare(args):
+def ds_compare(args: Any) -> int:
     print("Comparing target dataset id {} with source dataset id {}".format(args.target, args.source))
     print_args(args)
     ds = Dataset.get(dataset_id=args.target)
@@ -688,7 +799,7 @@ def ds_compare(args):
     return 0
 
 
-def ds_close(args):
+def ds_close(args: Any) -> int:
     print("Finalizing dataset id {}".format(args.id))
     check_null_id(args)
     print_args(args)
@@ -712,7 +823,7 @@ def ds_close(args):
     return 0
 
 
-def ds_publish(args):
+def ds_publish(args: Any) -> int:
     print("Publishing dataset id {}".format(args.id))
     check_null_id(args)
     print_args(args)
@@ -726,7 +837,7 @@ def ds_publish(args):
     return 0
 
 
-def ds_upload(args):
+def ds_upload(args: Any) -> int:
     print("uploading local files to dataset id {}".format(args.id))
     check_null_id(args)
     print_args(args)
@@ -741,7 +852,7 @@ def ds_upload(args):
     return 0
 
 
-def ds_remove(args):
+def ds_remove(args: Any) -> int:
     print("Removing files/folder from dataset id {}".format(args.id))
     check_null_id(args)
     print_args(args)
@@ -754,7 +865,7 @@ def ds_remove(args):
     return 0
 
 
-def ds_sync(args):
+def ds_sync(args: Any) -> int:
     dataset_created = False
     if args.parents or (args.project and args.name):
         args.id = ds_create(args)
@@ -765,7 +876,9 @@ def ds_sync(args):
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
     removed, added, modified = ds.sync_folder(
-        local_path=args.folder, dataset_path=args.dataset_folder or None, verbose=args.verbose
+        local_path=args.folder,
+        dataset_path=args.dataset_folder or None,
+        verbose=args.verbose,
     )
 
     print("Sync completed: {} files removed, {} added, {} modified".format(removed, added, modified))
@@ -794,7 +907,7 @@ def ds_sync(args):
     return 0
 
 
-def ds_add(args):
+def ds_add(args: Any) -> int:
     print("Adding files/folder/links to dataset id {}".format(args.id))
     check_null_id(args)
     print_args(args)
@@ -823,7 +936,7 @@ def ds_add(args):
     return 0
 
 
-def ds_create(args):
+def ds_create(args: Any) -> str:
     print("Creating a new dataset:")
     print_args(args)
     if args.output_uri:
@@ -843,7 +956,7 @@ def ds_create(args):
     return ds.id
 
 
-def ds_set_description(args):
+def ds_set_description(args: Any) -> int:
     check_null_id(args)
     print("Setting description '{}' to dataset {}".format(args.description, args.id))
     print_args(args)
@@ -852,7 +965,7 @@ def ds_set_description(args):
     return 0
 
 
-def main():
+def main() -> None:
     try:
         exit(cli())
     except KeyboardInterrupt:

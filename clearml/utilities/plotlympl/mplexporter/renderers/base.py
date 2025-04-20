@@ -1,51 +1,51 @@
-import warnings
 import itertools
+import warnings
 from contextlib import contextmanager
-from clearml.utilities.distutils_version import LooseVersion
+from typing import Generator, Optional, Sequence, List, Tuple, Dict, Any
 
-import numpy as np
+import matplotlib
 import matplotlib as mpl
+import numpy as np
 from matplotlib import transforms
 
-from .. import utils
+from clearml.utilities.distutils_version import LooseVersion
 from .. import _py3k_compat as py3k
+from .. import utils
 
 
 class Renderer(object):
     @staticmethod
-    def ax_zoomable(ax):
+    def ax_zoomable(ax: Any) -> bool:
         return bool(ax and ax.get_navigate())
 
     @staticmethod
-    def ax_has_xgrid(ax):
+    def ax_has_xgrid(ax: Any) -> bool:
         if not ax:
             return False
-        _gridOnMajor = ax.xaxis._gridOnMajor if hasattr(ax.xaxis, '_gridOnMajor') \
-            else ax.xaxis._major_tick_kw['gridOn']
+        _gridOnMajor = ax.xaxis._gridOnMajor if hasattr(ax.xaxis, "_gridOnMajor") else ax.xaxis._major_tick_kw["gridOn"]
         return bool(ax and _gridOnMajor and ax.yaxis.get_gridlines())
 
     @staticmethod
-    def ax_has_ygrid(ax):
+    def ax_has_ygrid(ax: Any) -> bool:
         if not ax:
             return False
-        _gridOnMajor = ax.yaxis._gridOnMajor if hasattr(ax.yaxis, '_gridOnMajor') \
-            else ax.yaxis._major_tick_kw['gridOn']
+        _gridOnMajor = ax.yaxis._gridOnMajor if hasattr(ax.yaxis, "_gridOnMajor") else ax.yaxis._major_tick_kw["gridOn"]
         return bool(ax and _gridOnMajor and ax.yaxis.get_gridlines())
 
     @property
-    def current_ax_zoomable(self):
+    def current_ax_zoomable(self) -> bool:
         return self.ax_zoomable(self._current_ax)
 
     @property
-    def current_ax_has_xgrid(self):
+    def current_ax_has_xgrid(self) -> bool:
         return self.ax_has_xgrid(self._current_ax)
 
     @property
-    def current_ax_has_ygrid(self):
+    def current_ax_has_ygrid(self) -> bool:
         return self.ax_has_ygrid(self._current_ax)
 
     @contextmanager
-    def draw_figure(self, fig, props):
+    def draw_figure(self, fig: Any, props: dict) -> Generator[None, None, None]:
         if hasattr(self, "_current_fig") and self._current_fig is not None:
             warnings.warn("figure embedded in figure: something is wrong")
         self._current_fig = fig
@@ -57,7 +57,7 @@ class Renderer(object):
         self._fig_props = {}
 
     @contextmanager
-    def draw_axes(self, ax, props):
+    def draw_axes(self, ax: Any, props: dict) -> Generator[None, None, None]:
         if hasattr(self, "_current_ax") and self._current_ax is not None:
             warnings.warn("axes embedded in axes: something is wrong")
         self._current_ax = ax
@@ -69,7 +69,7 @@ class Renderer(object):
         self._ax_props = {}
 
     @contextmanager
-    def draw_legend(self, legend, props):
+    def draw_legend(self, legend: Any, props: dict) -> Generator[None, None, None]:
         self._current_legend = legend
         self._legend_props = props
         self.open_legend(legend=legend, props=props)
@@ -80,7 +80,7 @@ class Renderer(object):
 
     # Following are the functions which should be overloaded in subclasses
 
-    def open_figure(self, fig, props):
+    def open_figure(self, fig: Any, props: dict) -> None:
         """
         Begin commands for a particular figure.
 
@@ -93,7 +93,7 @@ class Renderer(object):
         """
         pass
 
-    def close_figure(self, fig):
+    def close_figure(self, fig: Any) -> None:
         """
         Finish commands for a particular figure.
 
@@ -104,7 +104,7 @@ class Renderer(object):
         """
         pass
 
-    def open_axes(self, ax, props):
+    def open_axes(self, ax: Any, props: dict) -> None:
         """
         Begin commands for a particular axes.
 
@@ -117,7 +117,7 @@ class Renderer(object):
         """
         pass
 
-    def close_axes(self, ax):
+    def close_axes(self, ax: Any) -> None:
         """
         Finish commands for a particular axes.
 
@@ -128,7 +128,7 @@ class Renderer(object):
         """
         pass
 
-    def open_legend(self, legend, props):
+    def open_legend(self, legend: Any, props: dict) -> None:
         """
         Beging commands for a particular legend.
 
@@ -141,7 +141,7 @@ class Renderer(object):
         """
         pass
 
-    def close_legend(self, legend):
+    def close_legend(self, legend: Any) -> None:
         """
         Finish commands for a particular legend.
 
@@ -152,8 +152,15 @@ class Renderer(object):
         """
         pass
 
-    def draw_marked_line(self, data, coordinates, linestyle, markerstyle,
-                         label, mplobj=None):
+    def draw_marked_line(
+        self,
+        data: Sequence,
+        coordinates: str,
+        linestyle: dict,
+        markerstyle: dict,
+        label: str,
+        mplobj: Optional[Any] = None,
+    ) -> None:
         """Draw a line that also has markers.
 
         If this isn't reimplemented by a renderer object, by default, it will
@@ -166,7 +173,14 @@ class Renderer(object):
         if markerstyle is not None:
             self.draw_markers(data, coordinates, markerstyle, label, mplobj)
 
-    def draw_line(self, data, coordinates, style, label, mplobj=None):
+    def draw_line(
+        self,
+        data: np.ndarray,
+        coordinates: str,
+        style: dict,
+        label: str,
+        mplobj: Optional[Any] = None,
+    ) -> None:
         """
         Draw a line. By default, draw the line via the draw_path() command.
         Some renderers might wish to override this and provide more
@@ -187,40 +201,61 @@ class Renderer(object):
         mplobj : matplotlib object
             the matplotlib plot element which generated this line
         """
-        pathcodes = ['M'] + (data.shape[0] - 1) * ['L']
-        pathstyle = dict(facecolor='none', **style)
-        pathstyle['edgecolor'] = pathstyle.pop('color')
-        pathstyle['edgewidth'] = pathstyle.pop('linewidth')
-        self.draw_path(data=data, coordinates=coordinates,
-                       pathcodes=pathcodes, style=pathstyle, mplobj=mplobj)
+        pathcodes = ["M"] + (data.shape[0] - 1) * ["L"]
+        pathstyle = dict(facecolor="none", **style)
+        pathstyle["edgecolor"] = pathstyle.pop("color")
+        pathstyle["edgewidth"] = pathstyle.pop("linewidth")
+        self.draw_path(
+            data=data,
+            coordinates=coordinates,
+            pathcodes=pathcodes,
+            style=pathstyle,
+            mplobj=mplobj,
+        )
 
     @staticmethod
-    def _iter_path_collection(paths, path_transforms, offsets, styles):
+    def _iter_path_collection(
+        paths: list, path_transforms: Sequence, offsets: Sequence, styles: dict
+    ) -> itertools.islice:
         """Build an iterator over the elements of the path collection"""
         N = max(len(paths), len(offsets))
 
         # Before mpl 1.4.0, path_transform can be a false-y value, not a valid
         # transformation matrix.
-        if LooseVersion(mpl.__version__) < LooseVersion('1.4.0'):
+        if LooseVersion(mpl.__version__) < LooseVersion("1.4.0"):
             if path_transforms is None:
                 path_transforms = [np.eye(3)]
 
-        edgecolor = styles['edgecolor']
+        edgecolor = styles["edgecolor"]
         if np.size(edgecolor) == 0:
-            edgecolor = ['none']
-        facecolor = styles['facecolor']
+            edgecolor = ["none"]
+        facecolor = styles["facecolor"]
         if np.size(facecolor) == 0:
-            facecolor = ['none']
+            facecolor = ["none"]
 
-        elements = [paths, path_transforms, offsets,
-                    edgecolor, styles['linewidth'], facecolor]
+        elements = [
+            paths,
+            path_transforms,
+            offsets,
+            edgecolor,
+            styles["linewidth"],
+            facecolor,
+        ]
 
         it = itertools
         return it.islice(py3k.zip(*py3k.map(it.cycle, elements)), N)
 
-    def draw_path_collection(self, paths, path_coordinates, path_transforms,
-                             offsets, offset_coordinates, offset_order,
-                             styles, mplobj=None):
+    def draw_path_collection(
+        self,
+        paths: List[Tuple[np.ndarray, List[str]]],
+        path_coordinates: str,
+        path_transforms: np.ndarray,
+        offsets: np.ndarray,
+        offset_coordinates: str,
+        offset_order: str,
+        styles: Dict[str, List[Any]],
+        mplobj: Optional[Any] = None,
+    ) -> None:
         """
         Draw a collection of paths. The paths, offsets, and styles are all
         iterables, and the number of paths is max(len(paths), len(offsets)).
@@ -264,8 +299,7 @@ class Renderer(object):
         if offset_order == "before":
             raise NotImplementedError("offset before transform")
 
-        for tup in self._iter_path_collection(paths, path_transforms,
-                                              offsets, styles):
+        for tup in self._iter_path_collection(paths, path_transforms, offsets, styles):
             (path, path_transform, offset, ec, lw, fc) = tup
             vertices, pathcodes = path
             path_transform = transforms.Affine2D(path_transform)
@@ -273,18 +307,32 @@ class Renderer(object):
             # This is a hack:
             if path_coordinates == "figure":
                 path_coordinates = "points"
-            style = {"edgecolor": utils.export_color(ec),
-                     "facecolor": utils.export_color(fc),
-                     "edgewidth": lw,
-                     "dasharray": "10,0",
-                     "alpha": styles['alpha'],
-                     "zorder": styles['zorder']}
-            self.draw_path(data=vertices, coordinates=path_coordinates,
-                           pathcodes=pathcodes, style=style, offset=offset,
-                           offset_coordinates=offset_coordinates,
-                           mplobj=mplobj)
+            style = {
+                "edgecolor": utils.export_color(ec),
+                "facecolor": utils.export_color(fc),
+                "edgewidth": lw,
+                "dasharray": "10,0",
+                "alpha": styles["alpha"],
+                "zorder": styles["zorder"],
+            }
+            self.draw_path(
+                data=vertices,
+                coordinates=path_coordinates,
+                pathcodes=pathcodes,
+                style=style,
+                offset=offset,
+                offset_coordinates=offset_coordinates,
+                mplobj=mplobj,
+            )
 
-    def draw_markers(self, data, coordinates, style, label, mplobj=None):
+    def draw_markers(
+        self,
+        data: Sequence,
+        coordinates: str,
+        style: dict,
+        label: str,
+        mplobj: Any = None,
+    ) -> None:
         """
         Draw a set of markers. By default, this is done by repeatedly
         calling draw_path(), but renderers should generally overload
@@ -304,19 +352,29 @@ class Renderer(object):
         mplobj : matplotlib object
             the matplotlib plot element which generated this marker collection
         """
-        vertices, pathcodes = style['markerpath']
-        pathstyle = dict((key, style[key]) for key in ['alpha', 'edgecolor',
-                                                       'facecolor', 'zorder',
-                                                       'edgewidth'])
-        pathstyle['dasharray'] = "10,0"
+        vertices, pathcodes = style["markerpath"]
+        pathstyle = dict((key, style[key]) for key in ["alpha", "edgecolor", "facecolor", "zorder", "edgewidth"])
+        pathstyle["dasharray"] = "10,0"
         for vertex in data:
-            self.draw_path(data=vertices, coordinates="points",
-                           pathcodes=pathcodes, style=pathstyle,
-                           offset=vertex, offset_coordinates=coordinates,
-                           mplobj=mplobj)
+            self.draw_path(
+                data=vertices,
+                coordinates="points",
+                pathcodes=pathcodes,
+                style=pathstyle,
+                offset=vertex,
+                offset_coordinates=coordinates,
+                mplobj=mplobj,
+            )
 
-    def draw_text(self, text, position, coordinates, style,
-                  text_type=None, mplobj=None):
+    def draw_text(
+        self,
+        text: str,
+        position: tuple,
+        coordinates: str,
+        style: dict,
+        text_type: Optional[str] = None,
+        mplobj: Any = None,
+    ) -> None:
         """
         Draw text on the image.
 
@@ -338,8 +396,16 @@ class Renderer(object):
         """
         raise NotImplementedError()
 
-    def draw_path(self, data, coordinates, pathcodes, style,
-                  offset=None, offset_coordinates="data", mplobj=None):
+    def draw_path(
+        self,
+        data: Sequence,
+        coordinates: str,
+        pathcodes: list,
+        style: dict,
+        offset: list = None,
+        offset_coordinates: str = "data",
+        mplobj: Any = None,
+    ) -> None:
         """
         Draw a path.
 
@@ -375,7 +441,14 @@ class Renderer(object):
         """
         raise NotImplementedError()
 
-    def draw_image(self, imdata, extent, coordinates, style, mplobj=None):
+    def draw_image(
+        self,
+        imdata: str,
+        extent: list,
+        coordinates: str,
+        style: dict,
+        mplobj: Any = None,
+    ) -> None:
         """
         Draw an image.
 

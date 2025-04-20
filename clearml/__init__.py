@@ -13,7 +13,10 @@ TaskTypes = Task.TaskTypes
 
 if not PY2:
     from .backend_api import browser_login  # noqa: F401
-    from .automation.controller import PipelineController, PipelineDecorator  # noqa: F401
+    from .automation.controller import (  # noqa: F401
+        PipelineController,  # noqa: F401
+        PipelineDecorator,  # noqa: F401
+    )  # noqa: F401
 
     __all__ = [
         "__version__",

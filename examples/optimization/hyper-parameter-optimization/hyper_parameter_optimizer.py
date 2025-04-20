@@ -1,4 +1,5 @@
 import logging
+import argparse
 
 from clearml import Task
 from clearml.automation import (
@@ -32,6 +33,11 @@ def job_complete_callback(
         print('WOOT WOOT we broke the record! Objective reached {}'.format(objective_value))
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--template_task_id", default=None, help="Task to optimize")
+parser.add_argument("--run_as_service", action="store_true", help="If set, run remotely as a service")
+args = parser.parse_args()
+
 # Connecting ClearML with the current process,
 # from here on everything is logged automatically
 task = Task.init(project_name='Hyper-Parameter Optimization',
@@ -39,16 +45,9 @@ task = Task.init(project_name='Hyper-Parameter Optimization',
                  task_type=Task.TaskTypes.optimizer,
                  reuse_last_task_id=False)
 
-# experiment template to optimize in the hyper-parameter optimization
-args = {
-    'template_task_id': None,
-    'run_as_service': False,
-}
-args = task.connect(args)
-
 # Get the template task experiment that we want to optimize
-if not args['template_task_id']:
-    args['template_task_id'] = Task.get_task(
+if not args.template_task_id:
+    args.template_task_id = Task.get_task(
         project_name='examples', task_name='Keras HP optimization base').id
 
 # Set default queue name for the Training tasks themselves.
@@ -58,7 +57,7 @@ execution_queue = '1xGPU'
 # Example use case:
 an_optimizer = HyperParameterOptimizer(
     # This is the experiment we want to optimize
-    base_task_id=args['template_task_id'],
+    base_task_id=args.template_task_id,
     # here we define the hyper-parameters to optimize
     # Notice: The parameter name should exactly match what you see in the UI: <section_name>/<parameter>
     # For Example, here we see in the base experiment a section Named: "General"
@@ -109,7 +108,7 @@ an_optimizer = HyperParameterOptimizer(
 )
 
 # if we are running as a service, just enqueue ourselves into the services queue and let it run the optimization
-if args['run_as_service']:
+if args.run_as_service:
     # if this code is executed by `clearml-agent` the function call does nothing.
     # if executed locally, the local process will be terminated, and a remote copy will be executed instead
     task.execute_remotely(queue_name='services', exit_process=True)

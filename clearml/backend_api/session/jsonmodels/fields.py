@@ -1,5 +1,6 @@
 import datetime
 import re
+from typing import Union, List, Optional, Type, Iterable, Tuple, Any
 from weakref import WeakKeyDictionary
 
 import six
@@ -8,26 +9,25 @@ from dateutil.parser import parse
 from .errors import ValidationError
 from .collections import ModelCollection
 
-
 # unique marker for "no default value specified". None is not good enough since
 # it is a completely valid default value.
 NotSet = object()
 
 
 class BaseField(object):
-
     """Base class for all fields."""
 
     types = None
 
     def __init__(
-            self,
-            required=False,
-            nullable=False,
-            help_text=None,
-            validators=None,
-            default=NotSet,
-            name=None):
+        self,
+        required: bool = False,
+        nullable: bool = False,
+        help_text: str = None,
+        validators: Any = None,
+        default: Any = NotSet,
+        name: str = None,
+    ) -> None:
         self.memory = WeakKeyDictionary()
         self.required = required
         self.help_text = help_text
@@ -40,21 +40,21 @@ class BaseField(object):
         self._default = default
 
     @property
-    def has_default(self):
+    def has_default(self) -> bool:
         return self._default is not NotSet
 
-    def _assign_validators(self, validators):
+    def _assign_validators(self, validators: Union[None, list, Any]) -> None:
         if validators and not isinstance(validators, list):
             validators = [validators]
         self.validators = validators or []
 
-    def __set__(self, instance, value):
+    def __set__(self, instance: Any, value: Any) -> None:
         self._finish_initialization(type(instance))
         value = self.parse_value(value)
         self.validate(value)
         self.memory[instance._cache_key] = value
 
-    def __get__(self, instance, owner=None):
+    def __get__(self, instance: Any, owner: Optional[Type[Any]] = None) -> Any:
         if instance is None:
             self._finish_initialization(owner)
             return self
@@ -64,47 +64,45 @@ class BaseField(object):
         self._check_value(instance)
         return self.memory[instance._cache_key]
 
-    def _finish_initialization(self, owner):
+    def _finish_initialization(self, owner: type) -> None:
         pass
 
-    def _check_value(self, obj):
+    def _check_value(self, obj: Any) -> None:
         if obj._cache_key not in self.memory:
             self.__set__(obj, self.get_default_value())
 
-    def validate_for_object(self, obj):
+    def validate_for_object(self, obj: Any) -> None:
         value = self.__get__(obj)
         self.validate(value)
 
-    def validate(self, value):
+    def validate(self, value: Any) -> None:
         self._check_types()
         self._validate_against_types(value)
         self._check_against_required(value)
         self._validate_with_custom_validators(value)
 
-    def _check_against_required(self, value):
+    def _check_against_required(self, value: Any) -> None:
         if value is None and self.required:
-            raise ValidationError('Field is required!')
+            raise ValidationError("Field is required!")
 
-    def _validate_against_types(self, value):
+    def _validate_against_types(self, value: Any) -> None:
         if value is not None and not isinstance(value, self.types):
             raise ValidationError(
-                'Value is wrong, expected type "{types}"'.format(
-                    types=', '.join([t.__name__ for t in self.types])
-                ),
+                'Value is wrong, expected type "{types}"'.format(types=", ".join([t.__name__ for t in self.types])),
                 value,
             )
 
-    def _check_types(self):
+    def _check_types(self) -> None:
         if self.types is None:
             raise ValidationError(
-                'Field "{type}" is not usable, try '
-                'different field type.'.format(type=type(self).__name__))
+                'Field "{type}" is not usable, try ' "different field type.".format(type=type(self).__name__)
+            )
 
-    def to_struct(self, value):
+    def to_struct(self, value: Any) -> Any:
         """Cast value to Python structure."""
         return value
 
-    def parse_value(self, value):
+    def parse_value(self, value: Any) -> Any:
         """Parse value from primitive to desired format.
 
         Each field can parse value to form it wants it to be (like string or
@@ -113,7 +111,7 @@ class BaseField(object):
         """
         return value
 
-    def _validate_with_custom_validators(self, value):
+    def _validate_with_custom_validators(self, value: Any) -> None:
         if value is None and self.nullable:
             return
 
@@ -123,7 +121,7 @@ class BaseField(object):
             except AttributeError:
                 validator(value)
 
-    def get_default_value(self):
+    def get_default_value(self) -> Any:
         """Get default value for field.
 
         Each field can specify its default.
@@ -131,30 +129,28 @@ class BaseField(object):
         """
         return self._default if self.has_default else None
 
-    def _validate_name(self):
+    def _validate_name(self) -> None:
         if self.name is None:
             return
-        if not re.match(r'^[A-Za-z_](([\w\-]*)?\w+)?$', self.name):  # noqa: W605
-            raise ValueError('Wrong name', self.name)
+        if not re.match(r"^[A-Za-z_](([\w\-]*)?\w+)?$", self.name):  # noqa: W605
+            raise ValueError("Wrong name", self.name)
 
-    def structue_name(self, default):
+    def structue_name(self, default: Any) -> Any:
         return self.name if self.name is not None else default
 
 
 class StringField(BaseField):
-
     """String field."""
 
     types = six.string_types
 
 
 class IntField(BaseField):
-
     """Integer field."""
 
     types = (int,)
 
-    def parse_value(self, value):
+    def parse_value(self, value: Any) -> Optional[int]:
         """Cast value to `int`, e.g. from string or long"""
         parsed = super(IntField, self).parse_value(value)
         if parsed is None:
@@ -163,31 +159,33 @@ class IntField(BaseField):
 
 
 class FloatField(BaseField):
-
     """Float field."""
 
     types = (float, int)
 
 
 class BoolField(BaseField):
-
     """Bool field."""
 
     types = (bool,)
 
-    def parse_value(self, value):
+    def parse_value(self, value: Any) -> Optional[bool]:
         """Cast value to `bool`."""
         parsed = super(BoolField, self).parse_value(value)
         return bool(parsed) if parsed is not None else None
 
 
 class ListField(BaseField):
-
     """List field."""
 
     types = (list,)
 
-    def __init__(self, items_types=None, *args, **kwargs):
+    def __init__(
+        self,
+        items_types: Optional[Union[Type, Tuple[Type]]] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """Init.
 
         `ListField` is **always not required**. If you want to control number
@@ -198,18 +196,18 @@ class ListField(BaseField):
         super(ListField, self).__init__(*args, **kwargs)
         self.required = False
 
-    def get_default_value(self):
+    def get_default_value(self) -> ModelCollection:
         default = super(ListField, self).get_default_value()
         if default is None:
             return ModelCollection(self)
         return default
 
-    def _assign_types(self, items_types):
+    def _assign_types(self, items_types: Union[Iterable[Any], None]) -> None:
         if items_types:
             try:
                 self.items_types = tuple(items_types)
             except TypeError:
-                self.items_types = items_types,
+                self.items_types = (items_types,)
         else:
             self.items_types = tuple()
 
@@ -221,7 +219,7 @@ class ListField(BaseField):
                 types.append(type_)
         self.items_types = tuple(types)
 
-    def validate(self, value):
+    def validate(self, value: list) -> None:
         super(ListField, self).validate(value)
 
         if len(self.items_types) == 0:
@@ -230,19 +228,20 @@ class ListField(BaseField):
         for item in value:
             self.validate_single_value(item)
 
-    def validate_single_value(self, item):
+    def validate_single_value(self, item: Any) -> None:
         if len(self.items_types) == 0:
             return
 
         if not isinstance(item, self.items_types):
             raise ValidationError(
-                'All items must be instances '
+                "All items must be instances "
                 'of "{types}", and not "{type}".'.format(
-                    types=', '.join([t.__name__ for t in self.items_types]),
+                    types=", ".join([t.__name__ for t in self.items_types]),
                     type=type(item).__name__,
-                ))
+                )
+            )
 
-    def parse_value(self, values):
+    def parse_value(self, values: Any) -> Any:
         """Cast value to proper collection."""
         result = self.get_default_value()
 
@@ -254,20 +253,16 @@ class ListField(BaseField):
 
         return [self._cast_value(value) for value in values]
 
-    def _cast_value(self, value):
+    def _cast_value(self, value: Any) -> Any:
         if isinstance(value, self.items_types):
             return value
         else:
             if len(self.items_types) != 1:
                 tpl = 'Cannot decide which type to choose from "{types}".'
-                raise ValidationError(
-                    tpl.format(
-                        types=', '.join([t.__name__ for t in self.items_types])
-                    )
-                )
+                raise ValidationError(tpl.format(types=", ".join([t.__name__ for t in self.items_types])))
             return self.items_types[0](**value)
 
-    def _finish_initialization(self, owner):
+    def _finish_initialization(self, owner: type) -> None:
         super(ListField, self)._finish_initialization(owner)
 
         types = []
@@ -278,25 +273,29 @@ class ListField(BaseField):
                 types.append(type)
         self.items_types = tuple(types)
 
-    def _elem_to_struct(self, value):
+    def _elem_to_struct(self, value: Any) -> Any:
         try:
             return value.to_struct()
         except AttributeError:
             return value
 
-    def to_struct(self, values):
+    def to_struct(self, values: List[Any]) -> List[Any]:
         return [self._elem_to_struct(v) for v in values]
 
 
 class EmbeddedField(BaseField):
-
     """Field for embedded models."""
 
-    def __init__(self, model_types, *args, **kwargs):
+    def __init__(
+        self,
+        model_types: Union[List[Union[str, Type]], Tuple[Union[str, Type]]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         self._assign_model_types(model_types)
         super(EmbeddedField, self).__init__(*args, **kwargs)
 
-    def _assign_model_types(self, model_types):
+    def _assign_model_types(self, model_types: Union[list, tuple, Any]) -> None:
         if not isinstance(model_types, (list, tuple)):
             model_types = (model_types,)
 
@@ -308,7 +307,7 @@ class EmbeddedField(BaseField):
                 types.append(type_)
         self.types = tuple(types)
 
-    def _finish_initialization(self, owner):
+    def _finish_initialization(self, owner: type) -> None:
         super(EmbeddedField, self)._finish_initialization(owner)
 
         types = []
@@ -319,14 +318,14 @@ class EmbeddedField(BaseField):
                 types.append(type)
         self.types = tuple(types)
 
-    def validate(self, value):
+    def validate(self, value: Any) -> None:
         super(EmbeddedField, self).validate(value)
         try:
             value.validate()
         except AttributeError:
             pass
 
-    def parse_value(self, value):
+    def parse_value(self, value: Any) -> Any:
         """Parse value to proper model type."""
         if not isinstance(value, dict):
             return value
@@ -334,72 +333,69 @@ class EmbeddedField(BaseField):
         embed_type = self._get_embed_type()
         return embed_type(**value)
 
-    def _get_embed_type(self):
+    def _get_embed_type(self) -> type:
         if len(self.types) != 1:
             raise ValidationError(
                 'Cannot decide which type to choose from "{types}".'.format(
-                    types=', '.join([t.__name__ for t in self.types])
+                    types=", ".join([t.__name__ for t in self.types])
                 )
             )
         return self.types[0]
 
-    def to_struct(self, value):
+    def to_struct(self, value: Any) -> Any:
         return value.to_struct()
 
 
 class _LazyType(object):
-
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
 
-    def evaluate(self, base_cls):
+    def evaluate(self, base_cls: type) -> type:
         module, type_name = _evaluate_path(self.path, base_cls)
         return _import(module, type_name)
 
 
-def _evaluate_path(relative_path, base_cls):
+def _evaluate_path(relative_path: str, base_cls: type) -> Tuple[str, str]:
     base_module = base_cls.__module__
 
     modules = _get_modules(relative_path, base_module)
 
     type_name = modules.pop()
-    module = '.'.join(modules)
+    module = ".".join(modules)
     if not module:
         module = base_module
     return module, type_name
 
 
-def _get_modules(relative_path, base_module):
-    canonical_path = relative_path.lstrip('.')
-    canonical_modules = canonical_path.split('.')
+def _get_modules(relative_path: str, base_module: str) -> List[str]:
+    canonical_path = relative_path.lstrip(".")
+    canonical_modules = canonical_path.split(".")
 
-    if not relative_path.startswith('.'):
+    if not relative_path.startswith("."):
         return canonical_modules
 
     parents_amount = len(relative_path) - len(canonical_path)
-    parent_modules = base_module.split('.')
+    parent_modules = base_module.split(".")
     parents_amount = max(0, parents_amount - 1)
     if parents_amount > len(parent_modules):
         raise ValueError("Can't evaluate path '{}'".format(relative_path))
-    return parent_modules[:parents_amount * -1] + canonical_modules
+    return parent_modules[: parents_amount * -1] + canonical_modules
 
 
-def _import(module_name, type_name):
+def _import(module_name: str, type_name: str) -> Any:
     module = __import__(module_name, fromlist=[type_name])
     try:
         return getattr(module, type_name)
     except AttributeError:
-        raise ValueError(
-            "Can't find type '{}.{}'.".format(module_name, type_name))
+        raise ValueError("Can't find type '{}.{}'.".format(module_name, type_name))
 
 
 class TimeField(StringField):
-
     """Time field."""
 
     types = (datetime.time,)
 
-    def __init__(self, str_format=None, *args, **kwargs):
+    def __init__(self, str_format: str = None, *args: Any, **kwargs: Any) -> None:
         """Init.
 
         :param str str_format: Format to cast time to (if `None` - casting to
@@ -409,13 +405,13 @@ class TimeField(StringField):
         self.str_format = str_format
         super(TimeField, self).__init__(*args, **kwargs)
 
-    def to_struct(self, value):
+    def to_struct(self, value: datetime.time) -> str:
         """Cast `time` object to string."""
         if self.str_format:
             return value.strftime(self.str_format)
         return value.isoformat()
 
-    def parse_value(self, value):
+    def parse_value(self, value: Any) -> Optional[datetime.time]:
         """Parse string into instance of `time`."""
         if value is None:
             return value
@@ -425,13 +421,12 @@ class TimeField(StringField):
 
 
 class DateField(StringField):
-
     """Date field."""
 
     types = (datetime.date,)
-    default_format = '%Y-%m-%d'
+    default_format = "%Y-%m-%d"
 
-    def __init__(self, str_format=None, *args, **kwargs):
+    def __init__(self, str_format: str = None, *args: Any, **kwargs: Any) -> None:
         """Init.
 
         :param str str_format: Format to cast date to (if `None` - casting to
@@ -441,13 +436,13 @@ class DateField(StringField):
         self.str_format = str_format
         super(DateField, self).__init__(*args, **kwargs)
 
-    def to_struct(self, value):
+    def to_struct(self, value: datetime.date) -> str:
         """Cast `date` object to string."""
         if self.str_format:
             return value.strftime(self.str_format)
         return value.strftime(self.default_format)
 
-    def parse_value(self, value):
+    def parse_value(self, value: Union[None, datetime.date, str]) -> Union[None, datetime.date]:
         """Parse string into instance of `date`."""
         if value is None:
             return value
@@ -457,12 +452,11 @@ class DateField(StringField):
 
 
 class DateTimeField(StringField):
-
     """Datetime field."""
 
     types = (datetime.datetime,)
 
-    def __init__(self, str_format=None, *args, **kwargs):
+    def __init__(self, str_format: str = None, *args: Any, **kwargs: Any) -> None:
         """Init.
 
         :param str str_format: Format to cast datetime to (if `None` - casting
@@ -472,13 +466,13 @@ class DateTimeField(StringField):
         self.str_format = str_format
         super(DateTimeField, self).__init__(*args, **kwargs)
 
-    def to_struct(self, value):
+    def to_struct(self, value: datetime.datetime) -> str:
         """Cast `datetime` object to string."""
         if self.str_format:
             return value.strftime(self.str_format)
         return value.isoformat()
 
-    def parse_value(self, value):
+    def parse_value(self, value: Any) -> Optional[datetime.datetime]:
         """Parse string into instance of `datetime`."""
         if isinstance(value, datetime.datetime):
             return value

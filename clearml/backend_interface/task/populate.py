@@ -28,29 +28,28 @@ class CreateAndPopulate(object):
 
     def __init__(
         self,
-        project_name=None,  # type: Optional[str]
-        task_name=None,  # type: Optional[str]
-        task_type=None,  # type: Optional[str]
-        repo=None,  # type: Optional[str]
-        branch=None,  # type: Optional[str]
-        commit=None,  # type: Optional[str]
-        script=None,  # type: Optional[str]
-        working_directory=None,  # type: Optional[str]
-        module=None,  # type: Optional[str]
-        packages=None,  # type: Optional[Union[bool, Sequence[str]]]
-        requirements_file=None,  # type: Optional[Union[str, Path]]
-        docker=None,  # type: Optional[str]
-        docker_args=None,  # type: Optional[str]
-        docker_bash_setup_script=None,  # type: Optional[str]
-        output_uri=None,  # type: Optional[str]
-        base_task_id=None,  # type: Optional[str]
-        add_task_init_call=True,  # type: bool
-        force_single_script_file=False,  # type: bool
-        raise_on_missing_entries=False,  # type: bool
-        verbose=False,  # type: bool
-        binary=None,  # type: Optional[str]
-    ):
-        # type: (...) -> None
+        project_name: Optional[str] = None,
+        task_name: Optional[str] = None,
+        task_type: Optional[str] = None,
+        repo: Optional[str] = None,
+        branch: Optional[str] = None,
+        commit: Optional[str] = None,
+        script: Optional[str] = None,
+        working_directory: Optional[str] = None,
+        module: Optional[str] = None,
+        packages: Optional[Union[bool, Sequence[str]]] = None,
+        requirements_file: Optional[Union[str, Path]] = None,
+        docker: Optional[str] = None,
+        docker_args: Optional[str] = None,
+        docker_bash_setup_script: Optional[str] = None,
+        output_uri: Optional[str] = None,
+        base_task_id: Optional[str] = None,
+        add_task_init_call: bool = True,
+        force_single_script_file: bool = False,
+        raise_on_missing_entries: bool = False,
+        verbose: bool = False,
+        binary: Optional[str] = None,
+    ) -> None:
         """
         Create a new Task from an existing code base.
         If the code does not already contain a call to Task.init, pass add_task_init_call=True,
@@ -142,8 +141,7 @@ class CreateAndPopulate(object):
         self.verbose = verbose
         self.binary = binary
 
-    def create_task(self, dry_run=False):
-        # type: (bool) -> Union[Task, Dict]
+    def create_task(self, dry_run: bool = False) -> Union[Task, Dict]:
         """
         Create the new populated Task
 
@@ -244,11 +242,11 @@ class CreateAndPopulate(object):
             raise ValueError("Standalone script detected '{}', but no requirements provided".format(self.script))
         if dry_run:
             task = None
-            task_state = dict(
+            task_state: dict = dict(
                 name=self.task_name,
                 project=Task.get_project_id(self.project_name),
                 type=str(self.task_type or Task.TaskTypes.training),
-            )  # type: dict
+            )
             if self.output_uri is not None:
                 task_state["output"] = dict(destination=self.output_uri)
         else:
@@ -257,7 +255,10 @@ class CreateAndPopulate(object):
             if self.base_task_id:
                 if self.verbose:
                     print("Cloning task {}".format(self.base_task_id))
-                task = Task.clone(source_task=self.base_task_id, project=Task.get_project_id(self.project_name))
+                task = Task.clone(
+                    source_task=self.base_task_id,
+                    project=Task.get_project_id(self.project_name),
+                )
 
                 self._set_output_uri(task)
             else:
@@ -550,7 +551,10 @@ class CreateAndPopulate(object):
                         "\n  Using requirements.txt: {}".format(self.requirements_file.as_posix())
                         if self.requirements_file
                         else "",
-                        "\n  {}Packages: {}".format("Additional " if self.requirements_file else "", self.packages)
+                        "\n  {}Packages: {}".format(
+                            "Additional " if self.requirements_file else "",
+                            self.packages,
+                        )
                         if self.packages
                         else "",
                     )
@@ -566,7 +570,7 @@ class CreateAndPopulate(object):
         self.task = task
         return task
 
-    def _set_output_uri(self, task):
+    def _set_output_uri(self, task: Task) -> None:
         if self.output_uri is not None:
             try:
                 task.output_uri = self.output_uri
@@ -575,8 +579,10 @@ class CreateAndPopulate(object):
                 # do not verify the output uri (it might not be valid when we are creating the Task)
                 task.storage_uri = self.output_uri
 
-    def update_task_args(self, args=None):
-        # type: (Optional[Union[Sequence[str], Sequence[Tuple[str, str]]]]) -> ()
+    def update_task_args(
+        self,
+        args: Optional[Union[Sequence[str], Sequence[Tuple[str, str]]]] = None,
+    ) -> ():
         """
         Update the newly created Task argparse Arguments
         If called before Task created, used for argument verification
@@ -609,16 +615,14 @@ class CreateAndPopulate(object):
         task_params.update(args_list)
         self.task.set_parameters(task_params)
 
-    def get_id(self):
-        # type: () -> Optional[str]
+    def get_id(self) -> Optional[str]:
         """
         :return: Return the created Task id (str)
         """
         return self.task.id if self.task else None
 
     @staticmethod
-    def _locate_future_import(lines):
-        # type: (List[str]) -> int
+    def _locate_future_import(lines: List[str]) -> int:
         """
         :param lines: string lines of a python file
         :return: line index of the last __future_ import. return -1 if no __future__ was found
@@ -676,6 +680,7 @@ class CreateFromFunction(object):
     default_task_template_header = """from clearml import Task
 from clearml import TaskTypes
 from clearml.automation.controller import PipelineDecorator
+import inspect
 """
     task_template = """{header}
 from clearml.utilities.proxy_object import get_basic_type
@@ -694,7 +699,12 @@ if __name__ == '__main__':
     kwargs = {function_kwargs}
     task.connect(kwargs, name='{kwargs_section}')
     function_input_artifacts = {function_input_artifacts}
-    params = task.get_parameters() or dict()
+    params = task.get_parameters(cast=True) or dict()
+    argspec = inspect.getfullargspec({function_name})
+    if argspec.varkw is not None or argspec.varargs is not None:
+        for k, v in params.items():
+            if k.startswith('{kwargs_section}/'):
+                kwargs[k.replace('{kwargs_section}/', '', 1)] = v
     return_section = '{return_section}'
     for k, v in params.items():
         if not v or not k.startswith('{input_artifact_section}/'):
@@ -706,7 +716,15 @@ if __name__ == '__main__':
             kwargs[k] = parent_task.artifacts[artifact_name].get(deserialization_function={artifact_deserialization_function_name})
         else:
             kwargs[k] = parent_task.get_parameters(cast=True).get(return_section + '/' + artifact_name)
-    results = {function_name}(**kwargs)
+    if '0' in kwargs:  # *args arguments are present
+        pos_args = [kwargs.pop(arg, None) for arg in (argspec.args or [])]
+        other_pos_args_index = 0
+        while str(other_pos_args_index) in kwargs:
+            pos_args.append(kwargs.pop(str(other_pos_args_index)))
+            other_pos_args_index += 1
+        results = {function_name}(*pos_args, **kwargs)
+    else:
+        results = {function_name}(**kwargs)
     result_names = {function_return}
     if result_names:
         if not isinstance(results, (tuple, list)) or len(result_names) == 1:
@@ -731,34 +749,33 @@ if __name__ == '__main__':
     @classmethod
     def create_task_from_function(
         cls,
-        a_function,  # type: Callable
-        function_kwargs=None,  # type: Optional[Dict[str, Any]]
-        function_input_artifacts=None,  # type: Optional[Dict[str, str]]
-        function_return=None,  # type: Optional[List[str]]
-        project_name=None,  # type: Optional[str]
-        task_name=None,  # type: Optional[str]
-        task_type=None,  # type: Optional[str]
-        auto_connect_frameworks=None,  # type: Optional[dict]
-        auto_connect_arg_parser=None,  # type: Optional[dict]
-        repo=None,  # type: Optional[str]
-        branch=None,  # type: Optional[str]
-        commit=None,  # type: Optional[str]
-        packages=None,  # type: Optional[Union[str, Sequence[str]]]
-        docker=None,  # type: Optional[str]
-        docker_args=None,  # type: Optional[str]
-        docker_bash_setup_script=None,  # type: Optional[str]
-        output_uri=None,  # type: Optional[str]
-        helper_functions=None,  # type: Optional[Sequence[Callable]]
-        dry_run=False,  # type: bool
-        task_template_header=None,  # type: Optional[str]
-        artifact_serialization_function=None,  # type: Optional[Callable[[Any], Union[bytes, bytearray]]]
-        artifact_deserialization_function=None,  # type: Optional[Callable[[bytes], Any]]
-        _sanitize_function=None,  # type: Optional[Callable[[str], str]]
-        _sanitize_helper_functions=None,  # type: Optional[Callable[[str], str]]
-        skip_global_imports=False,  # type: bool
-        working_dir=None,  # type: Optional[str]
-    ):
-        # type: (...) -> Optional[Dict, Task]
+        a_function: Callable,
+        function_kwargs: Optional[Dict[str, Any]] = None,
+        function_input_artifacts: Optional[Dict[str, str]] = None,
+        function_return: Optional[List[str]] = None,
+        project_name: Optional[str] = None,
+        task_name: Optional[str] = None,
+        task_type: Optional[str] = None,
+        auto_connect_frameworks: Optional[dict] = None,
+        auto_connect_arg_parser: Optional[dict] = None,
+        repo: Optional[str] = None,
+        branch: Optional[str] = None,
+        commit: Optional[str] = None,
+        packages: Optional[Union[str, Sequence[str]]] = None,
+        docker: Optional[str] = None,
+        docker_args: Optional[str] = None,
+        docker_bash_setup_script: Optional[str] = None,
+        output_uri: Optional[str] = None,
+        helper_functions: Optional[Sequence[Callable]] = None,
+        dry_run: bool = False,
+        task_template_header: Optional[str] = None,
+        artifact_serialization_function: Optional[Callable[[Any], Union[bytes, bytearray]]] = None,
+        artifact_deserialization_function: Optional[Callable[[bytes], Any]] = None,
+        _sanitize_function: Optional[Callable[[str], str]] = None,
+        _sanitize_helper_functions: Optional[Callable[[str], str]] = None,
+        skip_global_imports: bool = False,
+        working_dir: Optional[str] = None,
+    ) -> Optional[Union[Dict, "Task"]]:
         """
         Create a Task from a function, including wrapping the function input arguments
         into the hyper-parameter section as kwargs, and storing function results as named artifacts
@@ -855,14 +872,20 @@ if __name__ == '__main__':
         assert not auto_connect_frameworks or isinstance(auto_connect_frameworks, (bool, dict))
         assert not auto_connect_arg_parser or isinstance(auto_connect_arg_parser, (bool, dict))
 
-        function_source, function_name = CreateFromFunction.__extract_function_information(
-            a_function, sanitize_function=_sanitize_function, skip_global_imports=skip_global_imports
+        (
+            function_source,
+            function_name,
+        ) = CreateFromFunction.__extract_function_information(
+            a_function,
+            sanitize_function=_sanitize_function,
+            skip_global_imports=skip_global_imports,
         )
         # add helper functions on top.
-        for f in (helper_functions or []):
-            helper_function_source, _ = CreateFromFunction.__extract_function_information(
-                f, sanitize_function=_sanitize_helper_functions
-            )
+        for f in helper_functions or []:
+            (
+                helper_function_source,
+                _,
+            ) = CreateFromFunction.__extract_function_information(f, sanitize_function=_sanitize_helper_functions)
             function_source = helper_function_source + "\n\n" + function_source
 
         artifact_serialization_function_source, artifact_serialization_function_name = (
@@ -870,7 +893,10 @@ if __name__ == '__main__':
             if artifact_serialization_function
             else ("", "None")
         )
-        artifact_deserialization_function_source, artifact_deserialization_function_name = (
+        (
+            artifact_deserialization_function_source,
+            artifact_deserialization_function_name,
+        ) = (
             CreateFromFunction.__extract_function_information(artifact_deserialization_function)
             if artifact_deserialization_function
             else ("", "None")
@@ -984,7 +1010,11 @@ if __name__ == '__main__':
                         for k, v in (function_kwargs or {}).items()
                     },
                     cls.input_artifact_section: {
-                        k: dict(section=cls.input_artifact_section, name=k, value=str(v) if v is not None else "")
+                        k: dict(
+                            section=cls.input_artifact_section,
+                            name=k,
+                            value=str(v) if v is not None else "",
+                        )
                         for k, v in (function_input_artifacts or {}).items()
                     },
                 }
@@ -992,7 +1022,11 @@ if __name__ == '__main__':
                 task.update_task(
                     task_data={
                         "script": task.data.script.to_dict().update(
-                            {"entry_point": entry_point, "working_dir": ".", "diff": task_template}
+                            {
+                                "entry_point": entry_point,
+                                "working_dir": ".",
+                                "diff": task_template,
+                            }
                         )
                     }
                 )
@@ -1016,8 +1050,7 @@ if __name__ == '__main__':
             return task
 
     @staticmethod
-    def __sanitize_remove_type_hints(function_source):
-        # type: (str) -> str
+    def __sanitize_remove_type_hints(function_source: str) -> str:
         try:
             import ast
 
@@ -1033,7 +1066,7 @@ if __name__ == '__main__':
         try:
 
             class TypeHintRemover(ast.NodeTransformer):
-                def visit_FunctionDef(self, node):
+                def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
                     # remove the return type definition
                     node.returns = None
                     # remove all argument annotations
@@ -1054,8 +1087,8 @@ if __name__ == '__main__':
             return function_source
 
     @staticmethod
-    def __extract_imports(func):
-        def add_import_guard(import_):
+    def __extract_imports(func: Callable) -> str:
+        def add_import_guard(import_: str) -> str:
             return (
                 "try:\n    "
                 + import_.replace("\n", "\n    ", import_.count("\n") - 1)
@@ -1093,7 +1126,7 @@ if __name__ == '__main__':
             return ""
 
     @staticmethod
-    def _extract_wrapped(decorated):
+    def _extract_wrapped(decorated: Callable) -> Optional[Callable]:
         if not decorated.__closure__:
             return None
         closure = (c.cell_contents for c in decorated.__closure__)
@@ -1102,7 +1135,7 @@ if __name__ == '__main__':
         return next((c for c in closure if inspect.isfunction(c)), None)
 
     @staticmethod
-    def _deep_extract_wrapped(decorated):
+    def _deep_extract_wrapped(decorated: Callable) -> Callable:
         while True:
             # noinspection PyProtectedMember
             func = CreateFromFunction._extract_wrapped(decorated)
@@ -1111,13 +1144,13 @@ if __name__ == '__main__':
             decorated = func
 
     @staticmethod
-    def __sanitize(func_source, sanitize_function=None):
+    def __sanitize(func_source: str, sanitize_function: Optional[Callable[[str], str]] = None) -> str:
         if sanitize_function:
             func_source = sanitize_function(func_source)
         return CreateFromFunction.__sanitize_remove_type_hints(func_source)
 
     @staticmethod
-    def __get_func_members(module):
+    def __get_func_members(module: Any) -> List[str]:
         result = []
         try:
             import ast
@@ -1133,7 +1166,11 @@ if __name__ == '__main__':
         return result
 
     @staticmethod
-    def __get_source_with_decorators(func, original_module=None, sanitize_function=None):
+    def __get_source_with_decorators(
+        func: Callable,
+        original_module: Optional[Any] = None,
+        sanitize_function: Optional[Callable] = None,
+    ) -> str:
         if original_module is None:
             original_module = inspect.getmodule(func)
         func_members = CreateFromFunction.__get_func_members(original_module)
@@ -1167,7 +1204,9 @@ if __name__ == '__main__':
                         continue
                     decorated_func_source = (
                         CreateFromFunction.__get_source_with_decorators(
-                            decorator_func, original_module=original_module, sanitize_function=sanitize_function
+                            decorator_func,
+                            original_module=original_module,
+                            sanitize_function=sanitize_function,
                         )
                         + "\n\n"
                         + decorated_func_source
@@ -1178,8 +1217,11 @@ if __name__ == '__main__':
         return decorated_func_source
 
     @staticmethod
-    def __extract_function_information(function, sanitize_function=None, skip_global_imports=False):
-        # type: (Callable, Optional[Callable], bool) -> (str, str)
+    def __extract_function_information(
+        function: Callable,
+        sanitize_function: Optional[Callable] = None,
+        skip_global_imports: bool = False,
+    ) -> (str, str):
         function = CreateFromFunction._deep_extract_wrapped(function)
         function_source = CreateFromFunction.__get_source_with_decorators(function, sanitize_function=sanitize_function)
         if not skip_global_imports:

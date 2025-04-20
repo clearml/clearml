@@ -1,10 +1,11 @@
 import os
 from subprocess import check_output
+from typing import List, Optional
 
 from furl import furl
 
 
-def get_command_output(command, path=None, strip=True):
+def get_command_output(command: List[str], path: Optional[str] = None, strip: bool = True) -> str:
     """
     Run a command and return its output
     :raises CalledProcessError: when command execution fails
@@ -15,7 +16,7 @@ def get_command_output(command, path=None, strip=True):
         return result.strip() if strip else result
 
 
-def remove_user_pass_from_url(url):
+def remove_user_pass_from_url(url: str) -> str:
     # remove user / password, if we have it embedded in the git repo
     url = str(url)
     # noinspection PyBroadException
@@ -24,10 +25,10 @@ def remove_user_pass_from_url(url):
     except ValueError:
         # check if for any reason we have two @
         # (e.g. ssh://user@abc.com@domain.com/path or ssh://user@abc.com:pass@domain.com/path)
-        if len(url.split('@')) >= 3:
+        if len(url.split("@")) >= 3:
             # noinspection PyBroadException
             try:
-                url = furl(url.replace('@', '_', 1)).remove(username=True, password=True).tostr()
+                url = furl(url.replace("@", "_", 1)).remove(username=True, password=True).tostr()
             except Exception:
                 pass
     except Exception:

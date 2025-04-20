@@ -4,11 +4,10 @@ auth service
 This service provides authentication management and authorization
 validation for the entire system.
 """
+from typing import List, Optional, Any
 import six
 from datetime import datetime
-
 from dateutil.parser import parse as parse_datetime
-
 from clearml.backend_api.session import (
     Request,
     Response,
@@ -45,48 +44,51 @@ class Credentials(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, access_key=None, secret_key=None, label=None, **kwargs):
+    def __init__(
+        self,
+        access_key: Optional[str] = None,
+        secret_key: Optional[str] = None,
+        label: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(Credentials, self).__init__(**kwargs)
         self.access_key = access_key
         self.secret_key = secret_key
         self.label = label
 
     @schema_property("access_key")
-    def access_key(self):
+    def access_key(self) -> Optional[str]:
         return self._property_access_key
 
     @access_key.setter
-    def access_key(self, value):
+    def access_key(self, value: Optional[str]) -> None:
         if value is None:
             self._property_access_key = None
             return
-
         self.assert_isinstance(value, "access_key", six.string_types)
         self._property_access_key = value
 
     @schema_property("secret_key")
-    def secret_key(self):
+    def secret_key(self) -> Optional[str]:
         return self._property_secret_key
 
     @secret_key.setter
-    def secret_key(self, value):
+    def secret_key(self, value: Optional[str]) -> None:
         if value is None:
             self._property_secret_key = None
             return
-
         self.assert_isinstance(value, "secret_key", six.string_types)
         self._property_secret_key = value
 
     @schema_property("label")
-    def label(self):
+    def label(self) -> Optional[str]:
         return self._property_label
 
     @label.setter
-    def label(self, value):
+    def label(self, value: Optional[str]) -> None:
         if value is None:
             self._property_label = None
             return
-
         self.assert_isinstance(value, "label", six.string_types)
         self._property_label = value
 
@@ -107,7 +109,7 @@ class CredentialKey(NonStrictDataModel):
         "properties": {
             "access_key": {
                 "description": "Credentials access key",
-                "type": ["string", "null"]
+                "type": ["string", "null"],
             },
             "label": {
                 "description": "Optional credentials label",
@@ -123,7 +125,14 @@ class CredentialKey(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, access_key=None, label=None, last_used=None, last_used_from=None, **kwargs):
+    def __init__(
+        self,
+        access_key: Optional[str] = None,
+        label: Optional[str] = None,
+        last_used: Optional[str] = None,
+        last_used_from: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(CredentialKey, self).__init__(**kwargs)
         self.access_key = access_key
         self.label = label
@@ -131,56 +140,52 @@ class CredentialKey(NonStrictDataModel):
         self.last_used_from = last_used_from
 
     @schema_property("access_key")
-    def access_key(self):
+    def access_key(self) -> Optional[str]:
         return self._property_access_key
 
     @access_key.setter
-    def access_key(self, value):
+    def access_key(self, value: Optional[str]) -> None:
         if value is None:
             self._property_access_key = None
             return
-
         self.assert_isinstance(value, "access_key", six.string_types)
         self._property_access_key = value
 
     @schema_property("label")
-    def label(self):
+    def label(self) -> Optional[str]:
         return self._property_label
 
     @label.setter
-    def label(self, value):
+    def label(self, value: Optional[str]) -> None:
         if value is None:
             self._property_label = None
             return
-
         self.assert_isinstance(value, "label", six.string_types)
         self._property_label = value
 
     @schema_property("last_used")
-    def last_used(self):
+    def last_used(self) -> Optional[str]:
         return self._property_last_used
 
     @last_used.setter
-    def last_used(self, value):
+    def last_used(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_used = None
             return
-
         self.assert_isinstance(value, "last_used", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_last_used = value
 
     @schema_property("last_used_from")
-    def last_used_from(self):
+    def last_used_from(self) -> Optional[str]:
         return self._property_last_used_from
 
     @last_used_from.setter
-    def last_used_from(self, value):
+    def last_used_from(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_used_from = None
             return
-
         self.assert_isinstance(value, "last_used_from", six.string_types)
         self._property_last_used_from = value
 
@@ -212,20 +217,19 @@ class CreateCredentialsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, label=None, **kwargs):
+    def __init__(self, label: Optional[str] = None, **kwargs: Any) -> None:
         super(CreateCredentialsRequest, self).__init__(**kwargs)
         self.label = label
 
     @schema_property("label")
-    def label(self):
+    def label(self) -> Optional[str]:
         return self._property_label
 
     @label.setter
-    def label(self, value):
+    def label(self, value: Optional[str]) -> None:
         if value is None:
             self._property_label = None
             return
-
         self.assert_isinstance(value, "label", six.string_types)
         self._property_label = value
 
@@ -241,7 +245,6 @@ class CreateCredentialsResponse(Response):
     _service = "auth"
     _action = "create_credentials"
     _version = "2.20"
-
     _schema = {
         "definitions": {
             "credentials": {
@@ -271,16 +274,16 @@ class CreateCredentialsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, credentials=None, **kwargs):
+    def __init__(self, credentials: Any = None, **kwargs: Any) -> None:
         super(CreateCredentialsResponse, self).__init__(**kwargs)
         self.credentials = credentials
 
     @schema_property("credentials")
-    def credentials(self):
+    def credentials(self) -> Any:
         return self._property_credentials
 
     @credentials.setter
-    def credentials(self, value):
+    def credentials(self, value: Any) -> None:
         if value is None:
             self._property_credentials = None
             return
@@ -314,34 +317,32 @@ class EditCredentialsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, access_key, label=None, **kwargs):
+    def __init__(self, access_key: str, label: Optional[str] = None, **kwargs: Any) -> None:
         super(EditCredentialsRequest, self).__init__(**kwargs)
         self.access_key = access_key
         self.label = label
 
     @schema_property("access_key")
-    def access_key(self):
+    def access_key(self) -> str:
         return self._property_access_key
 
     @access_key.setter
-    def access_key(self, value):
+    def access_key(self, value: str) -> None:
         if value is None:
             self._property_access_key = None
             return
-
         self.assert_isinstance(value, "access_key", six.string_types)
         self._property_access_key = value
 
     @schema_property("label")
-    def label(self):
+    def label(self) -> Optional[str]:
         return self._property_label
 
     @label.setter
-    def label(self, value):
+    def label(self, value: Optional[str]) -> None:
         if value is None:
             self._property_label = None
             return
-
         self.assert_isinstance(value, "label", six.string_types)
         self._property_label = value
 
@@ -357,7 +358,6 @@ class EditCredentialsResponse(Response):
     _service = "auth"
     _action = "edit_credentials"
     _version = "2.20"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -370,22 +370,21 @@ class EditCredentialsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(EditCredentialsResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -416,34 +415,32 @@ class EditUserRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, user=None, role=None, **kwargs):
+    def __init__(self, user: Optional[str] = None, role: Optional[str] = None, **kwargs: Any) -> None:
         super(EditUserRequest, self).__init__(**kwargs)
         self.user = user
         self.role = role
 
     @schema_property("user")
-    def user(self):
+    def user(self) -> Optional[str]:
         return self._property_user
 
     @user.setter
-    def user(self, value):
+    def user(self, value: Optional[str]) -> None:
         if value is None:
             self._property_user = None
             return
-
         self.assert_isinstance(value, "user", six.string_types)
         self._property_user = value
 
     @schema_property("role")
-    def role(self):
+    def role(self) -> Optional[str]:
         return self._property_role
 
     @role.setter
-    def role(self, value):
+    def role(self, value: Optional[str]) -> None:
         if value is None:
             self._property_role = None
             return
-
         self.assert_isinstance(value, "role", six.string_types)
         self._property_role = value
 
@@ -461,7 +458,6 @@ class EditUserResponse(Response):
     _service = "auth"
     _action = "edit_user"
     _version = "2.20"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -479,34 +475,32 @@ class EditUserResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[float] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(EditUserResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[float]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[float]) -> None:
         if value is None:
             self._property_updated = None
             return
-
         self.assert_isinstance(value, "updated", six.integer_types + (float,))
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -543,14 +537,13 @@ class GetCredentialsResponse(Response):
     _service = "auth"
     _action = "get_credentials"
     _version = "2.20"
-
     _schema = {
         "definitions": {
             "credential_key": {
                 "properties": {
                     "access_key": {
                         "description": "Credentials access key",
-                        "type": ["string", "null"]
+                        "type": ["string", "null"],
                     },
                     "label": {
                         "description": "Optional credentials label",
@@ -581,38 +574,38 @@ class GetCredentialsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, credentials=None, additional_credentials=None, **kwargs):
+    def __init__(
+        self, credentials: Optional[List[Any]] = None, additional_credentials: Optional[dict] = None, **kwargs: Any
+    ) -> None:
         super(GetCredentialsResponse, self).__init__(**kwargs)
         self.credentials = credentials
         self.additional_credentials = additional_credentials
 
     @schema_property("credentials")
-    def credentials(self):
+    def credentials(self) -> Optional[List[Any]]:
         return self._property_credentials
 
     @credentials.setter
-    def credentials(self, value):
+    def credentials(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_credentials = None
             return
-
         self.assert_isinstance(value, "credentials", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [CredentialKey.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "credentials", CredentialKey, is_array=True)
         self._property_credentials = value
 
     @schema_property("additional_credentials")
-    def additional_credentials(self):
+    def additional_credentials(self) -> Optional[dict]:
         return self._property_additional_credentials
 
     @additional_credentials.setter
-    def additional_credentials(self, value):
+    def additional_credentials(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_additional_credentials = None
             return
-
         self.assert_isinstance(value, "additional_credentials", (dict,))
         self._property_additional_credentials = value
 
@@ -635,31 +628,28 @@ class LoginRequest(Request):
         "definitions": {},
         "properties": {
             "expiration_sec": {
-                "description": (
-                    "Requested token expiration time in seconds. Not guaranteed, might be overridden by the service"
-                ),
+                "description": "Requested token expiration time in seconds. Not guaranteed, might be overridden by the service",
                 "type": ["integer", "null"],
             }
         },
         "type": "object",
     }
 
-    def __init__(self, expiration_sec=None, **kwargs):
+    def __init__(self, expiration_sec: Optional[int] = None, **kwargs: Any) -> None:
         super(LoginRequest, self).__init__(**kwargs)
         self.expiration_sec = expiration_sec
 
     @schema_property("expiration_sec")
-    def expiration_sec(self):
+    def expiration_sec(self) -> Optional[int]:
         return self._property_expiration_sec
 
     @expiration_sec.setter
-    def expiration_sec(self, value):
+    def expiration_sec(self, value: Optional[int]) -> None:
         if value is None:
             self._property_expiration_sec = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "expiration_sec", six.integer_types)
         self._property_expiration_sec = value
 
@@ -675,27 +665,25 @@ class LoginResponse(Response):
     _service = "auth"
     _action = "login"
     _version = "2.20"
-
     _schema = {
         "definitions": {},
         "properties": {"token": {"description": "Token string", "type": ["string", "null"]}},
         "type": "object",
     }
 
-    def __init__(self, token=None, **kwargs):
+    def __init__(self, token: Optional[str] = None, **kwargs: Any) -> None:
         super(LoginResponse, self).__init__(**kwargs)
         self.token = token
 
     @schema_property("token")
-    def token(self):
+    def token(self) -> Optional[str]:
         return self._property_token
 
     @token.setter
-    def token(self, value):
+    def token(self, value: Optional[str]) -> None:
         if value is None:
             self._property_token = None
             return
-
         self.assert_isinstance(value, "token", six.string_types)
         self._property_token = value
 
@@ -719,20 +707,19 @@ class RevokeCredentialsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, access_key=None, **kwargs):
+    def __init__(self, access_key: Optional[str] = None, **kwargs: Any) -> None:
         super(RevokeCredentialsRequest, self).__init__(**kwargs)
         self.access_key = access_key
 
     @schema_property("access_key")
-    def access_key(self):
+    def access_key(self) -> Optional[str]:
         return self._property_access_key
 
     @access_key.setter
-    def access_key(self, value):
+    def access_key(self, value: Optional[str]) -> None:
         if value is None:
             self._property_access_key = None
             return
-
         self.assert_isinstance(value, "access_key", six.string_types)
         self._property_access_key = value
 
@@ -748,7 +735,6 @@ class RevokeCredentialsResponse(Response):
     _service = "auth"
     _action = "revoke_credentials"
     _version = "2.20"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -761,22 +747,21 @@ class RevokeCredentialsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, revoked=None, **kwargs):
+    def __init__(self, revoked: Optional[int] = None, **kwargs: Any) -> None:
         super(RevokeCredentialsResponse, self).__init__(**kwargs)
         self.revoked = revoked
 
     @schema_property("revoked")
-    def revoked(self):
+    def revoked(self) -> Optional[int]:
         return self._property_revoked
 
     @revoked.setter
-    def revoked(self, value):
+    def revoked(self, value: Optional[int]) -> None:
         if value is None:
             self._property_revoked = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "revoked", six.integer_types)
         self._property_revoked = value
 

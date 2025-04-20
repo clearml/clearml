@@ -1,37 +1,38 @@
 import gzip
 import io
 import json
-import yaml
 import mimetypes
 import os
 import pickle
-from six.moves.urllib.parse import quote
 from copy import deepcopy
 from datetime import datetime
 from multiprocessing.pool import ThreadPool
 from tempfile import mkdtemp, mkstemp
 from threading import Thread
 from time import time
+from typing import Dict, Union, Optional, Sequence, Callable, TYPE_CHECKING, Any
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import six
+import yaml
 from PIL import Image
 from pathlib2 import Path
+from six.moves.urllib.parse import quote
 from six.moves.urllib.parse import urlparse
-from typing import Dict, Union, Optional, Any, Sequence, Callable
 
 from ..backend_api import Session
 from ..backend_api.services import tasks
 from ..backend_interface.metrics.events import UploadEvent
+from ..config import deferred_config, config
 from ..debugging.log import LoggerRoot
 from ..storage.helper import remote_driver_schemes
 from ..storage.util import sha256sum, format_size, get_common_path
 from ..utilities.process.mp import SafeEvent, ForkSafeRLock
 from ..utilities.proxy_object import LazyEvalWrapper
-from ..config import deferred_config, config
 
 try:
     import pandas as pd
+
     DataFrame = pd.DataFrame
 except ImportError:
     pd = None
@@ -44,6 +45,8 @@ try:
     from pathlib import Path as pathlib_Path  # noqa
 except ImportError:
     pathlib_Path = None
+if TYPE_CHECKING:
+    import pandas
 
 
 class Artifact(object):
@@ -54,78 +57,70 @@ class Artifact(object):
     _not_set = object()
 
     @property
-    def url(self):
-        # type: () -> str
+    def url(self) -> str:
         """
         :return: The URL of uploaded artifact.
         """
         return self._url
 
     @property
-    def name(self):
-        # type: () -> str
+    def name(self) -> str:
         """
         :return: The name of artifact.
         """
         return self._name
 
     @property
-    def size(self):
-        # type: () -> int
+    def size(self) -> int:
         """
         :return: The size in bytes of artifact.
         """
         return self._size
 
     @property
-    def type(self):
-        # type: () -> str
+    def type(self) -> str:
         """
         :return: The type (str) of of artifact.
         """
         return self._type
 
     @property
-    def mode(self):
-        # type: () -> Union["input", "output"]  # noqa: F821
+    def mode(self) -> str:
+        # noqa: F821
         """
         :return: The mode (str) of of artifact: "input" or "output".
         """
         return self._mode
 
     @property
-    def hash(self):
-        # type: () -> str
+    def hash(self) -> str:
         """
         :return: SHA2 hash (str) of of artifact content.
         """
         return self._hash
 
     @property
-    def timestamp(self):
-        # type: () -> datetime
+    def timestamp(self) -> datetime:
         """
         :return: Timestamp (datetime) of uploaded artifact.
         """
         return self._timestamp
 
     @property
-    def metadata(self):
-        # type: () -> Optional[Dict[str, str]]
+    def metadata(self) -> Optional[Dict[str, str]]:
         """
         :return: Key/Value dictionary attached to artifact.
         """
         return self._metadata
 
     @property
-    def preview(self):
-        # type: () -> str
+    def preview(self) -> str:
         """
         :return: A string (str) representation of the artifact.
         """
         return self._preview
 
-    def __init__(self, artifact_api_object):
+    def __init__(self, artifact_api_object: tasks.Artifact) -> None:
         """
         construct read-only object from api artifact object
 
@@ -143,8 +138,11 @@ class Artifact(object):
         self._content_type = artifact_api_object.type_data.content_type if artifact_api_object.type_data else None
         self._object = self._not_set
 
-    def get(self, force_download=False, deserialization_function=None):
-        # type: (bool, Optional[Callable[[bytes], Any]]) -> Any
+    def get(
+        self,
+        force_download: bool = False,
+        deserialization_function: Optional[Callable[[bytes], Any]] = None,
+    ) -> Any:
         """
         Return an object constructed from the artifact file
 
@@ -159,7 +157,7 @@ class Artifact(object):
         pointing to a local copy of the artifacts file (or directory) will be returned
 
         :param bool force_download: download file from remote even if exists in local cache
-        :param Callable[bytes, Any] deserialization_function: A deserialization function that takes one parameter of type `bytes`,
+        :param Callable[bytes, object] deserialization_function: A deserialization function that takes one parameter of type `bytes`,
             which represents the serialized object. This function should return the deserialized object.
             Useful when the artifact was uploaded using a custom serialization function when calling the
             `Task.upload_artifact` method with the `serialization_function` argument.
@@ -223,8 +221,12 @@ class Artifact(object):
 
         return self._object
 
-    def get_local_copy(self, extract_archive=True, raise_on_error=False, force_download=False):
-        # type: (bool, bool, bool) -> str
+    def get_local_copy(
+        self,
+        extract_archive: bool = True,
+        raise_on_error: bool = False,
+        force_download: bool = False,
+    ) -> str:
         """
         :param bool extract_archive: If True and artifact is of type 'archive' (compressed folder),
             the returned path will be a temporary folder containing the archive content
@@ -235,43 +237,60 @@ class Artifact(object):
         :return: A local path to a downloaded copy of the artifact.
         """
         from clearml.storage import StorageManager
+
         local_copy = StorageManager.get_local_copy(
             remote_url=self.url,
-            extract_archive=extract_archive and self.type == 'archive',
+            extract_archive=extract_archive and self.type == "archive",
             name=self.name,
-            force_download=force_download
+            force_download=force_download,
         )
         if raise_on_error and local_copy is None:
             raise ValueError(
-                "Could not retrieve a local copy of artifact {}, failed downloading {}".format(self.name, self.url))
+                "Could not retrieve a local copy of artifact {}, failed downloading {}".format(self.name, self.url)
+            )
 
         return local_copy
 
-    def __repr__(self):
-        return str({'name': self.name, 'size': self.size, 'type': self.type, 'mode': self.mode, 'url': self.url,
-                    'hash': self.hash, 'timestamp': self.timestamp,
-                    'metadata': self.metadata, 'preview': self.preview, })
+    def __repr__(self) -> str:
+        return str(
+            {
+                "name": self.name,
+                "size": self.size,
+                "type": self.type,
+                "mode": self.mode,
+                "url": self.url,
+                "hash": self.hash,
+                "timestamp": self.timestamp,
+                "metadata": self.metadata,
+                "preview": self.preview,
+            }
+        )
 
 
 class Artifacts(object):
     max_preview_size_bytes = 65536
 
-    _flush_frequency_sec = 300.
+    _flush_frequency_sec = 300.0
     _max_tmp_file_replace_attemps = 3
     # notice these two should match
-    _save_format = '.csv.gz'
-    _compression = 'gzip'
+    _save_format = ".csv.gz"
+    _compression = "gzip"
     # hashing constants
     _hash_block_size = 65536
-    _pd_artifact_type = 'data-audit-table'
+    _pd_artifact_type = "data-audit-table"
     _default_pandas_dataframe_extension_name = deferred_config(
         "development.artifacts.default_pandas_dataframe_extension_name", None
     )
 
     class _ProxyDictWrite(dict):
-        """ Dictionary wrapper that updates an arguments instance on any item set in the dictionary """
+        """Dictionary wrapper that updates an arguments instance on any item set in the dictionary"""
 
-        def __init__(self, artifacts_manager, *args, **kwargs):
+        def __init__(
+            self,
+            artifacts_manager: "Artifacts",
+            *args: Any,
+            **kwargs: Any,
+        ) -> None:
             super(Artifacts._ProxyDictWrite, self).__init__(*args, **kwargs)
             self._artifacts_manager = artifacts_manager
             # list of artifacts we should not upload (by name & weak-reference)
@@ -279,7 +298,7 @@ class Artifacts(object):
             # list of hash columns to calculate uniqueness for the artifacts
             self.artifact_hash_columns = {}
 
-        def __setitem__(self, key, value):
+        def __setitem__(self, key: Any, value: Any) -> None:
             # check that value is of type pandas
             if pd and isinstance(value, pd.DataFrame):
                 super(Artifacts._ProxyDictWrite, self).__setitem__(key, value)
@@ -287,35 +306,33 @@ class Artifacts(object):
                 if self._artifacts_manager:
                     self._artifacts_manager.flush()
             else:
-                raise ValueError('Artifacts currently support pandas.DataFrame objects only')
+                raise ValueError("Artifacts currently support pandas.DataFrame objects only")
 
-        def unregister_artifact(self, name):
+        def unregister_artifact(self, name: str) -> None:
             self.artifact_metadata.pop(name, None)
             self.pop(name, None)
 
-        def add_metadata(self, name, metadata):
+        def add_metadata(self, name: str, metadata: dict) -> None:
             self.artifact_metadata[name] = deepcopy(metadata)
 
-        def get_metadata(self, name):
+        def get_metadata(self, name: str) -> Optional[Dict[str, str]]:
             return self.artifact_metadata.get(name)
 
-        def add_hash_columns(self, artifact_name, hash_columns):
+        def add_hash_columns(self, artifact_name: str, hash_columns: Union[bool, Sequence[str]]) -> None:
             self.artifact_hash_columns[artifact_name] = hash_columns
 
-        def get_hash_columns(self, artifact_name):
+        def get_hash_columns(self, artifact_name: str) -> Optional[Sequence[str]]:
             return self.artifact_hash_columns.get(artifact_name)
 
     @property
-    def registered_artifacts(self):
-        # type: () -> Dict[str, Artifact]
+    def registered_artifacts(self) -> Dict[str, Artifact]:
         return self._artifacts_container
 
     @property
-    def summary(self):
-        # type: () -> str
+    def summary(self) -> str:
         return self._summary
 
-    def __init__(self, task):
+    def __init__(self, task: Any) -> None:
         self._task = task
         # notice the double link, this is important since the Artifact
         # dictionary needs to signal the Artifacts base on changes
@@ -325,7 +342,7 @@ class Artifacts(object):
         self._thread = None
         self._flush_event = SafeEvent()
         self._exit_flag = False
-        self._summary = ''
+        self._summary = ""
         self._temp_folder = []
         self._task_artifact_list = []
         self._task_edit_lock = ForkSafeRLock()
@@ -334,8 +351,13 @@ class Artifacts(object):
         self._project_name = None
         self._temp_files_lookup = {}
 
-    def register_artifact(self, name, artifact, metadata=None, uniqueness_columns=True):
-        # type: (str, DataFrame, Optional[dict], Union[bool, Sequence[str]]) -> ()
+    def register_artifact(
+        self,
+        name: str,
+        artifact: DataFrame,
+        metadata: Optional[dict] = None,
+        uniqueness_columns: Union[bool, Sequence[str]] = True,
+    ) -> ():
         """
         :param str name: name of the artifacts. Notice! it will override previous artifacts if name already exists.
         :param pandas.DataFrame artifact: artifact object, supported artifacts object types: pandas.DataFrame
@@ -345,37 +367,35 @@ class Artifacts(object):
         """
         # currently we support pandas.DataFrame (which we will upload as csv.gz)
         if name in self._artifacts_container:
-            LoggerRoot.get_base_logger().info('Register artifact, overwriting existing artifact \"{}\"'.format(name))
+            LoggerRoot.get_base_logger().info('Register artifact, overwriting existing artifact "{}"'.format(name))
         self._artifacts_container.add_hash_columns(
-            name, list(artifact.columns if uniqueness_columns is True else uniqueness_columns)
+            name,
+            list(artifact.columns if uniqueness_columns is True else uniqueness_columns),
         )
         self._artifacts_container[name] = artifact
         if metadata:
             self._artifacts_container.add_metadata(name, metadata)
 
-    def unregister_artifact(self, name):
-        # type: (str) -> ()
+    def unregister_artifact(self, name: str) -> ():
         # Remove artifact from the watch list
         self._unregister_request.add(name)
         self.flush()
 
     def upload_artifact(
         self,
-        name,  # type: str
-        artifact_object=None,  # type: Optional[object]
-        metadata=None,  # type: Optional[dict]
-        preview=None,  # type: Optional[str]
-        delete_after_upload=False,  # type: bool
-        auto_pickle=None,  # type: Optional[bool]
-        wait_on_upload=False,  # type: bool
-        extension_name=None,  # type: Optional[str]
-        serialization_function=None,  # type: Optional[Callable[[Any], Union[bytes, bytearray]]]
-    ):
-        # type: (...) -> bool
+        name: str,
+        artifact_object: Optional[Any] = None,
+        metadata: Optional[dict] = None,
+        preview: Optional[str] = None,
+        delete_after_upload: bool = False,
+        auto_pickle: Optional[bool] = None,
+        wait_on_upload: bool = False,
+        extension_name: Optional[str] = None,
+        serialization_function: Optional[Callable[[Any], Union[bytes, bytearray]]] = None,
+    ) -> bool:
         if not Session.check_min_api_version("2.3"):
             LoggerRoot.get_base_logger().warning(
-                "Artifacts not supported by your ClearML-server version,"
-                " please upgrade to the latest server version"
+                "Artifacts not supported by your ClearML-server version, please upgrade to the latest server version"
             )
             return False
 
@@ -394,7 +414,14 @@ class Artifacts(object):
             # noinspection PyProtectedMember
             artifact_object = LazyEvalWrapper._load_object(artifact_object)
 
-        pathlib_types = (Path, pathlib_Path,) if pathlib_Path is not None else (Path,)
+        pathlib_types = (
+            (
+                Path,
+                pathlib_Path,
+            )
+            if pathlib_Path is not None
+            else (Path,)
+        )
         local_filename = None
 
         # try to convert string Path object (it might reference a file/folder)
@@ -405,9 +432,9 @@ class Artifacts(object):
                 artifact_path = Path(artifact_object)
                 if artifact_path.exists():
                     artifact_object = artifact_path
-                elif '*' in artifact_object or '?' in artifact_object:
+                elif "*" in artifact_object or "?" in artifact_object:
                     # hackish, detect wildcard in tr files
-                    folder = Path('').joinpath(*artifact_path.parts[:-1])
+                    folder = Path("").joinpath(*artifact_path.parts[:-1])
                     if folder.is_dir() and folder.parts:
                         wildcard = artifact_path.parts[-1]
                         if list(Path(folder).rglob(wildcard)):
@@ -417,19 +444,27 @@ class Artifacts(object):
 
         store_as_pickle = False
         artifact_type_data = tasks.ArtifactTypeData()
-        artifact_type_data.preview = ''
+        artifact_type_data.preview = ""
         override_filename_in_uri = None
         override_filename_ext_in_uri = None
         uri = None
 
-        def get_extension(extension_name_, valid_extensions, default_extension, artifact_type_):
+        def get_extension(
+            extension_name_: Optional[str],
+            valid_extensions: Sequence[str],
+            default_extension: str,
+            artifact_type_: str,
+        ) -> str:
             if not extension_name_:
                 return default_extension
             if extension_name_ in valid_extensions:
                 return extension_name_
             LoggerRoot.get_base_logger().warning(
                 "{} artifact can not be uploaded with extension {}. Valid extensions are: {}. Defaulting to {}.".format(
-                    artifact_type_, extension_name_, ", ".join(valid_extensions), default_extension
+                    artifact_type_,
+                    extension_name_,
+                    ", ".join(valid_extensions),
+                    default_extension,
                 )
             )
             return default_extension
@@ -438,13 +473,14 @@ class Artifacts(object):
             artifact_type = "custom"
             # noinspection PyBroadException
             try:
-                artifact_type_data.preview = preview or str(artifact_object.__repr__())[:self.max_preview_size_bytes]
+                artifact_type_data.preview = preview or str(artifact_object.__repr__())[: self.max_preview_size_bytes]
             except Exception:
                 artifact_type_data.preview = ""
             override_filename_ext_in_uri = extension_name or ""
             override_filename_in_uri = name + override_filename_ext_in_uri
             local_filename = self._push_temp_file(
-                prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri)
+                prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri
+            )
             # noinspection PyBroadException
             try:
                 with open(local_filename, "wb") as f:
@@ -457,14 +493,13 @@ class Artifacts(object):
         elif extension_name == ".pkl":
             store_as_pickle = True
         elif np and isinstance(artifact_object, np.ndarray):
-            artifact_type = 'numpy'
+            artifact_type = "numpy"
             artifact_type_data.preview = preview or str(artifact_object.__repr__())
-            override_filename_ext_in_uri = get_extension(
-                extension_name, [".npz", ".csv.gz"], ".npz", artifact_type
-            )
+            override_filename_ext_in_uri = get_extension(extension_name, [".npz", ".csv.gz"], ".npz", artifact_type)
             override_filename_in_uri = name + override_filename_ext_in_uri
             local_filename = self._push_temp_file(
-                prefix=quote(name, safe="") + '.', suffix=override_filename_ext_in_uri)
+                prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri
+            )
             if override_filename_ext_in_uri == ".npz":
                 artifact_type_data.content_type = "application/numpy"
                 np.savez_compressed(local_filename, **{name: artifact_object})
@@ -478,7 +513,10 @@ class Artifacts(object):
             # we are making sure self._default_pandas_dataframe_extension_name is not deferred
             extension_name = extension_name or str(self._default_pandas_dataframe_extension_name or "")
             override_filename_ext_in_uri = get_extension(
-                extension_name, [".csv.gz", ".parquet", ".feather", ".pickle"], ".csv.gz", artifact_type
+                extension_name,
+                [".csv.gz", ".parquet", ".feather", ".pickle"],
+                ".csv.gz",
+                artifact_type,
             )
             override_filename_in_uri = name
             local_filename = self._push_temp_file(
@@ -523,7 +561,7 @@ class Artifacts(object):
             artifact_type = "image"
             artifact_type_data.content_type = "image/png"
             desc = str(artifact_object.__repr__())
-            artifact_type_data.preview = preview or desc[1:desc.find(' at ')]
+            artifact_type_data.preview = preview or desc[1 : desc.find(" at ")]
 
             # noinspection PyBroadException
             try:
@@ -550,7 +588,8 @@ class Artifacts(object):
                 artifact_type_data.content_type = guessed_type
 
             local_filename = self._push_temp_file(
-                prefix=quote(name, safe="") + '.', suffix=override_filename_ext_in_uri)
+                prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri
+            )
             artifact_object.save(local_filename)
             delete_after_upload = True
         elif isinstance(artifact_object, dict):
@@ -565,7 +604,8 @@ class Artifacts(object):
                     if not auto_pickle:
                         raise
                     LoggerRoot.get_base_logger().warning(
-                        "JSON serialization of artifact \'{}\' failed, reverting to pickle".format(name))
+                        "JSON serialization of artifact '{}' failed, reverting to pickle".format(name)
+                    )
                     store_as_pickle = True
                     serialized_text = None
             else:
@@ -577,14 +617,17 @@ class Artifacts(object):
                     if not auto_pickle:
                         raise
                     LoggerRoot.get_base_logger().warning(
-                        "YAML serialization of artifact \'{}\' failed, reverting to pickle".format(name))
+                        "YAML serialization of artifact '{}' failed, reverting to pickle".format(name)
+                    )
                     store_as_pickle = True
                     serialized_text = None
 
             if serialized_text is not None:
                 override_filename_in_uri = name + override_filename_ext_in_uri
                 local_filename = self._push_temp_file(
-                    prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri)
+                    prefix=quote(name, safe="") + ".",
+                    suffix=override_filename_ext_in_uri,
+                )
                 with open(local_filename, "w") as f:
                     f.write(serialized_text)
                 preview = preview or serialized_text
@@ -593,7 +636,8 @@ class Artifacts(object):
                 else:
                     artifact_type_data.preview = (
                         "# full serialized dict too large to store, storing first {}kb\n{}".format(
-                            self.max_preview_size_bytes // 1024, preview[: self.max_preview_size_bytes]
+                            self.max_preview_size_bytes // 1024,
+                            preview[: self.max_preview_size_bytes],
                         )
                     )
                 delete_after_upload = True
@@ -610,41 +654,44 @@ class Artifacts(object):
             else:  # We assume that this is not Windows os
                 if artifact_object.is_dir():
                     # change to wildcard
-                    artifact_object /= '*'
+                    artifact_object /= "*"
 
             if create_zip_file:
-                folder = Path('').joinpath(*artifact_object.parts[:-1])
+                folder = Path("").joinpath(*artifact_object.parts[:-1])
                 if not folder.is_dir() or not folder.parts:
-                    raise ValueError("Artifact file/folder '{}' could not be found".format(
-                        artifact_object.as_posix()))
+                    raise ValueError("Artifact file/folder '{}' could not be found".format(artifact_object.as_posix()))
 
                 wildcard = artifact_object.parts[-1]
                 files = list(Path(folder).rglob(wildcard))
-                override_filename_ext_in_uri = '.zip'
+                override_filename_ext_in_uri = ".zip"
                 override_filename_in_uri = folder.parts[-1] + override_filename_ext_in_uri
                 zip_file = self._push_temp_file(
-                    prefix=quote(folder.parts[-1], safe="") + '.', suffix=override_filename_ext_in_uri
+                    prefix=quote(folder.parts[-1], safe="") + ".",
+                    suffix=override_filename_ext_in_uri,
                 )
                 try:
-                    artifact_type_data.content_type = 'application/zip'
-                    archive_preview = 'Archive content {}:\n'.format(artifact_object.as_posix())
+                    artifact_type_data.content_type = "application/zip"
+                    archive_preview = "Archive content {}:\n".format(artifact_object.as_posix())
 
-                    with ZipFile(zip_file, 'w', allowZip64=True, compression=ZIP_DEFLATED) as zf:
+                    with ZipFile(zip_file, "w", allowZip64=True, compression=ZIP_DEFLATED) as zf:
                         for filename in sorted(files):
                             if filename.is_file():
                                 relative_file_name = filename.relative_to(folder).as_posix()
-                                archive_preview += '{} - {}\n'.format(
-                                    relative_file_name, format_size(filename.stat().st_size))
+                                archive_preview += "{} - {}\n".format(
+                                    relative_file_name,
+                                    format_size(filename.stat().st_size),
+                                )
                                 zf.write(filename.as_posix(), arcname=relative_file_name)
                 except Exception as e:
                     # failed uploading folder:
-                    LoggerRoot.get_base_logger().warning('Exception {}\nFailed zipping artifact folder {}'.format(
-                        folder, e))
+                    LoggerRoot.get_base_logger().warning(
+                        "Exception {}\nFailed zipping artifact folder {}".format(folder, e)
+                    )
                     return False
 
                 artifact_type_data.preview = preview or archive_preview
                 artifact_object = zip_file
-                artifact_type = 'archive'
+                artifact_type = "archive"
                 artifact_type_data.content_type = mimetypes.guess_type(artifact_object)[0]
                 local_filename = artifact_object
                 delete_after_upload = True
@@ -653,10 +700,11 @@ class Artifacts(object):
                     raise ValueError("Artifact file '{}' could not be found".format(artifact_object.as_posix()))
 
                 override_filename_in_uri = artifact_object.parts[-1]
-                artifact_type_data.preview = preview or '{} - {}\n'.format(
-                    artifact_object.name, format_size(artifact_object.stat().st_size))
+                artifact_type_data.preview = preview or "{} - {}\n".format(
+                    artifact_object.name, format_size(artifact_object.stat().st_size)
+                )
                 artifact_object = artifact_object.as_posix()
-                artifact_type = 'custom'
+                artifact_type = "custom"
                 artifact_type_data.content_type = mimetypes.guess_type(artifact_object)[0]
                 local_filename = artifact_object
         elif (
@@ -666,67 +714,74 @@ class Artifacts(object):
         ):
             # find common path if exists
             list_files = [Path(p) for p in artifact_object]
-            override_filename_ext_in_uri = '.zip'
+            override_filename_ext_in_uri = ".zip"
             override_filename_in_uri = quote(name, safe="") + override_filename_ext_in_uri
             common_path = get_common_path(list_files)
-            zip_file = self._push_temp_file(
-                prefix='artifact_folder.', suffix=override_filename_ext_in_uri
-            )
+            zip_file = self._push_temp_file(prefix="artifact_folder.", suffix=override_filename_ext_in_uri)
             try:
-                artifact_type_data.content_type = 'application/zip'
-                archive_preview = 'Archive content:\n'
+                artifact_type_data.content_type = "application/zip"
+                archive_preview = "Archive content:\n"
 
-                with ZipFile(zip_file, 'w', allowZip64=True, compression=ZIP_DEFLATED) as zf:
+                with ZipFile(zip_file, "w", allowZip64=True, compression=ZIP_DEFLATED) as zf:
                     for filename in sorted(list_files):
                         if filename.is_file():
-                            relative_file_name = filename.relative_to(Path(common_path)).as_posix() \
-                                if common_path else filename.as_posix()
-                            archive_preview += '{} - {}\n'.format(
-                                relative_file_name, format_size(filename.stat().st_size))
+                            relative_file_name = (
+                                filename.relative_to(Path(common_path)).as_posix()
+                                if common_path
+                                else filename.as_posix()
+                            )
+                            archive_preview += "{} - {}\n".format(
+                                relative_file_name, format_size(filename.stat().st_size)
+                            )
                             zf.write(filename.as_posix(), arcname=relative_file_name)
                         else:
                             LoggerRoot.get_base_logger().warning(
-                                "Failed zipping artifact file '{}', file not found!".format(filename.as_posix()))
+                                "Failed zipping artifact file '{}', file not found!".format(filename.as_posix())
+                            )
             except Exception as e:
                 # failed uploading folder:
-                LoggerRoot.get_base_logger().warning('Exception {}\nFailed zipping artifact files {}'.format(
-                    artifact_object, e))
+                LoggerRoot.get_base_logger().warning(
+                    "Exception {}\nFailed zipping artifact files {}".format(artifact_object, e)
+                )
                 return False
 
             artifact_type_data.preview = preview or archive_preview
             artifact_object = zip_file
-            artifact_type = 'archive'
+            artifact_type = "archive"
             artifact_type_data.content_type = mimetypes.guess_type(artifact_object)[0]
             local_filename = artifact_object
             delete_after_upload = True
         elif (
-                isinstance(artifact_object, six.string_types) and len(artifact_object) < 4096
-                and urlparse(artifact_object).scheme in remote_driver_schemes
+            isinstance(artifact_object, six.string_types)
+            and len(artifact_object) < 4096
+            and urlparse(artifact_object).scheme in remote_driver_schemes
         ):
             # we should not upload this, just register
             local_filename = None
             uri = artifact_object
-            artifact_type = 'custom'
+            artifact_type = "custom"
             artifact_type_data.content_type = mimetypes.guess_type(artifact_object)[0]
             if preview:
                 artifact_type_data.preview = preview
         elif isinstance(artifact_object, six.string_types) and artifact_object:
             # if we got here, we should store it as text file.
-            artifact_type = 'string'
-            artifact_type_data.content_type = 'text/plain'
+            artifact_type = "string"
+            artifact_type_data.content_type = "text/plain"
             if preview:
                 artifact_type_data.preview = preview
             elif len(artifact_object) < self.max_preview_size_bytes:
                 artifact_type_data.preview = artifact_object
             else:
-                artifact_type_data.preview = '# full text too large to store, storing first {}kb\n{}'.format(
-                    self.max_preview_size_bytes//1024, artifact_object[:self.max_preview_size_bytes]
+                artifact_type_data.preview = "# full text too large to store, storing first {}kb\n{}".format(
+                    self.max_preview_size_bytes // 1024,
+                    artifact_object[: self.max_preview_size_bytes],
                 )
             delete_after_upload = True
             override_filename_ext_in_uri = ".txt"
             override_filename_in_uri = name + override_filename_ext_in_uri
             local_filename = self._push_temp_file(
-                prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri)
+                prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri
+            )
             # noinspection PyBroadException
             try:
                 with open(local_filename, "wt") as f:
@@ -736,7 +791,7 @@ class Artifacts(object):
                 self._delete_temp_file(local_filename)
                 raise
         elif artifact_object is None or (isinstance(artifact_object, str) and artifact_object == ""):
-            artifact_type = ''
+            artifact_type = ""
             store_as_pickle = True
         elif auto_pickle:
             # revert to pickling the object
@@ -747,21 +802,22 @@ class Artifacts(object):
         # revert to serializing the object with pickle
         if store_as_pickle:
             # if we are here it means we do not know what to do with the object, so we serialize it with pickle.
-            artifact_type = 'pickle'
-            artifact_type_data.content_type = 'application/pickle'
+            artifact_type = "pickle"
+            artifact_type_data.content_type = "application/pickle"
             # noinspection PyBroadException
             try:
-                artifact_type_data.preview = preview or str(artifact_object.__repr__())[:self.max_preview_size_bytes]
+                artifact_type_data.preview = preview or str(artifact_object.__repr__())[: self.max_preview_size_bytes]
             except Exception:
-                artifact_type_data.preview = preview or ''
+                artifact_type_data.preview = preview or ""
             delete_after_upload = True
-            override_filename_ext_in_uri = '.pkl'
+            override_filename_ext_in_uri = ".pkl"
             override_filename_in_uri = name + override_filename_ext_in_uri
             local_filename = self._push_temp_file(
-                prefix=quote(name, safe="") + '.', suffix=override_filename_ext_in_uri)
+                prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri
+            )
             # noinspection PyBroadException
             try:
-                with open(local_filename, 'wb') as f:
+                with open(local_filename, "wb") as f:
                     pickle.dump(artifact_object, f)
             except Exception:
                 # cleanup and raise exception
@@ -769,17 +825,19 @@ class Artifacts(object):
                 raise
 
         # verify preview not out of scope:
-        if artifact_type_data.preview and len(artifact_type_data.preview) > (self.max_preview_size_bytes+1024):
-            artifact_type_data.preview = '# full preview too large to store, storing first {}kb\n{}'.format(
-                self.max_preview_size_bytes // 1024, artifact_type_data.preview[:self.max_preview_size_bytes]
+        if artifact_type_data.preview and len(artifact_type_data.preview) > (self.max_preview_size_bytes + 1024):
+            artifact_type_data.preview = "# full preview too large to store, storing first {}kb\n{}".format(
+                self.max_preview_size_bytes // 1024,
+                artifact_type_data.preview[: self.max_preview_size_bytes],
             )
 
         # remove from existing list, if exists
         for artifact in self._task_artifact_list:
             if artifact.key == name:
                 if artifact.type == self._pd_artifact_type:
-                    raise ValueError("Artifact of name {} already registered, "
-                                     "use register_artifact instead".format(name))
+                    raise ValueError(
+                        "Artifact of name {} already registered, use register_artifact instead".format(name)
+                    )
 
                 self._task_artifact_list.remove(artifact)
                 break
@@ -791,43 +849,48 @@ class Artifacts(object):
             # check that the file to upload exists
             local_filename = Path(local_filename).absolute()
             if not local_filename.exists() or not local_filename.is_file():
-                LoggerRoot.get_base_logger().warning('Artifact upload failed, cannot find file {}'.format(
-                    local_filename.as_posix()))
+                LoggerRoot.get_base_logger().warning(
+                    "Artifact upload failed, cannot find file {}".format(local_filename.as_posix())
+                )
                 return False
 
             file_hash, _ = sha256sum(local_filename.as_posix(), block_size=Artifacts._hash_block_size)
             file_size = local_filename.stat().st_size
 
-            uri = self._upload_local_file(local_filename, name,
-                                          delete_after_upload=delete_after_upload,
-                                          override_filename=override_filename_in_uri,
-                                          override_filename_ext=override_filename_ext_in_uri,
-                                          wait_on_upload=wait_on_upload)
+            uri = self._upload_local_file(
+                local_filename,
+                name,
+                delete_after_upload=delete_after_upload,
+                override_filename=override_filename_in_uri,
+                override_filename_ext=override_filename_ext_in_uri,
+                wait_on_upload=wait_on_upload,
+            )
 
         timestamp = int(time())
 
-        artifact = tasks.Artifact(key=name, type=artifact_type,
-                                  uri=uri,
-                                  content_size=file_size,
-                                  hash=file_hash,
-                                  timestamp=timestamp,
-                                  type_data=artifact_type_data,
-                                  display_data=[(str(k), str(v)) for k, v in metadata.items()] if metadata else None)
+        artifact = tasks.Artifact(
+            key=name,
+            type=artifact_type,
+            uri=uri,
+            content_size=file_size,
+            hash=file_hash,
+            timestamp=timestamp,
+            type_data=artifact_type_data,
+            display_data=[(str(k), str(v)) for k, v in metadata.items()] if metadata else None,
+        )
 
         # update task artifacts
         self._add_artifact(artifact)
 
         return True
 
-    def flush(self):
-        # type: () -> ()
+    def flush(self) -> ():
         # start the thread if it hasn't already:
         self._start()
         # flush the current state of all artifacts
         self._flush_event.set()
 
-    def stop(self, wait=True):
-        # type: (bool) -> ()
+    def stop(self, wait: bool = True) -> ():
         # stop the daemon thread and quit
         # wait until thread exists
         self._exit_flag = True
@@ -843,9 +906,8 @@ class Artifacts(object):
                 except Exception:
                     pass
 
-    def _start(self):
-        # type: () -> ()
-        """ Start daemon thread if any artifacts are registered and thread is not up yet """
+    def _start(self) -> ():
+        """Start daemon thread if any artifacts are registered and thread is not up yet"""
         if not self._thread and self._artifacts_container:
             # start the daemon thread
             self._flush_event.clear()
@@ -853,8 +915,7 @@ class Artifacts(object):
             self._thread.daemon = True
             self._thread.start()
 
-    def _daemon(self):
-        # type: () -> ()
+    def _daemon(self) -> ():
         while not self._exit_flag:
             self._flush_event.wait(self._flush_frequency_sec)
             self._flush_event.clear()
@@ -868,7 +929,7 @@ class Artifacts(object):
         # create summary
         self._summary = self._get_statistics()
 
-    def _add_artifact(self, artifact):
+    def _add_artifact(self, artifact: tasks.Artifact) -> None:
         if not self._task:
             raise ValueError("Task object not set")
         with self._task_edit_lock:
@@ -877,8 +938,7 @@ class Artifacts(object):
             # noinspection PyProtectedMember
             self._task._add_artifacts(self._task_artifact_list)
 
-    def _upload_data_audit_artifacts(self, name):
-        # type: (str) -> ()
+    def _upload_data_audit_artifacts(self, name: str) -> ():
         logger = self._task.get_logger()
         pd_artifact = self._artifacts_container.get(name)
         pd_metadata = self._artifacts_container.get_metadata(name)
@@ -896,12 +956,10 @@ class Artifacts(object):
 
         override_filename_ext_in_uri = self._save_format
         override_filename_in_uri = name
-        local_csv = self._push_temp_file(
-            prefix=quote(name, safe="") + '.', suffix=override_filename_ext_in_uri)
+        local_csv = self._push_temp_file(prefix=quote(name, safe="") + ".", suffix=override_filename_ext_in_uri)
         local_csv = Path(local_csv)
         self._store_compressed_pd_csv(pd_artifact, local_csv.as_posix(), index=False)
-        current_sha2, file_sha2 = sha256sum(
-            local_csv.as_posix(), skip_header=32, block_size=Artifacts._hash_block_size)
+        current_sha2, file_sha2 = sha256sum(local_csv.as_posix(), skip_header=32, block_size=Artifacts._hash_block_size)
         if name in self._last_artifacts_upload:
             previous_sha2 = self._last_artifacts_upload[name]
             if previous_sha2 == current_sha2:
@@ -915,10 +973,15 @@ class Artifacts(object):
         self._last_artifacts_upload[name] = current_sha2
 
         # If old clearml-server, upload as debug image
-        if not Session.check_min_api_version('2.3'):
-            logger.report_image(title='artifacts', series=name, local_path=local_csv.as_posix(),
-                                delete_after_upload=True, iteration=self._task.get_last_iteration(),
-                                max_image_history=2)
+        if not Session.check_min_api_version("2.3"):
+            logger.report_image(
+                title="artifacts",
+                series=name,
+                local_path=local_csv.as_posix(),
+                delete_after_upload=True,
+                iteration=self._task.get_last_iteration(),
+                max_image_history=2,
+            )
             return
 
         # Find our artifact
@@ -931,9 +994,13 @@ class Artifacts(object):
         file_size = local_csv.stat().st_size
 
         # upload file
-        uri = self._upload_local_file(local_csv, name, delete_after_upload=True,
-                                      override_filename=override_filename_in_uri,
-                                      override_filename_ext=override_filename_ext_in_uri)
+        uri = self._upload_local_file(
+            local_csv,
+            name,
+            delete_after_upload=True,
+            override_filename=override_filename_in_uri,
+            override_filename_ext=override_filename_ext_in_uri,
+        )
 
         # update task artifacts
         with self._task_edit_lock:
@@ -943,8 +1010,9 @@ class Artifacts(object):
 
             artifact_type_data.data_hash = current_sha2
             artifact_type_data.content_type = "text/csv"
-            artifact_type_data.preview = str(pd_artifact.__repr__(
-            )) + '\n\n' + self._get_statistics({name: pd_artifact})
+            artifact_type_data.preview = (
+                str(pd_artifact.__repr__()) + "\n\n" + self._get_statistics({name: pd_artifact})
+            )
 
             artifact.type_data = artifact_type_data
             artifact.uri = uri
@@ -956,10 +1024,14 @@ class Artifacts(object):
             self._add_artifact(artifact)
 
     def _upload_local_file(
-            self, local_file, name, delete_after_upload=False, override_filename=None, override_filename_ext=None,
-            wait_on_upload=False
-    ):
-        # type: (str, str, bool, Optional[str], Optional[str], bool) -> str
+        self,
+        local_file: str,
+        name: str,
+        delete_after_upload: bool = False,
+        override_filename: Optional[str] = None,
+        override_filename_ext: Optional[str] = None,
+        wait_on_upload: bool = False,
+    ) -> str:
         """
         Upload local file and return uri of the uploaded file (uploading in the background)
         """
@@ -970,13 +1042,17 @@ class Artifacts(object):
         upload_uri = self._task.output_uri or self._task.get_logger().get_default_upload_destination()
         if not isinstance(local_file, Path):
             local_file = Path(local_file)
-        ev = UploadEvent(metric='artifacts', variant=name,
-                         image_data=None, upload_uri=upload_uri,
-                         local_image_path=local_file.as_posix(),
-                         delete_after_upload=delete_after_upload,
-                         override_filename=override_filename,
-                         override_filename_ext=override_filename_ext,
-                         override_storage_key_prefix=self._get_storage_uri_prefix())
+        ev = UploadEvent(
+            metric="artifacts",
+            variant=name,
+            image_data=None,
+            upload_uri=upload_uri,
+            local_image_path=local_file.as_posix(),
+            delete_after_upload=delete_after_upload,
+            override_filename=override_filename,
+            override_filename_ext=override_filename_ext,
+            override_storage_key_prefix=self._get_storage_uri_prefix(),
+        )
         _, uri = ev.get_target_full_upload_uri(upload_uri, quote_uri=False)
 
         # send for upload
@@ -987,7 +1063,7 @@ class Artifacts(object):
                 try:
                     self._delete_temp_file(local_file)
                 except OSError:
-                    LoggerRoot.get_base_logger().warning('Failed removing temporary {}'.format(local_file))
+                    LoggerRoot.get_base_logger().warning("Failed removing temporary {}".format(local_file))
         else:
             self._task._reporter._report(ev)
 
@@ -995,9 +1071,8 @@ class Artifacts(object):
 
         return quoted_uri
 
-    def _get_statistics(self, artifacts_dict=None):
-        # type: (Optional[Dict[str, Artifact]]) -> str
-        summary = ''
+    def _get_statistics(self, artifacts_dict: Optional[Dict[str, Artifact]] = None) -> str:
+        summary = ""
         artifacts_dict = artifacts_dict or self._artifacts_container
         thread_pool = ThreadPool()
 
@@ -1016,15 +1091,15 @@ class Artifacts(object):
                     missing_cols = hash_cols.difference(a_df.columns)
                     if missing_cols == hash_cols:
                         LoggerRoot.get_base_logger().warning(
-                            'Uniqueness columns {} not found in artifact {}. '
-                            'Skipping uniqueness check for artifact.'.format(list(missing_cols), a_name)
+                            "Uniqueness columns {} not found in artifact {}. "
+                            "Skipping uniqueness check for artifact.".format(list(missing_cols), a_name)
                         )
                         continue
                     elif missing_cols:
                         # missing_cols must be a subset of hash_cols
                         hash_cols.difference_update(missing_cols)
                         LoggerRoot.get_base_logger().warning(
-                            'Uniqueness columns {} not found in artifact {}. Using {}.'.format(
+                            "Uniqueness columns {} not found in artifact {}. Using {}.".format(
                                 list(missing_cols), a_name, list(hash_cols)
                             )
                         )
@@ -1033,7 +1108,7 @@ class Artifacts(object):
 
                 a_unique_hash = set()
 
-                def hash_row(r):
+                def hash_row(r: Any) -> None:
                     a_unique_hash.add(hash(bytes(r)))
 
                 a_shape = a_df.shape
@@ -1041,18 +1116,29 @@ class Artifacts(object):
                 a_hash_cols = a_df.drop(columns=hash_col_drop)
                 thread_pool.map(hash_row, a_hash_cols.values)
                 # add result
-                artifacts_summary.append((a_name, a_shape, a_unique_hash,))
+                artifacts_summary.append(
+                    (
+                        a_name,
+                        a_shape,
+                        a_unique_hash,
+                    )
+                )
 
             # build intersection summary
             for i, (name, shape, unique_hash) in enumerate(artifacts_summary):
-                summary += '[{name}]: shape={shape}, {unique} unique rows, {percentage:.1f}% uniqueness\n'.format(
-                    name=name, shape=shape, unique=len(unique_hash),
-                    percentage=100 * len(unique_hash) / float(shape[0]))
-                for name2, shape2, unique_hash2 in artifacts_summary[i + 1:]:
+                summary += "[{name}]: shape={shape}, {unique} unique rows, {percentage:.1f}% uniqueness\n".format(
+                    name=name,
+                    shape=shape,
+                    unique=len(unique_hash),
+                    percentage=100 * len(unique_hash) / float(shape[0]),
+                )
+                for name2, shape2, unique_hash2 in artifacts_summary[i + 1 :]:
                     intersection = len(unique_hash & unique_hash2)
-                    summary += '\tIntersection with [{name2}] {intersection} rows: {percentage:.1f}%\n'.format(
-                        name2=name2, intersection=intersection,
-                        percentage=100 * intersection / float(len(unique_hash2)))
+                    summary += "\tIntersection with [{name2}] {intersection} rows: {percentage:.1f}%\n".format(
+                        name2=name2,
+                        intersection=intersection,
+                        percentage=100 * intersection / float(len(unique_hash2)),
+                    )
         except Exception as e:
             LoggerRoot.get_base_logger().warning(str(e))
         finally:
@@ -1060,29 +1146,35 @@ class Artifacts(object):
             thread_pool.terminate()
         return summary
 
-    def _get_temp_folder(self, force_new=False):
-        # type: (bool) -> str
+    def _get_temp_folder(self, force_new: bool = False) -> str:
         if force_new or not self._temp_folder:
-            new_temp = mkdtemp(prefix='artifacts_')
+            new_temp = mkdtemp(prefix="artifacts_")
             self._temp_folder.append(new_temp)
             return new_temp
         return self._temp_folder[0]
 
-    def _get_storage_uri_prefix(self):
-        # type: () -> str
-        if not self._storage_prefix or self._task_name != self._task.name or \
-                self._project_name != self._task.get_project_name():
+    def _get_storage_uri_prefix(self) -> str:
+        if (
+            not self._storage_prefix
+            or self._task_name != self._task.name
+            or self._project_name != self._task.get_project_name()
+        ):
             # noinspection PyProtectedMember
             self._storage_prefix = self._task._get_output_destination_suffix()
             self._task_name = self._task.name
             self._project_name = self._task.get_project_name()
         return self._storage_prefix
 
-    def _store_compressed_pd_csv(self, artifact_object, local_filename, **kwargs):
+    def _store_compressed_pd_csv(
+        self,
+        artifact_object: "pandas.DataFrame",
+        local_filename: str,
+        **kwargs: Any,
+    ) -> None:
         # bugfix: to make pandas csv.gz consistent file hash we must pass mtime=0
         # (otherwise it is encoded and creates new hash every time)
         if self._compression == "gzip":
-            with gzip.GzipFile(local_filename, 'wb', mtime=0) as gzip_file:
+            with gzip.GzipFile(local_filename, "wb", mtime=0) as gzip_file:
                 try:
                     pd_version = int(pd.__version__.split(".")[0])
                 except ValueError:
@@ -1096,7 +1188,7 @@ class Artifacts(object):
         else:
             artifact_object.to_csv(local_filename, compression=self._compression)
 
-    def _push_temp_file(self, prefix=None, suffix=None):
+    def _push_temp_file(self, prefix: Optional[str] = None, suffix: Optional[str] = None) -> str:
         """
         Same prefix/suffix as mkstemp uses
         :param prefix: Same prefix/suffix as mkstemp uses
@@ -1112,13 +1204,17 @@ class Artifacts(object):
         # put a consistent the file into a temp folder because the filename is part of
         # the compressed artifact and we want consistency. After that we rename compressed file to temp file and
         # delete temp folder
-        temp_folder = mkdtemp(prefix='artifacts_')
+        temp_folder = mkdtemp(prefix="artifacts_")
         local_filename = Path(temp_folder) / (str(prefix).rstrip(".") + "." + str(suffix).lstrip("."))
         local_filename = local_filename.as_posix()
-        self._temp_files_lookup[local_filename] = (temp_folder, deepcopy(prefix), deepcopy(suffix))
+        self._temp_files_lookup[local_filename] = (
+            temp_folder,
+            deepcopy(prefix),
+            deepcopy(suffix),
+        )
         return local_filename
 
-    def _pop_temp_file(self,  local_filename=None):
+    def _pop_temp_file(self, local_filename: Optional[str] = None) -> str:
         """
         Now we need to move the consistent file from the temp folder to the main temp folder,
         give it a new temp name, and remove the temp folder
@@ -1146,7 +1242,9 @@ class Artifacts(object):
                 except PermissionError:
                     LoggerRoot.get_base_logger().warning(
                         "Failed to replace {} with {}. Attemps left: {}".format(
-                            local_filename, temp_filename, self._max_tmp_file_replace_attemps - i
+                            local_filename,
+                            temp_filename,
+                            self._max_tmp_file_replace_attemps - i,
                         )
                     )
             else:
@@ -1160,7 +1258,7 @@ class Artifacts(object):
 
         return temp_filename
 
-    def _delete_temp_file(self, local_filename):
+    def _delete_temp_file(self, local_filename: str) -> None:
         # cleanup and raise exception
         local_filename = self._pop_temp_file(local_filename)
         os.unlink(local_filename)

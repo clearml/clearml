@@ -5,21 +5,23 @@ A module for converting from mpl language to plotly language.
 
 """
 import math
-
 import warnings
+from typing import Tuple, Optional, Union, List, Any
+
 import matplotlib.dates
 from matplotlib import __version__ as matplotlib_version
+
 try:
     from matplotlib.patches import FancyBboxPatch
 except ImportError:
     FancyBboxPatch = None
 
 
-def check_maplotlib_max_version(ver_maj, ver_min):
+def check_maplotlib_max_version(ver_maj: int, ver_min: int) -> bool:
     """
     return True if check_maplotlib_version is lower than specified version
     """
-    parts = matplotlib_version.split('.')
+    parts = matplotlib_version.split(".")
     if not parts:
         return False
     if parts[0] < str(ver_maj):
@@ -29,7 +31,7 @@ def check_maplotlib_max_version(ver_maj, ver_min):
     return False
 
 
-def check_bar_match(old_bar, new_bar):
+def check_bar_match(old_bar: dict, new_bar: dict) -> bool:
     """Check if two bars belong in the same collection (bar chart).
 
     Positional arguments:
@@ -56,7 +58,7 @@ def check_bar_match(old_bar, new_bar):
         return False
 
 
-def check_corners(inner_obj, outer_obj):
+def check_corners(inner_obj: matplotlib.artist.Artist, outer_obj: matplotlib.artist.Artist) -> bool:
     inner_corners = inner_obj.get_window_extent().corners()
     outer_corners = outer_obj.get_window_extent().corners()
     if inner_corners[0][0] < outer_corners[0][0]:
@@ -71,7 +73,7 @@ def check_corners(inner_obj, outer_obj):
         return True
 
 
-def convert_dash(mpl_dash):
+def convert_dash(mpl_dash: str) -> str:
     """Convert mpl line symbol to plotly line symbol and return symbol."""
     if mpl_dash in DASH_MAP:
         return DASH_MAP[mpl_dash]
@@ -101,7 +103,7 @@ def convert_dash(mpl_dash):
         return dashpx
 
 
-def convert_path(path):
+def convert_path(path: Tuple[Any, Any]) -> Optional[str]:
     verts = path[0]  # noqa: F841,  may use this later
     code = tuple(path[1])
     if code in PATH_MAP:
@@ -110,7 +112,7 @@ def convert_path(path):
         return None
 
 
-def convert_symbol(mpl_symbol):
+def convert_symbol(mpl_symbol: Union[str, List[str]]) -> Union[str, List[str]]:
     """Convert mpl marker symbol to plotly symbol and return symbol."""
     if isinstance(mpl_symbol, list):
         symbol = list()
@@ -123,7 +125,7 @@ def convert_symbol(mpl_symbol):
         return "circle"  # default
 
 
-def hex_to_rgb(value):
+def hex_to_rgb(value: str) -> Tuple[int, int, int]:
     """
     Change a hex color to an rgb tuple
 
@@ -137,10 +139,10 @@ def hex_to_rgb(value):
     """
     value = value.lstrip("#")
     lv = len(value)
-    return tuple(int(value[i: i + lv // 3], 16) for i in range(0, lv, lv // 3))
+    return tuple(int(value[i : i + lv // 3], 16) for i in range(0, lv, lv // 3))
 
 
-def merge_color_and_opacity(color, opacity):
+def merge_color_and_opacity(color: str, opacity: float) -> str:
     """
     Merge hex color with an alpha (opacity) to get an rgba tuple.
 
@@ -156,12 +158,12 @@ def merge_color_and_opacity(color, opacity):
     if opacity is None:
         return "rgb {}".format(rgb_tup)
 
-    opacity = int(opacity*255.) if opacity <= 1.0 else int(opacity)
+    opacity = int(opacity * 255.0) if opacity <= 1.0 else int(opacity)
     rgba_tup = rgb_tup + (opacity,)
     return "rgba {}".format(rgba_tup)
 
 
-def convert_va(mpl_va):
+def convert_va(mpl_va: str) -> str:
     """Convert mpl vertical alignment word to equivalent HTML word.
 
     Text alignment specifiers from mpl differ very slightly from those used
@@ -177,7 +179,10 @@ def convert_va(mpl_va):
         return None  # let plotly figure it out!
 
 
-def convert_x_domain(mpl_plot_bounds, mpl_max_x_bounds):
+def convert_x_domain(
+    mpl_plot_bounds: Tuple[float, float, float, float],
+    mpl_max_x_bounds: Tuple[float, float],
+) -> List[float]:
     """Map x dimension of current plot to plotly's domain space.
 
     The bbox used to locate an axes object in mpl differs from the
@@ -208,7 +213,10 @@ def convert_x_domain(mpl_plot_bounds, mpl_max_x_bounds):
     return [x0, x1]
 
 
-def convert_y_domain(mpl_plot_bounds, mpl_max_y_bounds):
+def convert_y_domain(
+    mpl_plot_bounds: Tuple[float, float, float, float],
+    mpl_max_y_bounds: Tuple[float, float],
+) -> List[float]:
     """Map y dimension of current plot to plotly's domain space.
 
     The bbox used to locate an axes object in mpl differs from the
@@ -239,7 +247,7 @@ def convert_y_domain(mpl_plot_bounds, mpl_max_y_bounds):
     return [y0, y1]
 
 
-def display_to_paper(x, y, layout):
+def display_to_paper(x: float, y: float, layout: dict) -> Tuple[float, float]:
     """Convert mpl display coordinates to plotly paper coordinates.
 
     Plotly references object positions with an (x, y) coordinate pair in either
@@ -260,7 +268,9 @@ def display_to_paper(x, y, layout):
     return num_x / den_x, num_y / den_y
 
 
-def get_axes_bounds(fig):
+def get_axes_bounds(
+    fig: Any,
+) -> Tuple[Tuple[float, float], Tuple[float, float]]:
     """Return the entire axes space for figure.
 
     An axes object in mpl is specified by its relation to the figure where
@@ -285,7 +295,7 @@ def get_axes_bounds(fig):
     return (x_min, x_max), (y_min, y_max)
 
 
-def get_axis_mirror(main_spine, mirror_spine):
+def get_axis_mirror(main_spine: bool, mirror_spine: bool) -> Union[bool, str]:
     if main_spine and mirror_spine:
         return "ticks"
     elif main_spine and not mirror_spine:
@@ -296,7 +306,7 @@ def get_axis_mirror(main_spine, mirror_spine):
         return False  # nuttin'!
 
 
-def get_bar_gap(bar_starts, bar_ends, tol=1e-10):
+def get_bar_gap(bar_starts: List[float], bar_ends: List[float], tol: float = 1e-10) -> Optional[float]:
     if len(bar_starts) == len(bar_ends) and len(bar_starts) > 1:
         sides1 = bar_starts[1:]
         sides2 = bar_ends[:-1]
@@ -307,12 +317,10 @@ def get_bar_gap(bar_starts, bar_ends, tol=1e-10):
             return gap0
 
 
-def convert_rgba_array(color_list):
+def convert_rgba_array(color_list: List[Tuple[float, float, float, float]]) -> Union[str, List[str]]:
     clean_color_list = list()
     for c in color_list:
-        clean_color_list += [
-            (dict(r=int(c[0] * 255), g=int(c[1] * 255), b=int(c[2] * 255), a=c[3]))
-        ]
+        clean_color_list += [(dict(r=int(c[0] * 255), g=int(c[1] * 255), b=int(c[2] * 255), a=c[3]))]
     plotly_colors = list()
     for rgba in clean_color_list:
         plotly_colors += ["rgba({r},{g},{b},{a})".format(**rgba)]
@@ -322,7 +330,7 @@ def convert_rgba_array(color_list):
         return plotly_colors
 
 
-def convert_path_array(path_array):
+def convert_path_array(path_array: List[Any]) -> Union[Any, List[Any]]:
     symbols = list()
     for path in path_array:
         symbols += [convert_path(path)]
@@ -332,14 +340,14 @@ def convert_path_array(path_array):
         return symbols
 
 
-def convert_linewidth_array(width_array):
+def convert_linewidth_array(width_array: List[float]) -> Union[float, List[float]]:
     if len(width_array) == 1:
         return width_array[0]
     else:
         return width_array
 
 
-def convert_size_array(size_array):
+def convert_size_array(size_array: List[float]) -> Union[float, List[float]]:
     size = [math.sqrt(s) for s in size_array]
     if len(size) == 1:
         return size[0]
@@ -347,7 +355,7 @@ def convert_size_array(size_array):
         return size
 
 
-def get_markerstyle_from_collection(props):
+def get_markerstyle_from_collection(props: dict) -> dict:
     markerstyle = dict(
         alpha=None,
         facecolor=convert_rgba_array(props["styles"]["facecolor"]),
@@ -360,32 +368,32 @@ def get_markerstyle_from_collection(props):
     return markerstyle
 
 
-def get_rect_xmin(data):
+def get_rect_xmin(data: List[Tuple[float, float]]) -> float:
     """Find minimum x value from four (x,y) vertices."""
     return min(data[0][0], data[1][0], data[2][0], data[3][0])
 
 
-def get_rect_xmax(data):
+def get_rect_xmax(data: List[Tuple[float, float]]) -> float:
     """Find maximum x value from four (x,y) vertices."""
     return max(data[0][0], data[1][0], data[2][0], data[3][0])
 
 
-def get_rect_ymin(data):
+def get_rect_ymin(data: List[Tuple[float, float]]) -> float:
     """Find minimum y value from four (x,y) vertices."""
     return min(data[0][1], data[1][1], data[2][1], data[3][1])
 
 
-def get_rect_ymax(data):
+def get_rect_ymax(data: List[Tuple[float, float]]) -> float:
     """Find maximum y value from four (x,y) vertices."""
     return max(data[0][1], data[1][1], data[2][1], data[3][1])
 
 
-def get_spine_visible(ax, spine_key):
+def get_spine_visible(ax: Any, spine_key: str) -> bool:
     """Return some spine parameters for the spine, `spine_key`."""
     spine = ax.spines[spine_key]
     ax_frame_on = ax.get_frame_on()
-    if check_maplotlib_max_version('3', '1'):
-        spine_frame_like = spine.is_frame_like() if hasattr(spine, 'is_frame_like') else True
+    if check_maplotlib_max_version("3", "1"):
+        spine_frame_like = spine.is_frame_like() if hasattr(spine, "is_frame_like") else True
     else:
         spine_frame_like = True
     if not spine.get_visible():
@@ -402,7 +410,7 @@ def get_spine_visible(ax, spine_key):
         return False  # oh man, and i thought we exhausted the options...
 
 
-def is_bar(bar_containers, **props):
+def is_bar(bar_containers: List[Any], **props: Any) -> bool:
     """A test to decide whether a path is a bar from a vertical bar chart."""
 
     # is this patch in a bar container?
@@ -412,12 +420,12 @@ def is_bar(bar_containers, **props):
     return False
 
 
-def is_fancy_bbox(**props):
+def is_fancy_bbox(**props: Any) -> bool:
     """A test to decide whether a path is a simple FancyBboxPatch."""
     return FancyBboxPatch and isinstance(props.get("mplobj"), FancyBboxPatch)
 
 
-def make_bar(**props):
+def make_bar(**props: Any) -> dict:
     """Make an intermediate bar dictionary.
 
     This creates a bar dictionary which aids in the comparison of new bars to
@@ -443,7 +451,7 @@ def make_bar(**props):
     }
 
 
-def prep_ticks(ax, index, ax_type, props):
+def prep_ticks(ax: Any, index: int, ax_type: str, props: dict) -> dict:
     """Prepare axis obj belonging to axes obj.
 
     positional arguments:
@@ -469,17 +477,11 @@ def prep_ticks(ax, index, ax_type, props):
         try:
             tickvalues = props["axes"][index]["tickvalues"]
             tick0 = tickvalues[0]
-            dticks = [
-                round(tickvalues[i] - tickvalues[i - 1], 12)
-                for i in range(1, len(tickvalues) - 1)
-            ]
+            dticks = [round(tickvalues[i] - tickvalues[i - 1], 12) for i in range(1, len(tickvalues) - 1)]
             if all([dticks[i] == dticks[i - 1] for i in range(1, len(dticks) - 1)]):
                 dtick = tickvalues[1] - tickvalues[0]
             else:
-                warnings.warn(
-                    "'linear' {0}-axis tick spacing not even, "
-                    "ignoring mpl tick formatting.".format(ax_type)
-                )
+                warnings.warn("'linear' {0}-axis tick spacing not even, ignoring mpl tick formatting.".format(ax_type))
                 raise TypeError
         except (IndexError, TypeError):
             axis_dict["nticks"] = props["axes"][index]["nticks"]
@@ -499,10 +501,7 @@ def prep_ticks(ax, index, ax_type, props):
     elif scale == "log":
         try:
             axis_dict["tick0"] = props["axes"][index]["tickvalues"][0]
-            axis_dict["dtick"] = (
-                props["axes"][index]["tickvalues"][1]
-                - props["axes"][index]["tickvalues"][0]
-            )
+            axis_dict["dtick"] = props["axes"][index]["tickvalues"][1] - props["axes"][index]["tickvalues"][0]
             axis_dict["tickmode"] = None
         except (IndexError, TypeError):
             axis_dict = dict(nticks=props["axes"][index]["nticks"])
@@ -528,9 +527,7 @@ def prep_ticks(ax, index, ax_type, props):
                 axis_dict["custom_range"] = True
         else:
             axis_dict = dict(range=None, type="linear")
-            warnings.warn(
-                "Converted non-base10 {0}-axis log scale to 'linear'" "".format(ax_type)
-            )
+            warnings.warn("Converted non-base10 {0}-axis log scale to 'linear'".format(ax_type))
     else:
         return dict()
     # get tick label formatting information
@@ -551,7 +548,7 @@ def prep_ticks(ax, index, ax_type, props):
     return axis_dict
 
 
-def prep_xy_axis(ax, props, x_bounds, y_bounds):
+def prep_xy_axis(ax: Any, props: dict, x_bounds: tuple, y_bounds: tuple) -> tuple:
     xaxis = dict(
         type=props["axes"][0]["scale"],
         range=list(props["xlim"]),
@@ -573,7 +570,12 @@ def prep_xy_axis(ax, props, x_bounds, y_bounds):
     return xaxis, yaxis
 
 
-def prep_xyz_axis(ax, props, x_bounds, y_bounds):
+def prep_xyz_axis(
+    ax: Any,
+    props: dict,
+    x_bounds: tuple,
+    y_bounds: tuple,
+) -> tuple:
     # there is no z_bounds as they can't (at least easily) be extracted from an `Axes3DSubplot` object
     xaxis, yaxis = prep_xy_axis(ax, props, x_bounds, y_bounds)
     # noinspection PyBroadException
@@ -591,7 +593,7 @@ def prep_xyz_axis(ax, props, x_bounds, y_bounds):
     return xaxis, yaxis, zaxis
 
 
-def mpl_dates_to_datestrings(dates, mpl_formatter):
+def mpl_dates_to_datestrings(dates: List[Union[float, int]], mpl_formatter: str) -> List[str]:
     """Convert matplotlib dates to iso-formatted-like time strings.
 
     Plotly's accepted format: "YYYY-MM-DD HH:MM:SS" (e.g., 2001-01-01 00:00:00)
@@ -619,9 +621,7 @@ def mpl_dates_to_datestrings(dates, mpl_formatter):
         except:  # noqa: E722
             return _dates
 
-    time_stings = [
-        " ".join(date.isoformat().split("+")[0].split("T")) for date in dates
-    ]
+    time_stings = [" ".join(date.isoformat().split("+")[0].split("T")) for date in dates]
     return time_stings
 
 

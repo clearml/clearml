@@ -2,8 +2,7 @@ from ...backend_config import Config
 from pathlib2 import Path
 
 
-def load(*additional_module_paths):
-    # type: (str) -> Config
+def load(*additional_module_paths: str) -> Config:
     """
     Load configuration with the API defaults, using the additional module path provided
     :param additional_module_paths: Additional config paths for modules who'se default

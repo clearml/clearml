@@ -4,7 +4,7 @@ import json
 import os
 import re
 import sys
-from typing import Optional, Union, Sequence, Dict
+from typing import Optional, Union, Sequence, Dict, Callable, List, Any
 from zlib import crc32
 
 import six
@@ -14,7 +14,7 @@ from six.moves.urllib.parse import quote, urlparse, urlunparse
 from ..debugging.log import LoggerRoot
 
 
-def get_config_object_matcher(**patterns):
+def get_config_object_matcher(**patterns: Any) -> Callable:
     unsupported = {k: v for k, v in patterns.items() if not isinstance(v, six.string_types)}
     if unsupported:
         raise ValueError(
@@ -26,7 +26,7 @@ def get_config_object_matcher(**patterns):
     starts_with = {k: v.rstrip("*") for k, v in patterns.items() if "*" not in v.rstrip("*") and "?" not in v}
     patterns = {k: v for k, v in patterns.items() if v not in starts_with}
 
-    def _matcher(**kwargs):
+    def _matcher(**kwargs: Any) -> Optional[bool]:
         for key, value in kwargs.items():
             if not value:
                 continue
@@ -42,7 +42,7 @@ def get_config_object_matcher(**patterns):
     return _matcher
 
 
-def quote_url(url, valid_schemes=("http", "https")):
+def quote_url(url: str, valid_schemes: Sequence[str] = ("http", "https")) -> str:
     parsed = urlparse(url)
     if parsed.scheme not in valid_schemes:
         return url
@@ -50,12 +50,11 @@ def quote_url(url, valid_schemes=("http", "https")):
     return urlunparse(parsed)
 
 
-def encode_string_to_filename(text):
+def encode_string_to_filename(text: str) -> str:
     return quote(text, safe=" ")
 
 
-def sha256sum(filename, skip_header=0, block_size=65536):
-    # type: (str, int, int) -> (Optional[str], Optional[str])
+def sha256sum(filename: str, skip_header: int = 0, block_size: int = 65536) -> (Optional[str], Optional[str]):
     # create sha2 of the file, notice we skip the header of the file (32 bytes)
     # because sometimes that is the only change
     h = hashlib.sha256()
@@ -79,8 +78,7 @@ def sha256sum(filename, skip_header=0, block_size=65536):
     return h.hexdigest(), file_hash.hexdigest() if skip_header else None
 
 
-def md5text(text, seed=1337):
-    # type: (str, Union[int, str]) -> str
+def md5text(text: str, seed: Union[int, str] = 1337) -> str:
     """
     Return md5 hash of a string
     Do not use this hash for security, if needed use something stronger like SHA2
@@ -92,8 +90,7 @@ def md5text(text, seed=1337):
     return hash_text(text=text, seed=seed, hash_func="md5")
 
 
-def crc32text(text, seed=1337):
-    # type: (str, Union[int, str]) -> str
+def crc32text(text: str, seed: Union[int, str] = 1337) -> str:
     """
     Return crc32 hash of a string
     Do not use this hash for security, if needed use something stronger like SHA2
@@ -105,8 +102,7 @@ def crc32text(text, seed=1337):
     return "{:08x}".format(crc32((str(seed) + str(text)).encode("utf-8")))
 
 
-def hash_text(text, seed=1337, hash_func="md5"):
-    # type: (str, Union[int, str], str) -> str
+def hash_text(text: str, seed: Union[int, str] = 1337, hash_func: str = "md5") -> str:
     """
     Return hash_func (md5/sha1/sha256/sha384/sha512) hash of a string
 
@@ -121,8 +117,7 @@ def hash_text(text, seed=1337, hash_func="md5"):
     return h.hexdigest()
 
 
-def hash_dict(a_dict, seed=1337, hash_func="md5"):
-    # type: (Dict, Union[int, str], str) -> str
+def hash_dict(a_dict: Dict, seed: Union[int, str] = 1337, hash_func: str = "md5") -> str:
     """
     Return hash_func (crc32/md5/sha1/sha256/sha384/sha512) hash of the dict values
     (dict must be JSON serializable)
@@ -140,15 +135,19 @@ def hash_dict(a_dict, seed=1337, hash_func="md5"):
         return hash_text(repr_string, seed=seed, hash_func=hash_func)
 
 
-def is_windows():
+def is_windows() -> bool:
     """
     :return: True if currently running on windows OS
     """
     return sys.platform == "win32"
 
 
-def format_size(size_in_bytes, binary=False, use_nonbinary_notation=False, use_b_instead_of_bytes=False):
-    # type: (Union[int, float], bool, bool, bool) -> str
+def format_size(
+    size_in_bytes: Union[int, float],
+    binary: bool = False,
+    use_nonbinary_notation: bool = False,
+    use_b_instead_of_bytes: bool = False,
+) -> str:
     """
     Return the size in human readable format (string)
     Matching humanfriendly.format_size outputs
@@ -196,7 +195,7 @@ def format_size(size_in_bytes, binary=False, use_nonbinary_notation=False, use_b
     return "{} {}".format(int(size), scale[0])
 
 
-def parse_size(size, binary=False):
+def parse_size(size: Union[str, float, int], binary: bool = False) -> int:
     """
     Parse a human readable data size and return the number of bytes.
     Match humanfriendly.parse_size
@@ -230,7 +229,7 @@ def parse_size(size, binary=False):
         1610612736
     """
 
-    def tokenize(text):
+    def tokenize(text: str) -> List[Union[int, float, str]]:
         tokenized_input = []
         for token in re.split(r"(\d+(?:\.\d+)?)", text):
             token = token.strip()
@@ -285,14 +284,16 @@ def parse_size(size, binary=False):
                 # Now we will deal with ambiguous prefixes (K, M, G, etc),
                 # symbols (KB, MB, GB, etc) and names (kilobyte, megabyte,
                 # gigabyte, etc) according to the caller's preference.
-                if normalized_unit in (low.lower(), high.lower()) or normalized_unit.startswith(low.lower()):
+                if normalized_unit in (
+                    low.lower(),
+                    high.lower(),
+                ) or normalized_unit.startswith(low.lower()):
                     return int(tokens[0] * k)
 
     raise ValueError("Failed to parse size! (input {} was tokenized as {})".format(size, tokens))
 
 
-def get_common_path(list_of_files):
-    # type: (Sequence[Union[str, Path]]) -> Optional[str]
+def get_common_path(list_of_files: Sequence[Union[str, Path]]) -> Optional[str]:
     """
     Return the common path of a list of files
 
@@ -331,14 +332,14 @@ def get_common_path(list_of_files):
     return None
 
 
-def is_within_directory(directory, target):
+def is_within_directory(directory: str, target: str) -> bool:
     abs_directory = os.path.abspath(directory)
     abs_target = os.path.abspath(target)
     prefix = os.path.commonprefix([abs_directory, abs_target])
     return prefix == abs_directory
 
 
-def create_zip_directories(zipfile, path=None):
+def create_zip_directories(zipfile: Any, path: Optional[Union[str, os.PathLike]] = None) -> None:
     try:
         path = os.getcwd() if path is None else os.fspath(path)
         for member in zipfile.namelist():
@@ -369,7 +370,12 @@ def create_zip_directories(zipfile, path=None):
         LoggerRoot.get_base_logger().warning("Failed creating zip directories: " + str(e))
 
 
-def safe_extract(tar, path=".", members=None, numeric_owner=False):
+def safe_extract(
+    tar: Any,
+    path: str = ".",
+    members: Any = None,
+    numeric_owner: bool = False,
+) -> None:
     """Tarfile member sanitization (addresses CVE-2007-4559)"""
     for member in tar.getmembers():
         member_path = os.path.join(path, member.name)

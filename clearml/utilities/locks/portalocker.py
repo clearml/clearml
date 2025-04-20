@@ -1,8 +1,9 @@
 import os
 import sys
-from . import exceptions
-from . import constants
+from typing import Any
 
+from . import constants
+from . import exceptions
 
 if os.name == "nt":  # pragma: no cover
     import msvcrt
@@ -12,7 +13,7 @@ if os.name == "nt":  # pragma: no cover
     else:
         lock_length = int(2**31 - 1)
 
-    def lock(file_, flags):
+    def lock(file_: Any, flags: int) -> None:
         if flags & constants.LOCK_SH:
             import win32file
             import pywintypes
@@ -39,7 +40,11 @@ if os.name == "nt":  # pragma: no cover
                 # error: (33, 'LockFileEx', 'The process cannot access the file
                 # because another process has locked a portion of the file.')
                 if exc_value.winerror == winerror.ERROR_LOCK_VIOLATION:
-                    raise exceptions.LockException(exceptions.LockException.LOCK_FAILED, exc_value.strerror, fh=file_)
+                    raise exceptions.LockException(
+                        exceptions.LockException.LOCK_FAILED,
+                        exc_value.strerror,
+                        fh=file_,
+                    )
                 else:
                     # Q:  Are there exceptions/codes we should be dealing with
                     # here?
@@ -70,14 +75,18 @@ if os.name == "nt":  # pragma: no cover
                     msvcrt.locking(file_.fileno(), mode, lock_length)
                 except IOError as exc_value:
                     # [ ] be more specific here
-                    raise exceptions.LockException(exceptions.LockException.LOCK_FAILED, exc_value.strerror, fh=file_)
+                    raise exceptions.LockException(
+                        exceptions.LockException.LOCK_FAILED,
+                        exc_value.strerror,
+                        fh=file_,
+                    )
                 finally:
                     if savepos:
                         file_.seek(savepos)
             except IOError as exc_value:
                 raise exceptions.LockException(exceptions.LockException.LOCK_FAILED, exc_value.strerror, fh=file_)
 
-    def unlock(file_):
+    def unlock(file_: Any) -> None:
         try:
             savepos = file_.tell()
             if savepos:
@@ -107,7 +116,11 @@ if os.name == "nt":  # pragma: no cover
                             # dealing with here?
                             raise
                 else:
-                    raise exceptions.LockException(exceptions.LockException.LOCK_FAILED, exc_value.strerror, fh=file_)
+                    raise exceptions.LockException(
+                        exceptions.LockException.LOCK_FAILED,
+                        exc_value.strerror,
+                        fh=file_,
+                    )
             finally:
                 if savepos:
                     file_.seek(savepos)
@@ -117,7 +130,7 @@ if os.name == "nt":  # pragma: no cover
 elif os.name == "posix":  # pragma: no cover
     import fcntl
 
-    def lock(file_, flags):
+    def lock(file_: Any, flags: int) -> None:
         locking_exceptions = (IOError,)
         try:  # pragma: no cover
             locking_exceptions += (BlockingIOError,)
@@ -131,7 +144,7 @@ elif os.name == "posix":  # pragma: no cover
             # every IO error
             raise exceptions.LockException(exc_value, fh=file_)
 
-    def unlock(file_):
+    def unlock(file_: Any) -> None:
         fcntl.flock(file_.fileno(), constants.LOCK_UN)
 
 else:  # pragma: no cover

@@ -10,9 +10,23 @@ from importlib import import_module
 from itertools import chain
 from operator import itemgetter
 from types import ModuleType
-from typing import Dict, Text, Tuple, Type, Any, Sequence
+from typing import (
+    Dict,
+    Text,
+    Tuple,
+    Type,
+    Sequence,
+    Optional,
+    List,
+    Callable,
+    Iterator,
+    Union,
+    Any,
+)
 
 import six
+from pathlib import Path
+
 from ... import services as api_services
 from ....backend_api.session import CallResult
 from ....backend_api.session import Session, Request as APIRequest
@@ -22,13 +36,12 @@ from ....backend_config.defs import LOCAL_CONFIG_FILE_OVERRIDE_VAR
 SERVICE_TO_ENTITY_CLASS_NAMES = {"storage": "StorageItem"}
 
 
-def entity_class_name(service):
-    # type: (ModuleType) -> Text
+def entity_class_name(service: ModuleType) -> Text:
     service_name = api_entity_name(service)
     return SERVICE_TO_ENTITY_CLASS_NAMES.get(service_name.lower(), service_name)
 
 
-def api_entity_name(service):
+def api_entity_name(service: ModuleType) -> Text:
     return module_name(service).rstrip("s")
 
 
@@ -44,21 +57,21 @@ class APIError(Exception):
     self.message - result message sent from server
     """
 
-    def __init__(self, response, extra_info=None):
+    def __init__(self, response: CallResult, extra_info: Any = None) -> None:
         """
         Create a new APIError from a server response
         """
         super(APIError, self).__init__()
-        self._response = response  # type: CallResult
+        self._response: CallResult = response
         self.extra_info = extra_info
-        self.data = response.response_data  # type: Dict
-        self.meta = response.meta  # type: ResponseMeta
-        self.code = response.meta.result_code  # type: int
-        self.subcode = response.meta.result_subcode  # type: int
-        self.message = response.meta.result_msg  # type: Text
-        self.codes = (self.code, self.subcode)  # type: Tuple[int, int]
+        self.data: Dict = response.response_data
+        self.meta: ResponseMeta = response.meta
+        self.code: int = response.meta.result_code
+        self.subcode: int = response.meta.result_subcode
+        self.message: Text = response.meta.result_msg
+        self.codes: Tuple[int, int] = (self.code, self.subcode)
 
-    def get_traceback(self):
+    def get_traceback(self) -> Optional[List[str]]:
         """
         Return server traceback for error, or None if doesn't exist.
         """
@@ -67,7 +80,7 @@ class APIError(Exception):
         except AttributeError:
             return None
 
-    def __str__(self):
+    def __str__(self) -> str:
         message = "{}: ".format(type(self).__name__)
         if self.extra_info:
             message += "{}: ".format(self.extra_info)
@@ -86,18 +99,23 @@ class APIError(Exception):
 
 
 class StrictSession(Session):
-
     """
     Session that raises exceptions on errors, and be configured with explicit ``config_file`` path.
     """
 
-    def __init__(self, config_file=None, initialize_logging=False, *args, **kwargs):
+    def __init__(
+        self,
+        config_file: Union[Path, Text] = None,
+        initialize_logging: bool = False,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """
         :param config_file: configuration file to use, else use the default
         :type config_file: Path | Text
         """
 
-        def init():
+        def init() -> None:
             super(StrictSession, self).__init__(initialize_logging=initialize_logging, *args, **kwargs)
 
         if not config_file:
@@ -114,7 +132,7 @@ class StrictSession(Session):
             else:
                 LOCAL_CONFIG_FILE_OVERRIDE_VAR.set(original)
 
-    def send(self, request, *args, **kwargs):
+    def send(self, request: APIRequest, *args: Any, **kwargs: Any) -> CallResult:
         result = super(StrictSession, self).send(request, *args, **kwargs)
         if not result.ok():
             raise APIError(result)
@@ -124,13 +142,12 @@ class StrictSession(Session):
 
 
 class Response(object):
-
     """
     Proxy object for API result data.
     Exposes "meta" of the original result.
     """
 
-    def __init__(self, result, dest=None):
+    def __init__(self, result: CallResult, dest: Text = None) -> None:
         """
         :param result: result of endpoint call
         :type result: CallResult
@@ -155,38 +172,37 @@ class Response(object):
             response = getattr(response, dest)
         self.response = response
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: Text) -> Any:
         if self.response is None:
             return None
         return getattr(self.response, attr)
 
     @property
-    def meta(self):
+    def meta(self) -> ResponseMeta:
         return self._result.meta
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.response)
 
-    def __dir__(self):
+    def __dir__(self) -> List[str]:
         fields = [name for name in dir(self.response) if isinstance(getattr(type(self.response), name, None), property)]
         return list(set(chain(super(Response, self).__dir__(), fields)) - {"response"})
 
 
 @six.python_2_unicode_compatible
 class TableResponse(Response):
-
     """
     Representation of result containing an array of entities
     """
 
     def __init__(
         self,
-        service,  # type: Service
-        entity,  # type: Type[entity]
-        fields=None,  # type: Sequence[Text]
-        *args,
-        **kwargs
-    ):
+        service: "Service",
+        entity: Any,
+        fields: Sequence[Text] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """
         :param service: service of entity
         :param entity: class representing entity
@@ -198,18 +214,18 @@ class TableResponse(Response):
         self.fields = fields or ("id", "name")
         self.response = [entity(service, item) for item in self]
 
-    def __repr__(self, fields=None):
+    def __repr__(self, fields: Sequence[Text] = None) -> Text:
         return self._format_table(fields=fields)
 
     __str__ = __repr__
 
-    def _format_table(self, fields=None):
+    def _format_table(self, fields: Sequence[Text] = None) -> Text:
         """
         Display <fields> attributes of each element in a table
         :param fields:
         """
 
-        def getter(obj, attr):
+        def getter(obj: Any, attr: Text) -> Text:
             result = reduce(
                 lambda x, name: x if x is None else getattr(x, name, None),
                 attr.split("."),
@@ -220,10 +236,10 @@ class TableResponse(Response):
         fields = fields or self.fields
         return "\n".join(str(dict((attr, getter(item, attr)) for attr in fields)) for item in self)
 
-    def display(self, fields=None):
+    def display(self, fields: Sequence[Text] = None) -> None:
         print(self._format_table(fields=fields))
 
-    def where(self, predicate=None, **kwargs):
+    def where(self, predicate: Callable[[Any], bool] = None, **kwargs: Any) -> "TableResponse":
         """
         Filter items.
         <predicate> is a callable from a single item to a boolean. Items for which <predicate> is True will be returned.
@@ -234,7 +250,7 @@ class TableResponse(Response):
         Giving more than one condition (predicate and keyword arguments) establishes an "and" relation.
         """
 
-        def compare_enum(x, y):
+        def compare_enum(x: Any, y: Any) -> bool:
             return x == y or isinstance(x, Enum) and x.value == y
 
         return TableResponse(
@@ -249,19 +265,18 @@ class TableResponse(Response):
             ],
         )
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> Any:
         return self.response[item]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         return iter(self.response)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.response)
 
 
 @six.add_metaclass(abc.ABCMeta)
 class Entity(object):
-
     """
     Represent a server object.
     Enables calls like:
@@ -274,7 +289,7 @@ class Entity(object):
 
     @property
     @abc.abstractmethod
-    def entity_name(self):  # type: () -> Text
+    def entity_name(self) -> Text:
         """
         Singular name of entity
         """
@@ -282,28 +297,28 @@ class Entity(object):
 
     @property
     @abc.abstractmethod
-    def get_by_id_request(self):  # type: () -> Type[APIRequest]
+    def get_by_id_request(self) -> Type[APIRequest]:
         """
         get_by_id request class
         """
         pass
 
-    def __init__(self, service, data):
+    def __init__(self, service: "Service", data: Any) -> None:
         self._service = service
         self.data = getattr(data, self.entity_name, data)
         self.__doc__ = self.data.__doc__
 
-    def fetch(self):
+    def fetch(self) -> None:
         """
         Update the entity data from the server.
         """
         result = self._service.session.send(self.get_by_id_request(self.data.id))
         self.data = getattr(result.response, self.entity_name)
 
-    def _get_default_kwargs(self):
+    def _get_default_kwargs(self) -> Dict[Text, Any]:
         return {self.entity_name: self.data.id}
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: Text) -> Any:
         """
         Inject the entity's ID to the method call.
         All missing properties are assumed to be functions.
@@ -318,13 +333,13 @@ class Entity(object):
             return func
 
         @wrap_request_class(func)
-        def new_func(*args, **kwargs):
+        def new_func(*args: Any, **kwargs: Any) -> Any:
             kwargs = dict(self._get_default_kwargs(), **kwargs)
             return func(*args, **kwargs)
 
         return new_func
 
-    def __dir__(self):
+    def __dir__(self) -> List[str]:
         """
         Add ``self._service``'s methods to ``dir`` result.
         """
@@ -336,7 +351,7 @@ class Entity(object):
             base = dir_()
         return list(set(base).union(dir(self._service), dir(self.data)))
 
-    def __repr__(self):
+    def __repr__(self) -> Text:
         """
         Display entity type, ID, and - if available - name.
         """
@@ -348,11 +363,11 @@ class Entity(object):
         return "<{}>".format("".join(parts))
 
 
-def wrap_request_class(cls):
+def wrap_request_class(cls) -> Type:
     return wraps(cls, assigned=tuple(WRAPPER_ASSIGNMENTS) + ("from_dict",))
 
 
-def make_action(service, request_cls):
+def make_action(service: "Service", request_cls: Type["APIRequest"]) -> Callable:
     # noinspection PyProtectedMember
     action = request_cls._action
     try:
@@ -365,7 +380,7 @@ def make_action(service, request_cls):
     if action not in ["get_all", "get_all_ex", "get_by_id", "create"]:
 
         @wrap
-        def new_func(self, *args, **kwargs):
+        def new_func(self, *args: Any, **kwargs: Any) -> Response:
             return Response(self.session.send(request_cls(*args, **kwargs)))
 
         new_func.__name__ = new_func.__qualname__ = action
@@ -383,13 +398,13 @@ def make_action(service, request_cls):
     if action == "get_by_id":
 
         @wrap
-        def get(self, *args, **kwargs):
+        def get(self, *args: Any, **kwargs: Any) -> entity:
             return entity(self, self.session.send(request_cls(*args, **kwargs)).response)
 
     elif action == "create":
 
         @wrap
-        def get(self, *args, **kwargs):
+        def get(self, *args: Any, **kwargs: Any) -> entity:
             return entity(
                 self,
                 Namespace(id=self.session.send(request_cls(*args, **kwargs)).response.id),
@@ -402,7 +417,7 @@ def make_action(service, request_cls):
                 break
 
         @wrap
-        def get(self, *args, **kwargs):
+        def get(self, *args: Any, **kwargs: Any) -> TableResponse:
             return TableResponse(
                 service=self,
                 entity=entity,
@@ -421,7 +436,6 @@ def make_action(service, request_cls):
 
 @six.add_metaclass(abc.ABCMeta)
 class Service(object):
-
     """
     Superclass for action-grouping classes.
     """
@@ -429,11 +443,11 @@ class Service(object):
     name = abc.abstractproperty()
     __doc__ = abc.abstractproperty()
 
-    def __init__(self, session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
 
-def get_requests(service):
+def get_requests(service: Service) -> OrderedDict:
     # force load proxy object
     # noinspection PyBroadException
     try:
@@ -445,14 +459,14 @@ def get_requests(service):
     return OrderedDict(
         (key, value)
         for key, value in sorted(
-            vars(service.__wrapped__ if hasattr(service, "__wrapped__") else service).items(), key=itemgetter(0)
+            vars(service.__wrapped__ if hasattr(service, "__wrapped__") else service).items(),
+            key=itemgetter(0),
         )
         if isinstance(value, type) and issubclass(value, APIRequest) and value._action
     )
 
 
-def make_service_class(module):
-    # type: (...) -> Type[Service]
+def make_service_class(module: types.ModuleType) -> Type[Service]:
     """
     Create a service class from service module.
     """
@@ -470,7 +484,7 @@ def make_service_class(module):
     return type(str(module_name(module)), (Service,), properties)
 
 
-def module_name(module):
+def module_name(module: Any) -> Text:
     try:
         module = module.__name__
     except AttributeError:
@@ -483,7 +497,7 @@ class Version(Entity):
     entity_name = "version"
     get_by_id_request = None
 
-    def fetch(self):
+    def fetch(self) -> None:
         try:
             published = self.data.status == "published"
         except AttributeError:
@@ -493,26 +507,30 @@ class Version(Entity):
             0
         ].data
 
-    def _get_default_kwargs(self):
+    def _get_default_kwargs(self) -> Dict[str, Any]:
         return dict(super(Version, self)._get_default_kwargs(), **{"dataset": self.data.dataset})
 
 
 class APIClient(object):
+    auth: Any = None
+    queues: Any = None
+    tasks: Any = None
+    workers: Any = None
+    events: Any = None
+    models: Any = None
+    projects: Any = None
 
-    auth = None  # type: Any
-    queues = None  # type: Any
-    tasks = None  # type: Any
-    workers = None  # type: Any
-    events = None  # type: Any
-    models = None  # type: Any
-    projects = None  # type: Any
-
-    def __init__(self, session=None, api_version=None, **kwargs):
+    def __init__(
+        self,
+        session: Session = None,
+        api_version: Text = None,
+        **kwargs: Any,
+    ) -> None:
         self.session = session or StrictSession()
 
         _api_services = kwargs.pop("api_services", api_services)
 
-        def import_(*args, **kwargs):
+        def import_(*args: Any, **kwargs: Any) -> Optional[ModuleType]:
             try:
                 return import_module(*args, **kwargs)
             except ImportError:
@@ -535,8 +553,7 @@ class APIClient(object):
             services = OrderedDict((name, getattr(_api_services, name)) for name in _api_services.__all__)
         self._update_services(services)
 
-    def _update_services(self, services):
-        # type: (Dict[str, types.ModuleType]) -> ()
+    def _update_services(self, services: Dict[str, types.ModuleType]) -> ():
         self.__dict__.update(
             dict(
                 {name: make_service_class(module)(self.session) for name, module in services.items()},

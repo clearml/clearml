@@ -5,8 +5,9 @@ _epsilon = 0.00001
 
 
 class ReadOnlyDict(dict):
-    def __readonly__(self, *args, **kwargs):
+    def __readonly__(self, *args: Any, **kwargs: Any) -> None:
         raise ValueError("This is a read only dictionary")
+
     __setitem__ = __readonly__
     __delitem__ = __readonly__
     pop = __readonly__
@@ -20,19 +21,19 @@ class ReadOnlyDict(dict):
 class Logs:
     _logs_instances = []
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[dict] = None) -> None:
         self._data = data or {}
         self._logs_instances.append(self)
 
-    def reset(self):
+    def reset(self) -> None:
         self._data = {}
 
     @property
-    def data(self):
+    def data(self) -> Any:
         return self._data
 
     @classmethod
-    def get_instances(cls):
+    def get_instances(cls) -> list:
         return cls._logs_instances
 
 
@@ -41,10 +42,10 @@ class BlobsDict(dict):
     Overloading getitem so that the 'data' copy is only done when the dictionary item is accessed.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super(BlobsDict, self).__init__(*args, **kwargs)
 
-    def __getitem__(self, k):
+    def __getitem__(self, k: Any) -> Any:
         val = super(BlobsDict, self).__getitem__(k)
         if isinstance(val, dict):
             return BlobsDict(val)
@@ -53,7 +54,7 @@ class BlobsDict(dict):
         # ans instead of -
         # elif isinstance(val, Blob):
         # we ask:
-        elif hasattr(val, '__class__') and val.__class__.__name__ == 'Blob':
+        elif hasattr(val, "__class__") and val.__class__.__name__ == "Blob":
             return val.data
         else:
             return val
@@ -61,76 +62,75 @@ class BlobsDict(dict):
 
 class NestedBlobsDict(BlobsDict):
     """A dictionary that applies an arbitrary key-altering function
-       before accessing the keys."""
+    before accessing the keys."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super(NestedBlobsDict, self).__init__(*args, **kwargs)
 
-    def __getitem__(self, keys_str=''):
-
-        if keys_str == '':
+    def __getitem__(self, keys_str: str = "") -> Any:
+        if keys_str == "":
             return super(NestedBlobsDict, self).__getitem__(self)
 
-        keylist = keys_str.split('.')
+        keylist = keys_str.split(".")
 
         cur = super(NestedBlobsDict, self).__getitem__(keylist[0])
         if len(keylist) == 1:
             return cur
         else:
-            return NestedBlobsDict(cur)['.'.join(keylist[1:])]
+            return NestedBlobsDict(cur)[".".join(keylist[1:])]
 
-    def __contains__(self, keys_str):
+    def __contains__(self, keys_str: str) -> bool:
         keylist = self.keys()
         return keys_str in keylist
 
-    def as_dict(self):
+    def as_dict(self) -> dict:
         return dict(self)
 
-    def get(self, keys_str, default=None):
+    def get(self, keys_str: str, default: Optional[Any] = None) -> Optional[Any]:
         # noinspection PyBroadException
         try:
             return self[keys_str]
         except Exception:
             return None
 
-    def _keys(self, cur_dict, path):
+    def _keys(self, cur_dict: dict, path: str) -> list:
         deep_keys = []
         cur_keys = dict.keys(cur_dict)
 
         for key in cur_keys:
             if isinstance(cur_dict[key], dict):
                 if len(path) > 0:
-                    deep_keys.extend(self._keys(cur_dict[key], path + '.' + key))
+                    deep_keys.extend(self._keys(cur_dict[key], path + "." + key))
                 else:
                     deep_keys.extend(self._keys(cur_dict[key], key))
             else:
                 if len(path) > 0:
-                    deep_keys.append(path + '.' + key)
+                    deep_keys.append(path + "." + key)
                 else:
                     deep_keys.append(key)
 
         return deep_keys
 
-    def keys(self):
-        return self._keys(self, '')
+    def keys(self) -> list:
+        return self._keys(self, "")
 
 
 class RequirementsDict(dict):
     @property
-    def pip(self):
+    def pip(self) -> Optional[Any]:
         return self.get("pip")
 
     @property
-    def conda(self):
+    def conda(self) -> Optional[Any]:
         return self.get("conda")
 
     @property
-    def orig_pip(self):
+    def orig_pip(self) -> Optional[Any]:
         return self.get("orig_pip")
 
 
-def merge_dicts(dict1, dict2):
-    """ Recursively merges dict2 into dict1 """
+def merge_dicts(dict1: dict, dict2: dict) -> dict:
+    """Recursively merges dict2 into dict1"""
     if not isinstance(dict1, dict) or not isinstance(dict2, dict):
         return dict2
     for k in dict2:
@@ -141,8 +141,8 @@ def merge_dicts(dict1, dict2):
     return dict1
 
 
-def hocon_quote_key(a_obj):
-    """ Recursively quote key with '.' to \"key\" """
+def hocon_quote_key(a_obj: Any) -> Any:
+    """Recursively quote key with '.' to \"key\" """
     if isinstance(a_obj, list):
         return [hocon_quote_key(a) for a in a_obj]
     elif isinstance(a_obj, tuple):
@@ -154,15 +154,15 @@ def hocon_quote_key(a_obj):
     a_dict = a_obj
     new_dict = type(a_dict)()
     for k, v in a_dict.items():
-        if isinstance(k, str) and '.' in k:
+        if isinstance(k, str) and "." in k:
             new_dict['"{}"'.format(k)] = hocon_quote_key(v)
         else:
             new_dict[k] = hocon_quote_key(v)
     return new_dict
 
 
-def hocon_unquote_key(a_obj):
-    """ Recursively unquote \"key\" with '.' to key """
+def hocon_unquote_key(a_obj: Any) -> Any:
+    """Recursively unquote \"key\" with '.' to key"""
 
     if isinstance(a_obj, list):
         return [hocon_unquote_key(a) for a in a_obj]
@@ -174,25 +174,24 @@ def hocon_unquote_key(a_obj):
     a_dict = a_obj
 
     # ConfigTree to dict
-    if hasattr(a_dict, 'as_plain_ordered_dict'):
+    if hasattr(a_dict, "as_plain_ordered_dict"):
         a_dict = a_dict.as_plain_ordered_dict()
 
     # preserve dict type
     new_dict = type(a_dict)()
     for k, v in a_dict.items():
-        if isinstance(k, str) and k[0] == '"' and k[-1] == '"' and '.' in k:
+        if isinstance(k, str) and k[0] == '"' and k[-1] == '"' and "." in k:
             new_dict[k[1:-1]] = hocon_unquote_key(v)
         else:
             new_dict[k] = hocon_unquote_key(v)
     return new_dict
 
 
-def cast_str_to_bool(value, strip=True):
-    # type: (Any, bool) -> Optional[bool]
+def cast_str_to_bool(value: Any, strip: bool = True) -> Optional[bool]:
     a_strip_v = value if not strip else str(value).lower().strip()
-    if a_strip_v == 'false' or not a_strip_v:
+    if a_strip_v == "false" or not a_strip_v:
         return False
-    elif a_strip_v == 'true':
+    elif a_strip_v == "true":
         return True
     else:
         # first try to cast to integer

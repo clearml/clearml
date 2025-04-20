@@ -2,6 +2,8 @@ import atexit
 import os
 import signal
 import sys
+import types
+from typing import Callable, Union, Any
 
 import six
 
@@ -13,7 +15,7 @@ class ExitHooks(object):
     _orig_exc_handler = None
     remote_user_aborted = False
 
-    def __init__(self, callback):
+    def __init__(self, callback: Callable) -> None:
         self.exit_code = None
         self.exception = None
         self.signal = None
@@ -23,7 +25,7 @@ class ExitHooks(object):
         self._except_recursion_protection_flag = False
         self._import_bind_path = os.path.join("clearml", "binding", "import_bind.py")
 
-    def update_callback(self, callback):
+    def update_callback(self, callback: Callable) -> None:
         if self._exit_callback and not six.PY2:
             # noinspection PyBroadException
             try:
@@ -46,7 +48,7 @@ class ExitHooks(object):
                     pass
             self._org_handlers = {}
 
-    def hook(self):
+    def hook(self) -> None:
         if self._orig_exit is None:
             self._orig_exit = sys.exit
             sys.exit = self.exit
@@ -54,7 +56,7 @@ class ExitHooks(object):
         if self._exit_callback:
             atexit.register(self._exit_callback)
 
-    def register_signal_and_exception_hooks(self):
+    def register_signal_and_exception_hooks(self) -> None:
         if self._orig_exc_handler is None:
             self._orig_exc_handler = sys.excepthook
 
@@ -88,7 +90,7 @@ class ExitHooks(object):
                 except Exception:
                     pass
 
-    def remove_signal_hooks(self):
+    def remove_signal_hooks(self) -> None:
         for org_handler_k, org_handler_v in self._org_handlers.items():
             # noinspection PyBroadException
             try:
@@ -97,16 +99,18 @@ class ExitHooks(object):
                 pass
         self._org_handlers = {}
 
-    def remove_exception_hooks(self):
+    def remove_exception_hooks(self) -> None:
         if self._orig_exc_handler:
             sys.excepthook = self._orig_exc_handler
             self._orig_exc_handler = None
 
-    def exit(self, code=0):
+    def exit(self, code: int = 0) -> None:
         self.exit_code = code
         self._orig_exit(code)
 
-    def exc_handler(self, exctype, value, traceback, *args, **kwargs):
+    def exc_handler(
+        self, exctype: type, value: BaseException, traceback: types.TracebackType, *args: Any, **kwargs: Any
+    ) -> None:
         if self._except_recursion_protection_flag or not self._orig_exc_handler:
             # noinspection PyArgumentList
             return sys.__excepthook__(exctype, value, traceback, *args, **kwargs)
@@ -143,7 +147,9 @@ class ExitHooks(object):
 
         return ret
 
-    def signal_handler(self, sig, frame):
+    def signal_handler(
+        self, sig: int, frame: types.FrameType
+    ) -> Union[Callable[[int, types.FrameType], Any], signal.Handlers]:
         org_handler = self._org_handlers.get(sig)
         if not org_handler:
             return signal.SIG_DFL

@@ -3,8 +3,8 @@ queues service
 
 Provides a management API for queues of tasks waiting to be executed by workers deployed anywhere (see Workers Service).
 """
+from typing import List, Optional, Any
 from datetime import datetime
-
 import six
 from clearml.backend_api.session import (
     Request,
@@ -58,12 +58,12 @@ class QueueMetrics(NonStrictDataModel):
 
     def __init__(
         self,
-        queue=None,
-        dates=None,
-        avg_waiting_times=None,
-        queue_lengths=None,
-        **kwargs
-    ):
+        queue: Optional[str] = None,
+        dates: Optional[List[int]] = None,
+        avg_waiting_times: Optional[List[float]] = None,
+        queue_lengths: Optional[List[int]] = None,
+        **kwargs: Any
+    ) -> None:
         super(QueueMetrics, self).__init__(**kwargs)
         self.queue = queue
         self.dates = dates
@@ -71,68 +71,55 @@ class QueueMetrics(NonStrictDataModel):
         self.queue_lengths = queue_lengths
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> Optional[str]:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("dates")
-    def dates(self):
+    def dates(self) -> Optional[List[int]]:
         return self._property_dates
 
     @dates.setter
-    def dates(self, value):
+    def dates(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_dates = None
             return
-
         self.assert_isinstance(value, "dates", (list, tuple))
-        value = [
-            int(v) if isinstance(v, float) and v.is_integer() else v for v in value
-        ]
-
+        value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
         self.assert_isinstance(value, "dates", six.integer_types, is_array=True)
         self._property_dates = value
 
     @schema_property("avg_waiting_times")
-    def avg_waiting_times(self):
+    def avg_waiting_times(self) -> Optional[List[float]]:
         return self._property_avg_waiting_times
 
     @avg_waiting_times.setter
-    def avg_waiting_times(self, value):
+    def avg_waiting_times(self, value: Optional[List[float]]) -> None:
         if value is None:
             self._property_avg_waiting_times = None
             return
-
         self.assert_isinstance(value, "avg_waiting_times", (list, tuple))
-
-        self.assert_isinstance(
-            value, "avg_waiting_times", six.integer_types + (float,), is_array=True
-        )
+        self.assert_isinstance(value, "avg_waiting_times", six.integer_types + (float,), is_array=True)
         self._property_avg_waiting_times = value
 
     @schema_property("queue_lengths")
-    def queue_lengths(self):
+    def queue_lengths(self) -> Optional[List[int]]:
         return self._property_queue_lengths
 
     @queue_lengths.setter
-    def queue_lengths(self, value):
+    def queue_lengths(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_queue_lengths = None
             return
-
         self.assert_isinstance(value, "queue_lengths", (list, tuple))
-        value = [
-            int(v) if isinstance(v, float) and v.is_integer() else v for v in value
-        ]
-
+        value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
         self.assert_isinstance(value, "queue_lengths", six.integer_types, is_array=True)
         self._property_queue_lengths = value
 
@@ -157,34 +144,32 @@ class Entry(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, task=None, added=None, **kwargs):
+    def __init__(self, task: Optional[str] = None, added: Optional[str] = None, **kwargs: Any) -> None:
         super(Entry, self).__init__(**kwargs)
         self.task = task
         self.added = added
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> Optional[str]:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: Optional[str]) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("added")
-    def added(self):
+    def added(self) -> Optional[str]:
         return self._property_added
 
     @added.setter
-    def added(self, value):
+    def added(self, value: Optional[str]) -> None:
         if value is None:
             self._property_added = None
             return
-
         self.assert_isinstance(value, "added", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
@@ -199,10 +184,7 @@ class MetadataItem(NonStrictDataModel):
                 "description": "The key uniquely identifying the metadata item inside the given entity",
                 "type": "string",
             },
-            "type": {
-                "description": "The type of the metadata item",
-                "type": "string",
-            },
+            "type": {"description": "The type of the metadata item", "type": "string"},
             "value": {
                 "description": "The value stored in the metadata item",
                 "type": "string",
@@ -210,18 +192,18 @@ class MetadataItem(NonStrictDataModel):
         },
     }
 
-    def __init__(self, key, type, value, **kwargs):
+    def __init__(self, key: Optional[str], type: Optional[str], value: Optional[str], **kwargs: Any) -> None:
         super(MetadataItem, self).__init__(**kwargs)
         self.key = key
         self.type = type
         self.value = value
 
     @schema_property("key")
-    def key(self):
+    def key(self) -> Optional[str]:
         return self._property_key
 
     @key.setter
-    def key(self, value):
+    def key(self, value: Optional[str]) -> None:
         if value is None:
             self._property_key = None
             return
@@ -229,11 +211,11 @@ class MetadataItem(NonStrictDataModel):
         self._property_key = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Optional[str]:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Optional[str]) -> None:
         if value is None:
             self._property_type = None
             return
@@ -241,11 +223,11 @@ class MetadataItem(NonStrictDataModel):
         self._property_type = value
 
     @schema_property("value")
-    def value(self):
+    def value(self) -> Optional[str]:
         return self._property_value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: Optional[str]) -> None:
         if value is None:
             self._property_value = None
             return
@@ -332,17 +314,17 @@ class Queue(NonStrictDataModel):
 
     def __init__(
         self,
-        id=None,
-        name=None,
-        user=None,
-        company=None,
-        created=None,
-        tags=None,
-        system_tags=None,
-        entries=None,
-        metadata=None,
-        **kwargs
-    ):
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        user: Optional[str] = None,
+        company: Optional[str] = None,
+        created: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        entries: Optional[List[Any]] = None,
+        metadata: Optional[List[Any]] = None,
+        **kwargs: Any
+    ) -> None:
         super(Queue, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -355,11 +337,11 @@ class Queue(NonStrictDataModel):
         self.metadata = metadata
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
@@ -367,11 +349,11 @@ class Queue(NonStrictDataModel):
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
@@ -379,11 +361,11 @@ class Queue(NonStrictDataModel):
         self._property_name = value
 
     @schema_property("user")
-    def user(self):
+    def user(self) -> Optional[str]:
         return self._property_user
 
     @user.setter
-    def user(self, value):
+    def user(self, value: Optional[str]) -> None:
         if value is None:
             self._property_user = None
             return
@@ -391,11 +373,11 @@ class Queue(NonStrictDataModel):
         self._property_user = value
 
     @schema_property("company")
-    def company(self):
+    def company(self) -> Optional[str]:
         return self._property_company
 
     @company.setter
-    def company(self, value):
+    def company(self, value: Optional[str]) -> None:
         if value is None:
             self._property_company = None
             return
@@ -403,11 +385,11 @@ class Queue(NonStrictDataModel):
         self._property_company = value
 
     @schema_property("created")
-    def created(self):
+    def created(self) -> Optional[str]:
         return self._property_created
 
     @created.setter
-    def created(self, value):
+    def created(self, value: Optional[str]) -> None:
         if value is None:
             self._property_created = None
             return
@@ -417,11 +399,11 @@ class Queue(NonStrictDataModel):
         self._property_created = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
@@ -430,11 +412,11 @@ class Queue(NonStrictDataModel):
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
@@ -443,35 +425,33 @@ class Queue(NonStrictDataModel):
         self._property_system_tags = value
 
     @schema_property("entries")
-    def entries(self):
+    def entries(self) -> Optional[List[Any]]:
         return self._property_entries
 
     @entries.setter
-    def entries(self, value):
+    def entries(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_entries = None
             return
         self.assert_isinstance(value, "entries", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [Entry.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "entries", Entry, is_array=True)
         self._property_entries = value
 
     @schema_property("metadata")
-    def metadata(self):
+    def metadata(self) -> Optional[List[Any]]:
         return self._property_metadata
 
     @metadata.setter
-    def metadata(self, value):
+    def metadata(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_metadata = None
             return
         self.assert_isinstance(value, "metadata", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
-            value = [
-                MetadataItem.from_dict(v) if isinstance(v, dict) else v for v in value
-            ]
+        if any((isinstance(v, dict) for v in value)):
+            value = [MetadataItem.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "metadata", MetadataItem, is_array=True)
         self._property_metadata = value
@@ -521,17 +501,17 @@ class AddOrUpdateMetadataRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, metadata, **kwargs):
+    def __init__(self, queue: str, metadata: List[Any], **kwargs: Any) -> None:
         super(AddOrUpdateMetadataRequest, self).__init__(**kwargs)
         self.queue = queue
         self.metadata = metadata
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
@@ -539,19 +519,17 @@ class AddOrUpdateMetadataRequest(Request):
         self._property_queue = value
 
     @schema_property("metadata")
-    def metadata(self):
+    def metadata(self) -> List[Any]:
         return self._property_metadata
 
     @metadata.setter
-    def metadata(self, value):
+    def metadata(self, value: List[Any]) -> None:
         if value is None:
             self._property_metadata = None
             return
         self.assert_isinstance(value, "metadata", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
-            value = [
-                MetadataItem.from_dict(v) if isinstance(v, dict) else v for v in value
-            ]
+        if any((isinstance(v, dict) for v in value)):
+            value = [MetadataItem.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "metadata", MetadataItem, is_array=True)
         self._property_metadata = value
@@ -568,7 +546,6 @@ class AddOrUpdateMetadataResponse(Response):
     _service = "queues"
     _action = "add_or_update_metadata"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -581,22 +558,21 @@ class AddOrUpdateMetadataResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(AddOrUpdateMetadataResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -624,34 +600,32 @@ class AddTaskRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, task, **kwargs):
+    def __init__(self, queue: str, task: str, **kwargs: Any) -> None:
         super(AddTaskRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -667,7 +641,6 @@ class AddTaskResponse(Response):
     _service = "queues"
     _action = "add_task"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -680,22 +653,21 @@ class AddTaskResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, added=None, **kwargs):
+    def __init__(self, added: Optional[int] = None, **kwargs: Any) -> None:
         super(AddTaskResponse, self).__init__(**kwargs)
         self.added = added
 
     @schema_property("added")
-    def added(self):
+    def added(self) -> Optional[int]:
         return self._property_added
 
     @added.setter
-    def added(self, value):
+    def added(self, value: Optional[int]) -> None:
         if value is None:
             self._property_added = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "added", six.integer_types)
         self._property_added = value
 
@@ -738,52 +710,49 @@ class CreateRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, name, tags=None, system_tags=None, **kwargs):
+    def __init__(
+        self, name: str, tags: Optional[List[str]] = None, system_tags: Optional[List[str]] = None, **kwargs: Any
+    ) -> None:
         super(CreateRequest, self).__init__(**kwargs)
         self.name = name
         self.tags = tags
         self.system_tags = system_tags
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> str:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -799,29 +768,25 @@ class CreateResponse(Response):
     _service = "queues"
     _action = "create"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
-        "properties": {
-            "id": {"description": "New queue ID", "type": ["string", "null"]}
-        },
+        "properties": {"id": {"description": "New queue ID", "type": ["string", "null"]}},
         "type": "object",
     }
 
-    def __init__(self, id=None, **kwargs):
+    def __init__(self, id: Optional[str] = None, **kwargs: Any) -> None:
         super(CreateResponse, self).__init__(**kwargs)
         self.id = id
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
@@ -853,34 +818,32 @@ class DeleteRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, force=False, **kwargs):
+    def __init__(self, queue: str, force: Optional[bool] = False, **kwargs: Any) -> None:
         super(DeleteRequest, self).__init__(**kwargs)
         self.queue = queue
         self.force = force
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -896,7 +859,6 @@ class DeleteResponse(Response):
     _service = "queues"
     _action = "delete"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -909,22 +871,21 @@ class DeleteResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, deleted=None, **kwargs):
+    def __init__(self, deleted: Optional[int] = None, **kwargs: Any) -> None:
         super(DeleteResponse, self).__init__(**kwargs)
         self.deleted = deleted
 
     @schema_property("deleted")
-    def deleted(self):
+    def deleted(self) -> Optional[int]:
         return self._property_deleted
 
     @deleted.setter
-    def deleted(self, value):
+    def deleted(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted", six.integer_types)
         self._property_deleted = value
 
@@ -956,36 +917,33 @@ class DeleteMetadataRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, keys, **kwargs):
+    def __init__(self, queue: str, keys: List[str], **kwargs: Any) -> None:
         super(DeleteMetadataRequest, self).__init__(**kwargs)
         self.queue = queue
         self.keys = keys
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("keys")
-    def keys(self):
+    def keys(self) -> List[str]:
         return self._property_keys
 
     @keys.setter
-    def keys(self, value):
+    def keys(self, value: List[str]) -> None:
         if value is None:
             self._property_keys = None
             return
-
         self.assert_isinstance(value, "keys", (list, tuple))
-
         self.assert_isinstance(value, "keys", six.string_types, is_array=True)
         self._property_keys = value
 
@@ -1001,7 +959,6 @@ class DeleteMetadataResponse(Response):
     _service = "queues"
     _action = "delete_metadata"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -1014,22 +971,21 @@ class DeleteMetadataResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(DeleteMetadataResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -1123,17 +1079,17 @@ class GetAllRequest(Request):
 
     def __init__(
         self,
-        name=None,
-        id=None,
-        tags=None,
-        system_tags=None,
-        page=None,
-        page_size=None,
-        order_by=None,
-        search_text=None,
-        only_fields=None,
-        **kwargs
-    ):
+        name: Optional[str] = None,
+        id: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        order_by: Optional[List[str]] = None,
+        search_text: Optional[str] = None,
+        only_fields: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetAllRequest, self).__init__(**kwargs)
         self.name = name
         self.id = id
@@ -1146,133 +1102,119 @@ class GetAllRequest(Request):
         self.only_fields = only_fields
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[List[str]]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", (list, tuple))
-
         self.assert_isinstance(value, "id", six.string_types, is_array=True)
         self._property_id = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("page")
-    def page(self):
+    def page(self) -> Optional[int]:
         return self._property_page
 
     @page.setter
-    def page(self, value):
+    def page(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page", six.integer_types)
         self._property_page = value
 
     @schema_property("page_size")
-    def page_size(self):
+    def page_size(self) -> Optional[int]:
         return self._property_page_size
 
     @page_size.setter
-    def page_size(self, value):
+    def page_size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page_size", six.integer_types)
         self._property_page_size = value
 
     @schema_property("order_by")
-    def order_by(self):
+    def order_by(self) -> Optional[List[str]]:
         return self._property_order_by
 
     @order_by.setter
-    def order_by(self, value):
+    def order_by(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_order_by = None
             return
-
         self.assert_isinstance(value, "order_by", (list, tuple))
-
         self.assert_isinstance(value, "order_by", six.string_types, is_array=True)
         self._property_order_by = value
 
     @schema_property("search_text")
-    def search_text(self):
+    def search_text(self) -> Optional[str]:
         return self._property_search_text
 
     @search_text.setter
-    def search_text(self, value):
+    def search_text(self, value: Optional[str]) -> None:
         if value is None:
             self._property_search_text = None
             return
-
         self.assert_isinstance(value, "search_text", six.string_types)
         self._property_search_text = value
 
     @schema_property("only_fields")
-    def only_fields(self):
+    def only_fields(self) -> Optional[List[str]]:
         return self._property_only_fields
 
     @only_fields.setter
-    def only_fields(self, value):
+    def only_fields(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_only_fields = None
             return
-
         self.assert_isinstance(value, "only_fields", (list, tuple))
-
         self.assert_isinstance(value, "only_fields", six.string_types, is_array=True)
         self._property_only_fields = value
 
@@ -1288,7 +1230,6 @@ class GetAllResponse(Response):
     _service = "queues"
     _action = "get_all"
     _version = "2.13"
-
     _schema = {
         "definitions": {
             "entry": {
@@ -1375,22 +1316,21 @@ class GetAllResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, queues=None, **kwargs):
+    def __init__(self, queues: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetAllResponse, self).__init__(**kwargs)
         self.queues = queues
 
     @schema_property("queues")
-    def queues(self):
+    def queues(self) -> Optional[List[Any]]:
         return self._property_queues
 
     @queues.setter
-    def queues(self, value):
+    def queues(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_queues = None
             return
-
         self.assert_isinstance(value, "queues", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [Queue.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "queues", Queue, is_array=True)
@@ -1415,20 +1355,19 @@ class GetByIdRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, **kwargs):
+    def __init__(self, queue: str, **kwargs: Any) -> None:
         super(GetByIdRequest, self).__init__(**kwargs)
         self.queue = queue
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
@@ -1444,7 +1383,6 @@ class GetByIdResponse(Response):
     _service = "queues"
     _action = "get_by_id"
     _version = "2.13"
-
     _schema = {
         "definitions": {
             "entry": {
@@ -1530,16 +1468,16 @@ class GetByIdResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, queue=None, **kwargs):
+    def __init__(self, queue: Any = None, **kwargs: Any) -> None:
         super(GetByIdResponse, self).__init__(**kwargs)
         self.queue = queue
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> Any:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Any) -> None:
         if value is None:
             self._property_queue = None
             return
@@ -1577,7 +1515,6 @@ class GetDefaultResponse(Response):
     _service = "queues"
     _action = "get_default"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -1587,34 +1524,32 @@ class GetDefaultResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, id=None, name=None, **kwargs):
+    def __init__(self, id: Optional[str] = None, name: Optional[str] = None, **kwargs: Any) -> None:
         super(GetDefaultResponse, self).__init__(**kwargs)
         self.id = id
         self.name = name
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
@@ -1637,20 +1572,19 @@ class GetNextTaskRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, **kwargs):
+    def __init__(self, queue: str, **kwargs: Any) -> None:
         super(GetNextTaskRequest, self).__init__(**kwargs)
         self.queue = queue
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
@@ -1666,7 +1600,6 @@ class GetNextTaskResponse(Response):
     _service = "queues"
     _action = "get_next_task"
     _version = "2.13"
-
     _schema = {
         "definitions": {
             "entry": {
@@ -1693,16 +1626,16 @@ class GetNextTaskResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, entry=None, **kwargs):
+    def __init__(self, entry: Any = None, **kwargs: Any) -> None:
         super(GetNextTaskResponse, self).__init__(**kwargs)
         self.entry = entry
 
     @schema_property("entry")
-    def entry(self):
+    def entry(self) -> Any:
         return self._property_entry
 
     @entry.setter
-    def entry(self, value):
+    def entry(self, value: Any) -> None:
         if value is None:
             self._property_entry = None
             return
@@ -1758,7 +1691,9 @@ class GetQueueMetricsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, from_date, to_date, interval, queue_ids=None, **kwargs):
+    def __init__(
+        self, from_date: float, to_date: float, interval: int, queue_ids: Optional[List[str]] = None, **kwargs: Any
+    ) -> None:
         super(GetQueueMetricsRequest, self).__init__(**kwargs)
         self.from_date = from_date
         self.to_date = to_date
@@ -1766,58 +1701,53 @@ class GetQueueMetricsRequest(Request):
         self.queue_ids = queue_ids
 
     @schema_property("from_date")
-    def from_date(self):
+    def from_date(self) -> float:
         return self._property_from_date
 
     @from_date.setter
-    def from_date(self, value):
+    def from_date(self, value: float) -> None:
         if value is None:
             self._property_from_date = None
             return
-
         self.assert_isinstance(value, "from_date", six.integer_types + (float,))
         self._property_from_date = value
 
     @schema_property("to_date")
-    def to_date(self):
+    def to_date(self) -> float:
         return self._property_to_date
 
     @to_date.setter
-    def to_date(self, value):
+    def to_date(self, value: float) -> None:
         if value is None:
             self._property_to_date = None
             return
-
         self.assert_isinstance(value, "to_date", six.integer_types + (float,))
         self._property_to_date = value
 
     @schema_property("interval")
-    def interval(self):
+    def interval(self) -> int:
         return self._property_interval
 
     @interval.setter
-    def interval(self, value):
+    def interval(self, value: int) -> None:
         if value is None:
             self._property_interval = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "interval", six.integer_types)
         self._property_interval = value
 
     @schema_property("queue_ids")
-    def queue_ids(self):
+    def queue_ids(self) -> Optional[List[str]]:
         return self._property_queue_ids
 
     @queue_ids.setter
-    def queue_ids(self, value):
+    def queue_ids(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_queue_ids = None
             return
-
         self.assert_isinstance(value, "queue_ids", (list, tuple))
-
         self.assert_isinstance(value, "queue_ids", six.string_types, is_array=True)
         self._property_queue_ids = value
 
@@ -1835,7 +1765,6 @@ class GetQueueMetricsResponse(Response):
     _service = "queues"
     _action = "get_queue_metrics"
     _version = "2.13"
-
     _schema = {
         "definitions": {
             "queue_metrics": {
@@ -1873,25 +1802,22 @@ class GetQueueMetricsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, queues=None, **kwargs):
+    def __init__(self, queues: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetQueueMetricsResponse, self).__init__(**kwargs)
         self.queues = queues
 
     @schema_property("queues")
-    def queues(self):
+    def queues(self) -> Optional[List[Any]]:
         return self._property_queues
 
     @queues.setter
-    def queues(self, value):
+    def queues(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_queues = None
             return
-
         self.assert_isinstance(value, "queues", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
-            value = [
-                QueueMetrics.from_dict(v) if isinstance(v, dict) else v for v in value
-            ]
+        if any((isinstance(v, dict) for v in value)):
+            value = [QueueMetrics.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "queues", QueueMetrics, is_array=True)
         self._property_queues = value
@@ -1925,50 +1851,47 @@ class MoveTaskBackwardRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, task, count=None, **kwargs):
+    def __init__(self, queue: str, task: str, count: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskBackwardRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
         self.count = count
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("count")
-    def count(self):
+    def count(self) -> Optional[int]:
         return self._property_count
 
     @count.setter
-    def count(self, value):
+    def count(self, value: Optional[int]) -> None:
         if value is None:
             self._property_count = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "count", six.integer_types)
         self._property_count = value
 
@@ -1985,7 +1908,6 @@ class MoveTaskBackwardResponse(Response):
     _service = "queues"
     _action = "move_task_backward"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -1997,22 +1919,21 @@ class MoveTaskBackwardResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, position=None, **kwargs):
+    def __init__(self, position: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskBackwardResponse, self).__init__(**kwargs)
         self.position = position
 
     @schema_property("position")
-    def position(self):
+    def position(self) -> Optional[int]:
         return self._property_position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: Optional[int]) -> None:
         if value is None:
             self._property_position = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "position", six.integer_types)
         self._property_position = value
 
@@ -2047,50 +1968,47 @@ class MoveTaskForwardRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, task, count=None, **kwargs):
+    def __init__(self, queue: str, task: str, count: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskForwardRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
         self.count = count
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("count")
-    def count(self):
+    def count(self) -> Optional[int]:
         return self._property_count
 
     @count.setter
-    def count(self, value):
+    def count(self, value: Optional[int]) -> None:
         if value is None:
             self._property_count = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "count", six.integer_types)
         self._property_count = value
 
@@ -2107,7 +2025,6 @@ class MoveTaskForwardResponse(Response):
     _service = "queues"
     _action = "move_task_forward"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2119,22 +2036,21 @@ class MoveTaskForwardResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, position=None, **kwargs):
+    def __init__(self, position: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskForwardResponse, self).__init__(**kwargs)
         self.position = position
 
     @schema_property("position")
-    def position(self):
+    def position(self) -> Optional[int]:
         return self._property_position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: Optional[int]) -> None:
         if value is None:
             self._property_position = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "position", six.integer_types)
         self._property_position = value
 
@@ -2160,34 +2076,32 @@ class MoveTaskToBackRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, task, **kwargs):
+    def __init__(self, queue: str, task: str, **kwargs: Any) -> None:
         super(MoveTaskToBackRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -2204,7 +2118,6 @@ class MoveTaskToBackResponse(Response):
     _service = "queues"
     _action = "move_task_to_back"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2216,22 +2129,21 @@ class MoveTaskToBackResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, position=None, **kwargs):
+    def __init__(self, position: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskToBackResponse, self).__init__(**kwargs)
         self.position = position
 
     @schema_property("position")
-    def position(self):
+    def position(self) -> Optional[int]:
         return self._property_position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: Optional[int]) -> None:
         if value is None:
             self._property_position = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "position", six.integer_types)
         self._property_position = value
 
@@ -2257,34 +2169,32 @@ class MoveTaskToFrontRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, task, **kwargs):
+    def __init__(self, queue: str, task: str, **kwargs: Any) -> None:
         super(MoveTaskToFrontRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -2301,7 +2211,6 @@ class MoveTaskToFrontResponse(Response):
     _service = "queues"
     _action = "move_task_to_front"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2313,22 +2222,21 @@ class MoveTaskToFrontResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, position=None, **kwargs):
+    def __init__(self, position: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskToFrontResponse, self).__init__(**kwargs)
         self.position = position
 
     @schema_property("position")
-    def position(self):
+    def position(self) -> Optional[int]:
         return self._property_position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: Optional[int]) -> None:
         if value is None:
             self._property_position = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "position", six.integer_types)
         self._property_position = value
 
@@ -2356,34 +2264,32 @@ class RemoveTaskRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, task, **kwargs):
+    def __init__(self, queue: str, task: str, **kwargs: Any) -> None:
         super(RemoveTaskRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -2399,7 +2305,6 @@ class RemoveTaskResponse(Response):
     _service = "queues"
     _action = "remove_task"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2412,22 +2317,21 @@ class RemoveTaskResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, removed=None, **kwargs):
+    def __init__(self, removed: Optional[int] = None, **kwargs: Any) -> None:
         super(RemoveTaskResponse, self).__init__(**kwargs)
         self.removed = removed
 
     @schema_property("removed")
-    def removed(self):
+    def removed(self) -> Optional[int]:
         return self._property_removed
 
     @removed.setter
-    def removed(self, value):
+    def removed(self, value: Optional[int]) -> None:
         if value is None:
             self._property_removed = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "removed", six.integer_types)
         self._property_removed = value
 
@@ -2473,7 +2377,14 @@ class UpdateRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, queue, name=None, tags=None, system_tags=None, **kwargs):
+    def __init__(
+        self,
+        queue: str,
+        name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(UpdateRequest, self).__init__(**kwargs)
         self.queue = queue
         self.name = name
@@ -2481,58 +2392,52 @@ class UpdateRequest(Request):
         self.system_tags = system_tags
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -2550,7 +2455,6 @@ class UpdateResponse(Response):
     _service = "queues"
     _action = "update"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2568,36 +2472,34 @@ class UpdateResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(UpdateResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 

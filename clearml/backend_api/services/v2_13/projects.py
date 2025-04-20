@@ -3,8 +3,8 @@ projects service
 
 Provides support for defining Projects containing Tasks, Models and Dataset Versions.
 """
+from typing import List, Optional, Any
 from datetime import datetime
-
 import six
 from clearml.backend_api.session import (
     Request,
@@ -38,36 +38,33 @@ class MultiFieldPatternData(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, pattern=None, fields=None, **kwargs):
+    def __init__(self, pattern: Optional[str] = None, fields: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(MultiFieldPatternData, self).__init__(**kwargs)
         self.pattern = pattern
         self.fields = fields
 
     @schema_property("pattern")
-    def pattern(self):
+    def pattern(self) -> Optional[str]:
         return self._property_pattern
 
     @pattern.setter
-    def pattern(self, value):
+    def pattern(self, value: Optional[str]) -> None:
         if value is None:
             self._property_pattern = None
             return
-
         self.assert_isinstance(value, "pattern", six.string_types)
         self._property_pattern = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[List[str]]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (list, tuple))
-
         self.assert_isinstance(value, "fields", six.string_types, is_array=True)
         self._property_fields = value
 
@@ -139,18 +136,18 @@ class Project(NonStrictDataModel):
 
     def __init__(
         self,
-        id=None,
-        name=None,
-        description=None,
-        user=None,
-        company=None,
-        created=None,
-        tags=None,
-        system_tags=None,
-        default_output_destination=None,
-        last_update=None,
-        **kwargs
-    ):
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        user: Optional[str] = None,
+        company: Optional[str] = None,
+        created: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        default_output_destination: Optional[str] = None,
+        last_update: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(Project, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -164,138 +161,126 @@ class Project(NonStrictDataModel):
         self.last_update = last_update
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("description")
-    def description(self):
+    def description(self) -> Optional[str]:
         return self._property_description
 
     @description.setter
-    def description(self, value):
+    def description(self, value: Optional[str]) -> None:
         if value is None:
             self._property_description = None
             return
-
         self.assert_isinstance(value, "description", six.string_types)
         self._property_description = value
 
     @schema_property("user")
-    def user(self):
+    def user(self) -> Optional[str]:
         return self._property_user
 
     @user.setter
-    def user(self, value):
+    def user(self, value: Optional[str]) -> None:
         if value is None:
             self._property_user = None
             return
-
         self.assert_isinstance(value, "user", six.string_types)
         self._property_user = value
 
     @schema_property("company")
-    def company(self):
+    def company(self) -> Optional[str]:
         return self._property_company
 
     @company.setter
-    def company(self, value):
+    def company(self, value: Optional[str]) -> None:
         if value is None:
             self._property_company = None
             return
-
         self.assert_isinstance(value, "company", six.string_types)
         self._property_company = value
 
     @schema_property("created")
-    def created(self):
+    def created(self) -> Optional[str]:
         return self._property_created
 
     @created.setter
-    def created(self, value):
+    def created(self, value: Optional[str]) -> None:
         if value is None:
             self._property_created = None
             return
-
         self.assert_isinstance(value, "created", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_created = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("default_output_destination")
-    def default_output_destination(self):
+    def default_output_destination(self) -> Optional[str]:
         return self._property_default_output_destination
 
     @default_output_destination.setter
-    def default_output_destination(self, value):
+    def default_output_destination(self, value: Optional[str]) -> None:
         if value is None:
             self._property_default_output_destination = None
             return
-
         self.assert_isinstance(value, "default_output_destination", six.string_types)
         self._property_default_output_destination = value
 
     @schema_property("last_update")
-    def last_update(self):
+    def last_update(self) -> Optional[str]:
         return self._property_last_update
 
     @last_update.setter
-    def last_update(self, value):
+    def last_update(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_update = None
             return
-
         self.assert_isinstance(value, "last_update", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
@@ -358,36 +343,34 @@ class StatsStatusCount(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, total_runtime=None, status_count=None, **kwargs):
+    def __init__(self, total_runtime: Optional[int] = None, status_count: Optional[dict] = None, **kwargs: Any) -> None:
         super(StatsStatusCount, self).__init__(**kwargs)
         self.total_runtime = total_runtime
         self.status_count = status_count
 
     @schema_property("total_runtime")
-    def total_runtime(self):
+    def total_runtime(self) -> Optional[int]:
         return self._property_total_runtime
 
     @total_runtime.setter
-    def total_runtime(self, value):
+    def total_runtime(self, value: Optional[int]) -> None:
         if value is None:
             self._property_total_runtime = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "total_runtime", six.integer_types)
         self._property_total_runtime = value
 
     @schema_property("status_count")
-    def status_count(self):
+    def status_count(self) -> Optional[dict]:
         return self._property_status_count
 
     @status_count.setter
-    def status_count(self, value):
+    def status_count(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_status_count = None
             return
-
         self.assert_isinstance(value, "status_count", (dict,))
         self._property_status_count = value
 
@@ -420,17 +403,17 @@ class Stats(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, active=None, archived=None, **kwargs):
+    def __init__(self, active: Any = None, archived: Any = None, **kwargs: Any) -> None:
         super(Stats, self).__init__(**kwargs)
         self.active = active
         self.archived = archived
 
     @schema_property("active")
-    def active(self):
+    def active(self) -> Any:
         return self._property_active
 
     @active.setter
-    def active(self, value):
+    def active(self, value: Any) -> None:
         if value is None:
             self._property_active = None
             return
@@ -441,11 +424,11 @@ class Stats(NonStrictDataModel):
         self._property_active = value
 
     @schema_property("archived")
-    def archived(self):
+    def archived(self) -> Any:
         return self._property_archived
 
     @archived.setter
-    def archived(self, value):
+    def archived(self, value: Any) -> None:
         if value is None:
             self._property_archived = None
             return
@@ -534,19 +517,19 @@ class ProjectsGetAllResponseSingle(NonStrictDataModel):
 
     def __init__(
         self,
-        id=None,
-        name=None,
-        description=None,
-        user=None,
-        company=None,
-        created=None,
-        tags=None,
-        system_tags=None,
-        default_output_destination=None,
-        stats=None,
-        sub_projects=None,
-        **kwargs
-    ):
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        user: Optional[str] = None,
+        company: Optional[str] = None,
+        created: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        default_output_destination: Optional[str] = None,
+        stats: Any = None,
+        sub_projects: Optional[List[dict]] = None,
+        **kwargs: Any
+    ) -> None:
         super(ProjectsGetAllResponseSingle, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -561,134 +544,123 @@ class ProjectsGetAllResponseSingle(NonStrictDataModel):
         self.sub_projects = sub_projects
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("description")
-    def description(self):
+    def description(self) -> Optional[str]:
         return self._property_description
 
     @description.setter
-    def description(self, value):
+    def description(self, value: Optional[str]) -> None:
         if value is None:
             self._property_description = None
             return
-
         self.assert_isinstance(value, "description", six.string_types)
         self._property_description = value
 
     @schema_property("user")
-    def user(self):
+    def user(self) -> Optional[str]:
         return self._property_user
 
     @user.setter
-    def user(self, value):
+    def user(self, value: Optional[str]) -> None:
         if value is None:
             self._property_user = None
             return
-
         self.assert_isinstance(value, "user", six.string_types)
         self._property_user = value
 
     @schema_property("company")
-    def company(self):
+    def company(self) -> Optional[str]:
         return self._property_company
 
     @company.setter
-    def company(self, value):
+    def company(self, value: Optional[str]) -> None:
         if value is None:
             self._property_company = None
             return
-
         self.assert_isinstance(value, "company", six.string_types)
         self._property_company = value
 
     @schema_property("created")
-    def created(self):
+    def created(self) -> Optional[str]:
         return self._property_created
 
     @created.setter
-    def created(self, value):
+    def created(self, value: Optional[str]) -> None:
         if value is None:
             self._property_created = None
             return
-
         self.assert_isinstance(value, "created", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_created = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("default_output_destination")
-    def default_output_destination(self):
+    def default_output_destination(self) -> Optional[str]:
         return self._property_default_output_destination
 
     @default_output_destination.setter
-    def default_output_destination(self, value):
+    def default_output_destination(self, value: Optional[str]) -> None:
         if value is None:
             self._property_default_output_destination = None
             return
-
         self.assert_isinstance(value, "default_output_destination", six.string_types)
         self._property_default_output_destination = value
 
     @schema_property("stats")
-    def stats(self):
+    def stats(self) -> Any:
         return self._property_stats
 
     @stats.setter
-    def stats(self, value):
+    def stats(self, value: Any) -> None:
         if value is None:
             self._property_stats = None
             return
@@ -699,17 +671,15 @@ class ProjectsGetAllResponseSingle(NonStrictDataModel):
         self._property_stats = value
 
     @schema_property("sub_projects")
-    def sub_projects(self):
+    def sub_projects(self) -> Optional[List[dict]]:
         return self._property_sub_projects
 
     @sub_projects.setter
-    def sub_projects(self, value):
+    def sub_projects(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_sub_projects = None
             return
-
         self.assert_isinstance(value, "sub_projects", (list, tuple))
-
         self.assert_isinstance(value, "sub_projects", (dict,), is_array=True)
         self._property_sub_projects = value
 
@@ -745,8 +715,13 @@ class MetricVariantResult(NonStrictDataModel):
     }
 
     def __init__(
-        self, metric=None, metric_hash=None, variant=None, variant_hash=None, **kwargs
-    ):
+        self,
+        metric: Optional[str] = None,
+        metric_hash: Optional[str] = None,
+        variant: Optional[str] = None,
+        variant_hash: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(MetricVariantResult, self).__init__(**kwargs)
         self.metric = metric
         self.metric_hash = metric_hash
@@ -754,54 +729,50 @@ class MetricVariantResult(NonStrictDataModel):
         self.variant_hash = variant_hash
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("metric_hash")
-    def metric_hash(self):
+    def metric_hash(self) -> Optional[str]:
         return self._property_metric_hash
 
     @metric_hash.setter
-    def metric_hash(self, value):
+    def metric_hash(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric_hash = None
             return
-
         self.assert_isinstance(value, "metric_hash", six.string_types)
         self._property_metric_hash = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> Optional[str]:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: Optional[str]) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
     @schema_property("variant_hash")
-    def variant_hash(self):
+    def variant_hash(self) -> Optional[str]:
         return self._property_variant_hash
 
     @variant_hash.setter
-    def variant_hash(self, value):
+    def variant_hash(self, value: Optional[str]) -> None:
         if value is None:
             self._property_variant_hash = None
             return
-
         self.assert_isinstance(value, "variant_hash", six.string_types)
         self._property_variant_hash = value
 
@@ -825,54 +796,54 @@ class Urls(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, model_urls=None, event_urls=None, artifact_urls=None, **kwargs):
+    def __init__(
+        self,
+        model_urls: Optional[List[str]] = None,
+        event_urls: Optional[List[str]] = None,
+        artifact_urls: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(Urls, self).__init__(**kwargs)
         self.model_urls = model_urls
         self.event_urls = event_urls
         self.artifact_urls = artifact_urls
 
     @schema_property("model_urls")
-    def model_urls(self):
+    def model_urls(self) -> Optional[List[str]]:
         return self._property_model_urls
 
     @model_urls.setter
-    def model_urls(self, value):
+    def model_urls(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_model_urls = None
             return
-
         self.assert_isinstance(value, "model_urls", (list, tuple))
-
         self.assert_isinstance(value, "model_urls", six.string_types, is_array=True)
         self._property_model_urls = value
 
     @schema_property("event_urls")
-    def event_urls(self):
+    def event_urls(self) -> Optional[List[str]]:
         return self._property_event_urls
 
     @event_urls.setter
-    def event_urls(self, value):
+    def event_urls(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_event_urls = None
             return
-
         self.assert_isinstance(value, "event_urls", (list, tuple))
-
         self.assert_isinstance(value, "event_urls", six.string_types, is_array=True)
         self._property_event_urls = value
 
     @schema_property("artifact_urls")
-    def artifact_urls(self):
+    def artifact_urls(self) -> Optional[List[str]]:
         return self._property_artifact_urls
 
     @artifact_urls.setter
-    def artifact_urls(self, value):
+    def artifact_urls(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_artifact_urls = None
             return
-
         self.assert_isinstance(value, "artifact_urls", (list, tuple))
-
         self.assert_isinstance(value, "artifact_urls", six.string_types, is_array=True)
         self._property_artifact_urls = value
 
@@ -927,13 +898,13 @@ class CreateRequest(Request):
 
     def __init__(
         self,
-        name,
-        description=None,
-        tags=None,
-        system_tags=None,
-        default_output_destination=None,
-        **kwargs
-    ):
+        name: str,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        default_output_destination: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(CreateRequest, self).__init__(**kwargs)
         self.name = name
         self.description = description
@@ -942,71 +913,64 @@ class CreateRequest(Request):
         self.default_output_destination = default_output_destination
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> str:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("description")
-    def description(self):
+    def description(self) -> Optional[str]:
         return self._property_description
 
     @description.setter
-    def description(self, value):
+    def description(self, value: Optional[str]) -> None:
         if value is None:
             self._property_description = None
             return
-
         self.assert_isinstance(value, "description", six.string_types)
         self._property_description = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("default_output_destination")
-    def default_output_destination(self):
+    def default_output_destination(self) -> Optional[str]:
         return self._property_default_output_destination
 
     @default_output_destination.setter
-    def default_output_destination(self, value):
+    def default_output_destination(self, value: Optional[str]) -> None:
         if value is None:
             self._property_default_output_destination = None
             return
-
         self.assert_isinstance(value, "default_output_destination", six.string_types)
         self._property_default_output_destination = value
 
@@ -1022,27 +986,25 @@ class CreateResponse(Response):
     _service = "projects"
     _action = "create"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {"id": {"description": "Project id", "type": ["string", "null"]}},
         "type": "object",
     }
 
-    def __init__(self, id=None, **kwargs):
+    def __init__(self, id: Optional[str] = None, **kwargs: Any) -> None:
         super(CreateResponse, self).__init__(**kwargs)
         self.id = id
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
@@ -1082,48 +1044,47 @@ class DeleteRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, project, force=False, delete_contents=None, **kwargs):
+    def __init__(
+        self, project: str, force: Optional[bool] = False, delete_contents: Optional[bool] = None, **kwargs: Any
+    ) -> None:
         super(DeleteRequest, self).__init__(**kwargs)
         self.project = project
         self.force = force
         self.delete_contents = delete_contents
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> str:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: str) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("delete_contents")
-    def delete_contents(self):
+    def delete_contents(self) -> Optional[bool]:
         return self._property_delete_contents
 
     @delete_contents.setter
-    def delete_contents(self, value):
+    def delete_contents(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_contents = None
             return
-
         self.assert_isinstance(value, "delete_contents", (bool,))
         self._property_delete_contents = value
 
@@ -1149,7 +1110,6 @@ class DeleteResponse(Response):
     _service = "projects"
     _action = "delete"
     _version = "2.13"
-
     _schema = {
         "definitions": {
             "urls": {
@@ -1197,13 +1157,13 @@ class DeleteResponse(Response):
 
     def __init__(
         self,
-        deleted=None,
-        disassociated_tasks=None,
-        urls=None,
-        deleted_models=None,
-        deleted_tasks=None,
-        **kwargs
-    ):
+        deleted: Optional[int] = None,
+        disassociated_tasks: Optional[int] = None,
+        urls: Any = None,
+        deleted_models: Optional[int] = None,
+        deleted_tasks: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         super(DeleteResponse, self).__init__(**kwargs)
         self.deleted = deleted
         self.disassociated_tasks = disassociated_tasks
@@ -1212,41 +1172,39 @@ class DeleteResponse(Response):
         self.deleted_tasks = deleted_tasks
 
     @schema_property("deleted")
-    def deleted(self):
+    def deleted(self) -> Optional[int]:
         return self._property_deleted
 
     @deleted.setter
-    def deleted(self, value):
+    def deleted(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted", six.integer_types)
         self._property_deleted = value
 
     @schema_property("disassociated_tasks")
-    def disassociated_tasks(self):
+    def disassociated_tasks(self) -> Optional[int]:
         return self._property_disassociated_tasks
 
     @disassociated_tasks.setter
-    def disassociated_tasks(self, value):
+    def disassociated_tasks(self, value: Optional[int]) -> None:
         if value is None:
             self._property_disassociated_tasks = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "disassociated_tasks", six.integer_types)
         self._property_disassociated_tasks = value
 
     @schema_property("urls")
-    def urls(self):
+    def urls(self) -> Any:
         return self._property_urls
 
     @urls.setter
-    def urls(self, value):
+    def urls(self, value: Any) -> None:
         if value is None:
             self._property_urls = None
             return
@@ -1257,32 +1215,30 @@ class DeleteResponse(Response):
         self._property_urls = value
 
     @schema_property("deleted_models")
-    def deleted_models(self):
+    def deleted_models(self) -> Optional[int]:
         return self._property_deleted_models
 
     @deleted_models.setter
-    def deleted_models(self, value):
+    def deleted_models(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted_models = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted_models", six.integer_types)
         self._property_deleted_models = value
 
     @schema_property("deleted_tasks")
-    def deleted_tasks(self):
+    def deleted_tasks(self) -> Optional[int]:
         return self._property_deleted_tasks
 
     @deleted_tasks.setter
-    def deleted_tasks(self, value):
+    def deleted_tasks(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted_tasks = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted_tasks", six.integer_types)
         self._property_deleted_tasks = value
 
@@ -1427,21 +1383,21 @@ class GetAllRequest(Request):
 
     def __init__(
         self,
-        id=None,
-        name=None,
-        description=None,
-        tags=None,
-        system_tags=None,
-        order_by=None,
-        page=None,
-        page_size=None,
-        search_text=None,
-        only_fields=None,
-        _all_=None,
-        _any_=None,
-        shallow_search=False,
-        **kwargs
-    ):
+        id: Optional[List[str]] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        order_by: Optional[List[str]] = None,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        search_text: Optional[str] = None,
+        only_fields: Optional[List[str]] = None,
+        _all_: Any = None,
+        _any_: Any = None,
+        shallow_search: Optional[bool] = False,
+        **kwargs: Any
+    ) -> None:
         super(GetAllRequest, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -1458,155 +1414,140 @@ class GetAllRequest(Request):
         self.shallow_search = shallow_search
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[List[str]]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", (list, tuple))
-
         self.assert_isinstance(value, "id", six.string_types, is_array=True)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("description")
-    def description(self):
+    def description(self) -> Optional[str]:
         return self._property_description
 
     @description.setter
-    def description(self, value):
+    def description(self, value: Optional[str]) -> None:
         if value is None:
             self._property_description = None
             return
-
         self.assert_isinstance(value, "description", six.string_types)
         self._property_description = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("order_by")
-    def order_by(self):
+    def order_by(self) -> Optional[List[str]]:
         return self._property_order_by
 
     @order_by.setter
-    def order_by(self, value):
+    def order_by(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_order_by = None
             return
-
         self.assert_isinstance(value, "order_by", (list, tuple))
-
         self.assert_isinstance(value, "order_by", six.string_types, is_array=True)
         self._property_order_by = value
 
     @schema_property("page")
-    def page(self):
+    def page(self) -> Optional[int]:
         return self._property_page
 
     @page.setter
-    def page(self, value):
+    def page(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page", six.integer_types)
         self._property_page = value
 
     @schema_property("page_size")
-    def page_size(self):
+    def page_size(self) -> Optional[int]:
         return self._property_page_size
 
     @page_size.setter
-    def page_size(self, value):
+    def page_size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page_size", six.integer_types)
         self._property_page_size = value
 
     @schema_property("search_text")
-    def search_text(self):
+    def search_text(self) -> Optional[str]:
         return self._property_search_text
 
     @search_text.setter
-    def search_text(self, value):
+    def search_text(self, value: Optional[str]) -> None:
         if value is None:
             self._property_search_text = None
             return
-
         self.assert_isinstance(value, "search_text", six.string_types)
         self._property_search_text = value
 
     @schema_property("only_fields")
-    def only_fields(self):
+    def only_fields(self) -> Optional[List[str]]:
         return self._property_only_fields
 
     @only_fields.setter
-    def only_fields(self, value):
+    def only_fields(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_only_fields = None
             return
-
         self.assert_isinstance(value, "only_fields", (list, tuple))
-
         self.assert_isinstance(value, "only_fields", six.string_types, is_array=True)
         self._property_only_fields = value
 
     @schema_property("_all_")
-    def _all_(self):
+    def _all_(self) -> Any:
         return self._property__all_
 
     @_all_.setter
-    def _all_(self, value):
+    def _all_(self, value: Any) -> None:
         if value is None:
             self._property__all_ = None
             return
@@ -1617,11 +1558,11 @@ class GetAllRequest(Request):
         self._property__all_ = value
 
     @schema_property("_any_")
-    def _any_(self):
+    def _any_(self) -> Any:
         return self._property__any_
 
     @_any_.setter
-    def _any_(self, value):
+    def _any_(self, value: Any) -> None:
         if value is None:
             self._property__any_ = None
             return
@@ -1632,15 +1573,14 @@ class GetAllRequest(Request):
         self._property__any_ = value
 
     @schema_property("shallow_search")
-    def shallow_search(self):
+    def shallow_search(self) -> Optional[bool]:
         return self._property_shallow_search
 
     @shallow_search.setter
-    def shallow_search(self, value):
+    def shallow_search(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_shallow_search = None
             return
-
         self.assert_isinstance(value, "shallow_search", (bool,))
         self._property_shallow_search = value
 
@@ -1656,7 +1596,6 @@ class GetAllResponse(Response):
     _service = "projects"
     _action = "get_all"
     _version = "2.13"
-
     _schema = {
         "definitions": {
             "projects_get_all_response_single": {
@@ -1679,10 +1618,7 @@ class GetAllResponse(Response):
                         "type": ["string", "null"],
                     },
                     "id": {"description": "Project id", "type": ["string", "null"]},
-                    "name": {
-                        "description": "Project name",
-                        "type": ["string", "null"],
-                    },
+                    "name": {"description": "Project name", "type": ["string", "null"]},
                     "stats": {
                         "description": "Additional project stats",
                         "oneOf": [{"$ref": "#/definitions/stats"}, {"type": "null"}],
@@ -1798,30 +1734,24 @@ class GetAllResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, projects=None, **kwargs):
+    def __init__(self, projects: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetAllResponse, self).__init__(**kwargs)
         self.projects = projects
 
     @schema_property("projects")
-    def projects(self):
+    def projects(self) -> Optional[List[Any]]:
         return self._property_projects
 
     @projects.setter
-    def projects(self, value):
+    def projects(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_projects = None
             return
-
         self.assert_isinstance(value, "projects", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
-            value = [
-                ProjectsGetAllResponseSingle.from_dict(v) if isinstance(v, dict) else v
-                for v in value
-            ]
+        if any((isinstance(v, dict) for v in value)):
+            value = [ProjectsGetAllResponseSingle.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
-            self.assert_isinstance(
-                value, "projects", ProjectsGetAllResponseSingle, is_array=True
-            )
+            self.assert_isinstance(value, "projects", ProjectsGetAllResponseSingle, is_array=True)
         self._property_projects = value
 
 
@@ -1841,20 +1771,19 @@ class GetByIdRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, project, **kwargs):
+    def __init__(self, project: str, **kwargs: Any) -> None:
         super(GetByIdRequest, self).__init__(**kwargs)
         self.project = project
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> str:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: str) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
@@ -1870,7 +1799,6 @@ class GetByIdResponse(Response):
     _service = "projects"
     _action = "get_by_id"
     _version = "2.13"
-
     _schema = {
         "definitions": {
             "project": {
@@ -1898,10 +1826,7 @@ class GetByIdResponse(Response):
                         "format": "date-time",
                         "type": ["string", "null"],
                     },
-                    "name": {
-                        "description": "Project name",
-                        "type": ["string", "null"],
-                    },
+                    "name": {"description": "Project name", "type": ["string", "null"]},
                     "system_tags": {
                         "description": "System tags. This field is reserved for system use, please don't use it.",
                         "items": {"type": "string"},
@@ -1929,16 +1854,16 @@ class GetByIdResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, project=None, **kwargs):
+    def __init__(self, project: Any = None, **kwargs: Any) -> None:
         super(GetByIdResponse, self).__init__(**kwargs)
         self.project = project
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Any:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Any) -> None:
         if value is None:
             self._property_project = None
             return
@@ -1988,8 +1913,13 @@ class GetHyperParametersRequest(Request):
     }
 
     def __init__(
-        self, project, page=0, page_size=500, include_subprojects=True, **kwargs
-    ):
+        self,
+        project: str,
+        page: Optional[int] = 0,
+        page_size: Optional[int] = 500,
+        include_subprojects: Optional[bool] = True,
+        **kwargs: Any
+    ) -> None:
         super(GetHyperParametersRequest, self).__init__(**kwargs)
         self.project = project
         self.page = page
@@ -1997,58 +1927,54 @@ class GetHyperParametersRequest(Request):
         self.include_subprojects = include_subprojects
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> str:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: str) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("page")
-    def page(self):
+    def page(self) -> Optional[int]:
         return self._property_page
 
     @page.setter
-    def page(self, value):
+    def page(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page", six.integer_types)
         self._property_page = value
 
     @schema_property("page_size")
-    def page_size(self):
+    def page_size(self) -> Optional[int]:
         return self._property_page_size
 
     @page_size.setter
-    def page_size(self, value):
+    def page_size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page_size", six.integer_types)
         self._property_page_size = value
 
     @schema_property("include_subprojects")
-    def include_subprojects(self):
+    def include_subprojects(self) -> Optional[bool]:
         return self._property_include_subprojects
 
     @include_subprojects.setter
-    def include_subprojects(self, value):
+    def include_subprojects(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_include_subprojects = None
             return
-
         self.assert_isinstance(value, "include_subprojects", (bool,))
         self._property_include_subprojects = value
 
@@ -2068,7 +1994,6 @@ class GetHyperParametersResponse(Response):
     _service = "projects"
     _action = "get_hyper_parameters"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2089,54 +2014,56 @@ class GetHyperParametersResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, parameters=None, remaining=None, total=None, **kwargs):
+    def __init__(
+        self,
+        parameters: Optional[List[dict]] = None,
+        remaining: Optional[int] = None,
+        total: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetHyperParametersResponse, self).__init__(**kwargs)
         self.parameters = parameters
         self.remaining = remaining
         self.total = total
 
     @schema_property("parameters")
-    def parameters(self):
+    def parameters(self) -> Optional[List[dict]]:
         return self._property_parameters
 
     @parameters.setter
-    def parameters(self, value):
+    def parameters(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_parameters = None
             return
-
         self.assert_isinstance(value, "parameters", (list, tuple))
-
         self.assert_isinstance(value, "parameters", (dict,), is_array=True)
         self._property_parameters = value
 
     @schema_property("remaining")
-    def remaining(self):
+    def remaining(self) -> Optional[int]:
         return self._property_remaining
 
     @remaining.setter
-    def remaining(self, value):
+    def remaining(self, value: Optional[int]) -> None:
         if value is None:
             self._property_remaining = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "remaining", six.integer_types)
         self._property_remaining = value
 
     @schema_property("total")
-    def total(self):
+    def total(self) -> Optional[int]:
         return self._property_total
 
     @total.setter
-    def total(self, value):
+    def total(self, value: Optional[int]) -> None:
         if value is None:
             self._property_total = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "total", six.integer_types)
         self._property_total = value
 
@@ -2188,13 +2115,13 @@ class GetHyperparamValuesRequest(Request):
 
     def __init__(
         self,
-        section,
-        name,
-        projects=None,
-        allow_public=None,
-        include_subprojects=True,
-        **kwargs
-    ):
+        section: str,
+        name: str,
+        projects: Optional[List[str]] = None,
+        allow_public: Optional[bool] = None,
+        include_subprojects: Optional[bool] = True,
+        **kwargs: Any
+    ) -> None:
         super(GetHyperparamValuesRequest, self).__init__(**kwargs)
         self.projects = projects
         self.section = section
@@ -2203,69 +2130,63 @@ class GetHyperparamValuesRequest(Request):
         self.include_subprojects = include_subprojects
 
     @schema_property("projects")
-    def projects(self):
+    def projects(self) -> Optional[List[str]]:
         return self._property_projects
 
     @projects.setter
-    def projects(self, value):
+    def projects(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_projects = None
             return
-
         self.assert_isinstance(value, "projects", (list, tuple))
-
         self.assert_isinstance(value, "projects", six.string_types, is_array=True)
         self._property_projects = value
 
     @schema_property("section")
-    def section(self):
+    def section(self) -> str:
         return self._property_section
 
     @section.setter
-    def section(self, value):
+    def section(self, value: str) -> None:
         if value is None:
             self._property_section = None
             return
-
         self.assert_isinstance(value, "section", six.string_types)
         self._property_section = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> str:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("allow_public")
-    def allow_public(self):
+    def allow_public(self) -> Optional[bool]:
         return self._property_allow_public
 
     @allow_public.setter
-    def allow_public(self, value):
+    def allow_public(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_allow_public = None
             return
-
         self.assert_isinstance(value, "allow_public", (bool,))
         self._property_allow_public = value
 
     @schema_property("include_subprojects")
-    def include_subprojects(self):
+    def include_subprojects(self) -> Optional[bool]:
         return self._property_include_subprojects
 
     @include_subprojects.setter
-    def include_subprojects(self, value):
+    def include_subprojects(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_include_subprojects = None
             return
-
         self.assert_isinstance(value, "include_subprojects", (bool,))
         self._property_include_subprojects = value
 
@@ -2283,7 +2204,6 @@ class GetHyperparamValuesResponse(Response):
     _service = "projects"
     _action = "get_hyperparam_values"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2300,38 +2220,35 @@ class GetHyperparamValuesResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, total=None, values=None, **kwargs):
+    def __init__(self, total: Optional[int] = None, values: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(GetHyperparamValuesResponse, self).__init__(**kwargs)
         self.total = total
         self.values = values
 
     @schema_property("total")
-    def total(self):
+    def total(self) -> Optional[int]:
         return self._property_total
 
     @total.setter
-    def total(self, value):
+    def total(self, value: Optional[int]) -> None:
         if value is None:
             self._property_total = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "total", six.integer_types)
         self._property_total = value
 
     @schema_property("values")
-    def values(self):
+    def values(self) -> Optional[List[str]]:
         return self._property_values
 
     @values.setter
-    def values(self, value):
+    def values(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_values = None
             return
-
         self.assert_isinstance(value, "values", (list, tuple))
-
         self.assert_isinstance(value, "values", six.string_types, is_array=True)
         self._property_values = value
 
@@ -2386,50 +2303,52 @@ class GetModelTagsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, include_system=False, projects=None, filter=None, **kwargs):
+    def __init__(
+        self,
+        include_system: Optional[bool] = False,
+        projects: Optional[List[str]] = None,
+        filter: Optional[dict] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetModelTagsRequest, self).__init__(**kwargs)
         self.include_system = include_system
         self.projects = projects
         self.filter = filter
 
     @schema_property("include_system")
-    def include_system(self):
+    def include_system(self) -> Optional[bool]:
         return self._property_include_system
 
     @include_system.setter
-    def include_system(self, value):
+    def include_system(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_include_system = None
             return
-
         self.assert_isinstance(value, "include_system", (bool,))
         self._property_include_system = value
 
     @schema_property("projects")
-    def projects(self):
+    def projects(self) -> Optional[List[str]]:
         return self._property_projects
 
     @projects.setter
-    def projects(self, value):
+    def projects(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_projects = None
             return
-
         self.assert_isinstance(value, "projects", (list, tuple))
-
         self.assert_isinstance(value, "projects", six.string_types, is_array=True)
         self._property_projects = value
 
     @schema_property("filter")
-    def filter(self):
+    def filter(self) -> Optional[dict]:
         return self._property_filter
 
     @filter.setter
-    def filter(self, value):
+    def filter(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_filter = None
             return
-
         self.assert_isinstance(value, "filter", (dict,))
         self._property_filter = value
 
@@ -2448,7 +2367,6 @@ class GetModelTagsResponse(Response):
     _service = "projects"
     _action = "get_model_tags"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2466,38 +2384,36 @@ class GetModelTagsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, tags=None, system_tags=None, **kwargs):
+    def __init__(
+        self, tags: Optional[List[str]] = None, system_tags: Optional[List[str]] = None, **kwargs: Any
+    ) -> None:
         super(GetModelTagsResponse, self).__init__(**kwargs)
         self.tags = tags
         self.system_tags = system_tags
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -2544,51 +2460,51 @@ class GetTaskParentsRequest(Request):
     }
 
     def __init__(
-        self, projects=None, tasks_state="active", include_subprojects=True, **kwargs
-    ):
+        self,
+        projects: Optional[List[str]] = None,
+        tasks_state: Optional[str] = "active",
+        include_subprojects: Optional[bool] = True,
+        **kwargs: Any
+    ) -> None:
         super(GetTaskParentsRequest, self).__init__(**kwargs)
         self.projects = projects
         self.tasks_state = tasks_state
         self.include_subprojects = include_subprojects
 
     @schema_property("projects")
-    def projects(self):
+    def projects(self) -> Optional[List[str]]:
         return self._property_projects
 
     @projects.setter
-    def projects(self, value):
+    def projects(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_projects = None
             return
-
         self.assert_isinstance(value, "projects", (list, tuple))
-
         self.assert_isinstance(value, "projects", six.string_types, is_array=True)
         self._property_projects = value
 
     @schema_property("tasks_state")
-    def tasks_state(self):
+    def tasks_state(self) -> Optional[str]:
         return self._property_tasks_state
 
     @tasks_state.setter
-    def tasks_state(self, value):
+    def tasks_state(self, value: Optional[str]) -> None:
         if value is None:
             self._property_tasks_state = None
             return
-
         self.assert_isinstance(value, "tasks_state", six.string_types)
         self._property_tasks_state = value
 
     @schema_property("include_subprojects")
-    def include_subprojects(self):
+    def include_subprojects(self) -> Optional[bool]:
         return self._property_include_subprojects
 
     @include_subprojects.setter
-    def include_subprojects(self, value):
+    def include_subprojects(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_include_subprojects = None
             return
-
         self.assert_isinstance(value, "include_subprojects", (bool,))
         self._property_include_subprojects = value
 
@@ -2604,7 +2520,6 @@ class GetTaskParentsResponse(Response):
     _service = "projects"
     _action = "get_task_parents"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2640,22 +2555,20 @@ class GetTaskParentsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, parents=None, **kwargs):
+    def __init__(self, parents: Optional[List[dict]] = None, **kwargs: Any) -> None:
         super(GetTaskParentsResponse, self).__init__(**kwargs)
         self.parents = parents
 
     @schema_property("parents")
-    def parents(self):
+    def parents(self) -> Optional[List[dict]]:
         return self._property_parents
 
     @parents.setter
-    def parents(self, value):
+    def parents(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_parents = None
             return
-
         self.assert_isinstance(value, "parents", (list, tuple))
-
         self.assert_isinstance(value, "parents", (dict,), is_array=True)
         self._property_parents = value
 
@@ -2710,50 +2623,52 @@ class GetTaskTagsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, include_system=False, projects=None, filter=None, **kwargs):
+    def __init__(
+        self,
+        include_system: Optional[bool] = False,
+        projects: Optional[List[str]] = None,
+        filter: Optional[dict] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetTaskTagsRequest, self).__init__(**kwargs)
         self.include_system = include_system
         self.projects = projects
         self.filter = filter
 
     @schema_property("include_system")
-    def include_system(self):
+    def include_system(self) -> Optional[bool]:
         return self._property_include_system
 
     @include_system.setter
-    def include_system(self, value):
+    def include_system(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_include_system = None
             return
-
         self.assert_isinstance(value, "include_system", (bool,))
         self._property_include_system = value
 
     @schema_property("projects")
-    def projects(self):
+    def projects(self) -> Optional[List[str]]:
         return self._property_projects
 
     @projects.setter
-    def projects(self, value):
+    def projects(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_projects = None
             return
-
         self.assert_isinstance(value, "projects", (list, tuple))
-
         self.assert_isinstance(value, "projects", six.string_types, is_array=True)
         self._property_projects = value
 
     @schema_property("filter")
-    def filter(self):
+    def filter(self) -> Optional[dict]:
         return self._property_filter
 
     @filter.setter
-    def filter(self, value):
+    def filter(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_filter = None
             return
-
         self.assert_isinstance(value, "filter", (dict,))
         self._property_filter = value
 
@@ -2772,7 +2687,6 @@ class GetTaskTagsResponse(Response):
     _service = "projects"
     _action = "get_task_tags"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2790,38 +2704,36 @@ class GetTaskTagsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, tags=None, system_tags=None, **kwargs):
+    def __init__(
+        self, tags: Optional[List[str]] = None, system_tags: Optional[List[str]] = None, **kwargs: Any
+    ) -> None:
         super(GetTaskTagsResponse, self).__init__(**kwargs)
         self.tags = tags
         self.system_tags = system_tags
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -2855,34 +2767,34 @@ class GetUniqueMetricVariantsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, project=None, include_subprojects=True, **kwargs):
+    def __init__(
+        self, project: Optional[str] = None, include_subprojects: Optional[bool] = True, **kwargs: Any
+    ) -> None:
         super(GetUniqueMetricVariantsRequest, self).__init__(**kwargs)
         self.project = project
         self.include_subprojects = include_subprojects
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Optional[str]:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("include_subprojects")
-    def include_subprojects(self):
+    def include_subprojects(self) -> Optional[bool]:
         return self._property_include_subprojects
 
     @include_subprojects.setter
-    def include_subprojects(self, value):
+    def include_subprojects(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_include_subprojects = None
             return
-
         self.assert_isinstance(value, "include_subprojects", (bool,))
         self._property_include_subprojects = value
 
@@ -2898,7 +2810,6 @@ class GetUniqueMetricVariantsResponse(Response):
     _service = "projects"
     _action = "get_unique_metric_variants"
     _version = "2.13"
-
     _schema = {
         "definitions": {
             "metric_variant_result": {
@@ -2933,26 +2844,22 @@ class GetUniqueMetricVariantsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, metrics=None, **kwargs):
+    def __init__(self, metrics: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetUniqueMetricVariantsResponse, self).__init__(**kwargs)
         self.metrics = metrics
 
     @schema_property("metrics")
-    def metrics(self):
+    def metrics(self) -> Optional[List[Any]]:
         return self._property_metrics
 
     @metrics.setter
-    def metrics(self, value):
+    def metrics(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_metrics = None
             return
-
         self.assert_isinstance(value, "metrics", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
-            value = [
-                MetricVariantResult.from_dict(v) if isinstance(v, dict) else v
-                for v in value
-            ]
+        if any((isinstance(v, dict) for v in value)):
+            value = [MetricVariantResult.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "metrics", MetricVariantResult, is_array=True)
         self._property_metrics = value
@@ -2977,27 +2884,25 @@ class MakePrivateRequest(Request):
                 "description": "Ids of the projects to convert. Only the projects originated by the company can be converted",
                 "items": {"type": "string"},
                 "type": ["array", "null"],
-            },
+            }
         },
         "type": "object",
     }
 
-    def __init__(self, ids=None, **kwargs):
+    def __init__(self, ids: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(MakePrivateRequest, self).__init__(**kwargs)
         self.ids = ids
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> Optional[List[str]]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
@@ -3013,34 +2918,32 @@ class MakePrivateResponse(Response):
     _service = "projects"
     _action = "make_private"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
             "updated": {
                 "description": "Number of projects updated",
                 "type": ["integer", "null"],
-            },
+            }
         },
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(MakePrivateResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -3063,27 +2966,25 @@ class MakePublicRequest(Request):
                 "description": "Ids of the projects to convert",
                 "items": {"type": "string"},
                 "type": ["array", "null"],
-            },
+            }
         },
         "type": "object",
     }
 
-    def __init__(self, ids=None, **kwargs):
+    def __init__(self, ids: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(MakePublicRequest, self).__init__(**kwargs)
         self.ids = ids
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> Optional[List[str]]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
@@ -3099,34 +3000,32 @@ class MakePublicResponse(Response):
     _service = "projects"
     _action = "make_public"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
             "updated": {
                 "description": "Number of projects updated",
                 "type": ["integer", "null"],
-            },
+            }
         },
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(MakePublicResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -3157,34 +3056,32 @@ class MergeRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, project, destination_project=None, **kwargs):
+    def __init__(self, project: str, destination_project: Optional[str] = None, **kwargs: Any) -> None:
         super(MergeRequest, self).__init__(**kwargs)
         self.project = project
         self.destination_project = destination_project
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> str:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: str) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("destination_project")
-    def destination_project(self):
+    def destination_project(self) -> Optional[str]:
         return self._property_destination_project
 
     @destination_project.setter
-    def destination_project(self, value):
+    def destination_project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_destination_project = None
             return
-
         self.assert_isinstance(value, "destination_project", six.string_types)
         self._property_destination_project = value
 
@@ -3204,7 +3101,6 @@ class MergeResponse(Response):
     _service = "projects"
     _action = "merge"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -3220,38 +3116,38 @@ class MergeResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, moved_entities=None, moved_projects=None, **kwargs):
+    def __init__(
+        self, moved_entities: Optional[int] = None, moved_projects: Optional[int] = None, **kwargs: Any
+    ) -> None:
         super(MergeResponse, self).__init__(**kwargs)
         self.moved_entities = moved_entities
         self.moved_projects = moved_projects
 
     @schema_property("moved_entities")
-    def moved_entities(self):
+    def moved_entities(self) -> Optional[int]:
         return self._property_moved_entities
 
     @moved_entities.setter
-    def moved_entities(self, value):
+    def moved_entities(self, value: Optional[int]) -> None:
         if value is None:
             self._property_moved_entities = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "moved_entities", six.integer_types)
         self._property_moved_entities = value
 
     @schema_property("moved_projects")
-    def moved_projects(self):
+    def moved_projects(self) -> Optional[int]:
         return self._property_moved_projects
 
     @moved_projects.setter
-    def moved_projects(self, value):
+    def moved_projects(self, value: Optional[int]) -> None:
         if value is None:
             self._property_moved_projects = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "moved_projects", six.integer_types)
         self._property_moved_projects = value
 
@@ -3282,34 +3178,32 @@ class MoveRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, project, new_location=None, **kwargs):
+    def __init__(self, project: str, new_location: Optional[str] = None, **kwargs: Any) -> None:
         super(MoveRequest, self).__init__(**kwargs)
         self.project = project
         self.new_location = new_location
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> str:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: str) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("new_location")
-    def new_location(self):
+    def new_location(self) -> Optional[str]:
         return self._property_new_location
 
     @new_location.setter
-    def new_location(self, value):
+    def new_location(self, value: Optional[str]) -> None:
         if value is None:
             self._property_new_location = None
             return
-
         self.assert_isinstance(value, "new_location", six.string_types)
         self._property_new_location = value
 
@@ -3325,7 +3219,6 @@ class MoveResponse(Response):
     _service = "projects"
     _action = "move"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -3337,22 +3230,21 @@ class MoveResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, moved=None, **kwargs):
+    def __init__(self, moved: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveResponse, self).__init__(**kwargs)
         self.moved = moved
 
     @schema_property("moved")
-    def moved(self):
+    def moved(self) -> Optional[int]:
         return self._property_moved
 
     @moved.setter
-    def moved(self, value):
+    def moved(self, value: Optional[int]) -> None:
         if value is None:
             self._property_moved = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "moved", six.integer_types)
         self._property_moved = value
 
@@ -3410,14 +3302,14 @@ class UpdateRequest(Request):
 
     def __init__(
         self,
-        project,
-        name=None,
-        description=None,
-        tags=None,
-        system_tags=None,
-        default_output_destination=None,
-        **kwargs
-    ):
+        project: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        default_output_destination: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(UpdateRequest, self).__init__(**kwargs)
         self.project = project
         self.name = name
@@ -3427,84 +3319,76 @@ class UpdateRequest(Request):
         self.default_output_destination = default_output_destination
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> str:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: str) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("description")
-    def description(self):
+    def description(self) -> Optional[str]:
         return self._property_description
 
     @description.setter
-    def description(self, value):
+    def description(self, value: Optional[str]) -> None:
         if value is None:
             self._property_description = None
             return
-
         self.assert_isinstance(value, "description", six.string_types)
         self._property_description = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("default_output_destination")
-    def default_output_destination(self):
+    def default_output_destination(self) -> Optional[str]:
         return self._property_default_output_destination
 
     @default_output_destination.setter
-    def default_output_destination(self, value):
+    def default_output_destination(self, value: Optional[str]) -> None:
         if value is None:
             self._property_default_output_destination = None
             return
-
         self.assert_isinstance(value, "default_output_destination", six.string_types)
         self._property_default_output_destination = value
 
@@ -3522,7 +3406,6 @@ class UpdateResponse(Response):
     _service = "projects"
     _action = "update"
     _version = "2.13"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -3540,36 +3423,34 @@ class UpdateResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(UpdateResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 

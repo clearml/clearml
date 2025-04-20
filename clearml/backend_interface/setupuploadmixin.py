@@ -2,7 +2,11 @@ from abc import abstractproperty
 from typing import Optional
 import warnings
 
-from ..backend_config.bucket_config import S3BucketConfig, AzureContainerConfig, GSBucketConfig
+from ..backend_config.bucket_config import (
+    S3BucketConfig,
+    AzureContainerConfig,
+    GSBucketConfig,
+)
 from ..storage.helper import StorageHelper
 
 
@@ -12,15 +16,15 @@ class SetupUploadMixin(object):
 
     def setup_upload(
         self,
-        bucket_name,  # type: str
-        host=None,  # type: Optional[str]
-        access_key=None,  # type: Optional[str]
-        secret_key=None,  # type: Optional[str]
-        multipart=True,  # type: bool
-        https=True,  # type: bool
-        region=None,  # type: Optional[str]
-        verify=True,  # type: bool
-    ):
+        bucket_name: str,
+        host: Optional[str] = None,
+        access_key: Optional[str] = None,
+        secret_key: Optional[str] = None,
+        multipart: bool = True,
+        https: bool = True,
+        region: Optional[str] = None,
+        verify: bool = True,
+    ) -> None:
         """
         (Deprecated) Setup upload options. Only S3 is supported.
         Please note that this function is deprecated. Use `setup_aws_upload`, `setup_gcp_upload` or
@@ -57,19 +61,18 @@ class SetupUploadMixin(object):
 
     def setup_aws_upload(
         self,
-        bucket,  # str
-        subdir=None,  # Optional[str]
-        host=None,  # Optional[str]
-        key=None,  # Optional[str]
-        secret=None,  # Optional[str]
-        token=None,  # Optional[str]
-        region=None,  # Optional[str]
-        multipart=True,  # bool
-        secure=True,  # bool
-        verify=True,  # bool
-        profile=None  # Optional[str]
-    ):
-        # type: (...) -> None
+        bucket: str,  # str
+        subdir: Optional[str] = None,  # Optional[str]
+        host: Optional[str] = None,  # Optional[str]
+        key: Optional[str] = None,  # Optional[str]
+        secret: Optional[str] = None,  # Optional[str]
+        token: Optional[str] = None,  # Optional[str]
+        region: Optional[str] = None,  # Optional[str]
+        multipart: bool = True,  # bool
+        secure: bool = True,  # bool
+        verify: bool = True,  # bool
+        profile: Optional[str] = None,  # Optional[str]
+    ) -> None:
         """
         Setup S3 upload options.
 
@@ -106,9 +109,14 @@ class SetupUploadMixin(object):
         self.storage_uri = StorageHelper.get_aws_storage_uri_from_config(self._bucket_config)
 
     def setup_gcp_upload(
-        self, bucket, subdir="", project=None, credentials_json=None, pool_connections=None, pool_maxsize=None
-    ):
-        # type: (str, str, Optional[str], Optional[str], Optional[int], Optional[int]) -> None
+        self,
+        bucket: str,
+        subdir: str = "",
+        project: Optional[str] = None,
+        credentials_json: Optional[str] = None,
+        pool_connections: Optional[int] = None,
+        pool_maxsize: Optional[int] = None,
+    ) -> None:
         """
         Setup GCP upload options.
 
@@ -130,8 +138,12 @@ class SetupUploadMixin(object):
         StorageHelper.add_gcp_configuration(self._bucket_config, log=self.log)
         self.storage_uri = StorageHelper.get_gcp_storage_uri_from_config(self._bucket_config)
 
-    def setup_azure_upload(self, account_name, account_key, container_name=None):
-        # type: (str, str, Optional[str]) -> None
+    def setup_azure_upload(
+        self,
+        account_name: str,
+        account_key: str,
+        container_name: Optional[str] = None,
+    ) -> None:
         """
         Setup Azure upload options.
 
@@ -140,7 +152,9 @@ class SetupUploadMixin(object):
         :param container_name: The name of the blob container to upload to
         """
         self._bucket_config = AzureContainerConfig(  # noqa
-            account_name=account_name, account_key=account_key, container_name=container_name
+            account_name=account_name,
+            account_key=account_key,
+            container_name=container_name,
         )
         StorageHelper.add_azure_configuration(self._bucket_config, log=self.log)
         self.storage_uri = StorageHelper.get_azure_storage_uri_from_config(self._bucket_config)

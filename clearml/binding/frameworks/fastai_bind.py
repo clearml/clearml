@@ -1,24 +1,28 @@
 import sys
+from typing import Callable, TYPE_CHECKING, Any
 
 import numpy as np
 
 from clearml.utilities.version import Version
-
 from . import _patched_call
+from .tensorflow_bind import IsTensorboardInit
 from .tensorflow_bind import WeightsGradientHistHelper
 from ..import_bind import PostImportHookPatching
 from ...debugging.log import LoggerRoot
-from .tensorflow_bind import IsTensorboardInit
 
 try:
     import fastai
 except ImportError:
     fastai = None
 
+if TYPE_CHECKING:
+    import torch
+    import fastai
+
 
 class PatchFastai(object):
     @staticmethod
-    def update_current_task(task, **_):
+    def update_current_task(task: Any, **_: Any) -> None:
         if fastai is None:
             return
 
@@ -41,7 +45,7 @@ class PatchFastaiV1(object):
     __patched = False
 
     @staticmethod
-    def update_current_task(task, **_):
+    def update_current_task(task: Any, **_: Any) -> None:
         PatchFastaiV1._current_task = task
         if not task:
             return
@@ -50,13 +54,14 @@ class PatchFastaiV1(object):
             PatchFastaiV1.patch_model_callback()
 
     @staticmethod
-    def patch_model_callback():
+    def patch_model_callback() -> None:
         # if you have tensorboard, we assume you use TensorboardLogger, which we catch, so no need to patch.
         if "tensorboard" in sys.modules and IsTensorboardInit.tensorboard_used():
             return
 
         try:
             from fastai.basic_train import Recorder
+
             Recorder.on_batch_end = _patched_call(Recorder.on_batch_end, PatchFastaiV1._on_batch_end)
             Recorder.on_backward_end = _patched_call(Recorder.on_backward_end, PatchFastaiV1._on_backward_end)
             Recorder.on_epoch_end = _patched_call(Recorder.on_epoch_end, PatchFastaiV1._on_epoch_end)
@@ -67,7 +72,7 @@ class PatchFastaiV1(object):
             LoggerRoot.get_base_logger(PatchFastaiV1).debug(str(ex))
 
     @staticmethod
-    def _on_train_begin(original_fn, recorder, *args, **kwargs):
+    def _on_train_begin(original_fn: Callable, recorder: Any, *args: Any, **kwargs: Any) -> None:
         original_fn(recorder, *args, **kwargs)
         if not PatchFastaiV1._current_task:
             return
@@ -81,8 +86,8 @@ class PatchFastaiV1(object):
             pass
 
     @staticmethod
-    def _on_backward_end(original_fn, recorder, *args, **kwargs):
-        def count_zeros(gradient):
+    def _on_backward_end(original_fn: Callable, recorder: Any, *args: Any, **kwargs: Any) -> None:
+        def count_zeros(gradient: "torch.Tensor") -> int:
             n = gradient.data.data.cpu().numpy()
             return n.size - np.count_nonzero(n)
 
@@ -100,7 +105,14 @@ class PatchFastaiV1(object):
             # TODO: Check computation!
             gradient_stats = np.array(
                 [
-                    (x.data.norm(), count_zeros(x), x.data.mean(), np.median(x.data), x.data.max(), x.data.min())
+                    (
+                        x.data.norm(),
+                        count_zeros(x),
+                        x.data.mean(),
+                        np.median(x.data),
+                        x.data.max(),
+                        x.data.min(),
+                    )
                     for x in gradients
                 ]
             )
@@ -119,12 +131,17 @@ class PatchFastaiV1(object):
             logger = PatchFastaiV1._current_task.get_logger()
             iteration = kwargs.get("iteration", 0)
             for name, val in stats_report.items():
-                logger.report_scalar(title="model_stats_gradients", series=name, value=val, iteration=iteration)
+                logger.report_scalar(
+                    title="model_stats_gradients",
+                    series=name,
+                    value=val,
+                    iteration=iteration,
+                )
         except Exception:
             pass
 
     @staticmethod
-    def _on_epoch_end(original_fn, recorder, *args, **kwargs):
+    def _on_epoch_end(original_fn: Callable, recorder: Any, *args: Any, **kwargs: Any) -> None:
         original_fn(recorder, *args, **kwargs)
         if not PatchFastaiV1._current_task:
             return
@@ -143,7 +160,7 @@ class PatchFastaiV1(object):
             pass
 
     @staticmethod
-    def _on_batch_end(original_fn, recorder, *args, **kwargs):
+    def _on_batch_end(original_fn: Callable, recorder: Any, *args: Any, **kwargs: Any) -> None:
         original_fn(recorder, *args, **kwargs)
         if not PatchFastaiV1._current_task:
             return
@@ -168,9 +185,14 @@ class PatchFastaiV1(object):
             ):
                 PatchFastaiV1.__gradient_hist_helpers[id(recorder)] = WeightsGradientHistHelper(logger)
             histograms = []
-            for (name, values) in params:
+            for name, values in params:
                 histograms.append(
-                    dict(title="model_weights", series="model_weights/" + name, step=iteration, hist_data=values)
+                    dict(
+                        title="model_weights",
+                        series="model_weights/" + name,
+                        step=iteration,
+                        hist_data=values,
+                    )
                 )
             PatchFastaiV1.__gradient_hist_helpers[id(recorder)].add_histograms(histograms)
         except Exception:
@@ -182,7 +204,7 @@ class PatchFastaiV2(object):
     __patched = False
 
     @staticmethod
-    def update_current_task(task, **_):
+    def update_current_task(task: Any, **_: Any) -> None:
         PatchFastaiV2._current_task = task
         if not task:
             return
@@ -191,7 +213,7 @@ class PatchFastaiV2(object):
             PatchFastaiV2.patch_model_callback()
 
     @staticmethod
-    def patch_model_callback():
+    def patch_model_callback() -> None:
         if "tensorboard" in sys.modules and IsTensorboardInit.tensorboard_used():
             return
 
@@ -211,12 +233,12 @@ class PatchFastaiV2(object):
     class PatchFastaiCallbacks(__patch_fastai_callbacks_base):
         __id = 0
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             kwargs["train_metrics"] = True
             super().__init__(*args, **kwargs)
             self.__train_iter = 0
 
-            def noop(*_, **__):
+            def noop(*_: Any, **__: Any) -> None:
                 pass
 
             self.logger = noop
@@ -224,7 +246,7 @@ class PatchFastaiV2(object):
             PatchFastaiV2.PatchFastaiCallbacks.__id += 1
             self.__gradient_hist_helper = WeightsGradientHistHelper(PatchFastaiV2._current_task.get_logger())
 
-        def after_batch(self):
+        def after_batch(self) -> None:
             # noinspection PyBroadException
             try:
                 super().after_batch()  # noqa
@@ -242,14 +264,19 @@ class PatchFastaiV2(object):
                         iteration=self.__train_iter,
                     )
                 for k, v in self.opt.hypers[-1].items():  # noqa
-                    logger.report_scalar(title=k + "_" + self.__id, series=k, value=v, iteration=self.__train_iter)
+                    logger.report_scalar(
+                        title=k + "_" + self.__id,
+                        series=k,
+                        value=v,
+                        iteration=self.__train_iter,
+                    )
                 params = [
                     (name, values.clone().detach().cpu()) for (name, values) in self.model.named_parameters()
                 ]  # noqa
                 if self.__gradient_hist_helper.logger is not logger:
                     self.__gradient_hist_helper = WeightsGradientHistHelper(logger)
                 histograms = []
-                for (name, values) in params:
+                for name, values in params:
                     histograms.append(
                         dict(
                             title="model_weights_" + self.__id,
@@ -262,7 +289,7 @@ class PatchFastaiV2(object):
             except Exception:
                 pass
 
-        def after_epoch(self):
+        def after_epoch(self) -> None:
             # noinspection PyBroadException
             try:
                 super().after_epoch()  # noqa
@@ -282,13 +309,20 @@ class PatchFastaiV2(object):
                 if len(gradients) == 0:
                     return
 
-                def count_zeros(gradient):
+                def count_zeros(gradient: "torch.Tensor") -> int:
                     n = gradient.data.data.cpu().numpy()
                     return n.size - np.count_nonzero(n)
 
                 gradient_stats = np.array(
                     [
-                        (x.data.norm(), count_zeros(x), x.data.mean(), np.median(x.data), x.data.max(), x.data.min())
+                        (
+                            x.data.norm(),
+                            count_zeros(x),
+                            x.data.mean(),
+                            np.median(x.data),
+                            x.data.max(),
+                            x.data.min(),
+                        )
                         for x in gradients
                     ]
                 )
@@ -314,6 +348,6 @@ class PatchFastaiV2(object):
                 pass
 
     @staticmethod
-    def _insert_callbacks(original_fn, obj, *args, **kwargs):
+    def _insert_callbacks(original_fn: Callable, obj: "fastai.learner.Learner", *args: Any, **kwargs: Any) -> Any:
         obj.add_cb(PatchFastaiV2.PatchFastaiCallbacks)
         return original_fn(obj, *args, **kwargs)

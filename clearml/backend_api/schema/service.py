@@ -1,5 +1,6 @@
 import itertools
 import re
+from typing import Dict, Set, Any
 
 import attr
 import six
@@ -9,36 +10,36 @@ from .action import Action
 
 
 class Service(object):
-    """ Service schema handler """
+    """Service schema handler"""
 
     __jsonschema_ref_ex = re.compile("^#/definitions/(.*)$")
 
     @property
-    def default(self):
+    def default(self) -> ConfigTree:
         return self._default
 
     @property
-    def actions(self):
+    def actions(self) -> Dict[str, Dict[float, Action]]:
         return self._actions
 
     @property
-    def definitions(self):
-        """ Raw  service definitions (each might be dependant on some of its siblings) """
+    def definitions(self) -> Dict[str, Any]:
+        """Raw  service definitions (each might be dependant on some of its siblings)"""
         return self._definitions
 
     @property
-    def definitions_refs(self):
+    def definitions_refs(self) -> Dict[str, Set[str]]:
         return self._definitions_refs
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def doc(self):
+    def doc(self) -> str:
         return self._doc
 
-    def __init__(self, name, service_config):
+    def __init__(self, name: str, service_config: ConfigTree) -> None:
         self._name = name
         self._default = None
         self._actions = []
@@ -48,26 +49,20 @@ class Service(object):
         self.parse(service_config)
 
     @classmethod
-    def get_ref_name(cls, ref_string):
+    def get_ref_name(cls, ref_string: str) -> str:
         m = cls.__jsonschema_ref_ex.match(ref_string)
         if m:
             return m.group(1)
 
-    def parse(self, service_config):
-        self._default = service_config.get(
-            "_default", ConfigTree()
-        ).as_plain_ordered_dict()
+    def parse(self, service_config: ConfigTree) -> None:
+        self._default = service_config.get("_default", ConfigTree()).as_plain_ordered_dict()
 
-        self._doc = '{} service'.format(self.name)
-        description = service_config.get('_description', '')
+        self._doc = "{} service".format(self.name)
+        description = service_config.get("_description", "")
         if description:
-            self._doc += '\n\n{}'.format(description)
-        self._definitions = service_config.get(
-            "_definitions", ConfigTree()
-        ).as_plain_ordered_dict()
-        self._definitions_refs = {
-            k: self._get_schema_references(v) for k, v in self._definitions.items()
-        }
+            self._doc += "\n\n{}".format(description)
+        self._definitions = service_config.get("_definitions", ConfigTree()).as_plain_ordered_dict()
+        self._definitions_refs = {k: self._get_schema_references(v) for k, v in self._definitions.items()}
         all_refs = set(itertools.chain(*self.definitions_refs.values()))
         if not all_refs.issubset(self.definitions):
             raise ValueError(
@@ -75,11 +70,7 @@ class Service(object):
                 % (", ".join(all_refs.difference(self.definitions)), self.name)
             )
 
-        actions = {
-            k: v.as_plain_ordered_dict()
-            for k, v in service_config.items()
-            if not k.startswith("_")
-        }
+        actions = {k: v.as_plain_ordered_dict() for k, v in service_config.items() if not k.startswith("_")}
         self._actions = {
             action_name: action
             for action_name, action in (
@@ -89,8 +80,8 @@ class Service(object):
             if action
         }
 
-    def _parse_action_versions(self, action_name, action_versions):
-        def parse_version(action_version):
+    def _parse_action_versions(self, action_name: str, action_versions: dict) -> dict:
+        def parse_version(action_version: str) -> float:
             try:
                 return float(action_version)
             except (ValueError, TypeError) as ex:
@@ -100,7 +91,7 @@ class Service(object):
                     )
                 )
 
-        def add_internal(cfg):
+        def add_internal(cfg: dict) -> dict:
             if "internal" in action_versions:
                 cfg.setdefault("internal", action_versions["internal"])
             return cfg
@@ -108,7 +99,10 @@ class Service(object):
         return {
             parsed_version: action
             for parsed_version, action in (
-                (parsed_version, self._parse_action(action_name, parsed_version, add_internal(cfg)))
+                (
+                    parsed_version,
+                    self._parse_action(action_name, parsed_version, add_internal(cfg)),
+                )
                 for parsed_version, cfg in (
                     (parse_version(version), cfg)
                     for version, cfg in action_versions.items()
@@ -118,7 +112,7 @@ class Service(object):
             if action
         }
 
-    def _get_schema_references(self, s):
+    def _get_schema_references(self, s: Any) -> Set[str]:
         refs = set()
         if isinstance(s, dict):
             for k, v in s.items():
@@ -132,36 +126,29 @@ class Service(object):
                 refs.update(self._get_schema_references(v))
         return refs
 
-    def _expand_schema_references_with_definitions(self, schema, refs=None):
+    def _expand_schema_references_with_definitions(self, schema: dict, refs: set = None) -> set:
         definitions = schema.get("definitions", {})
         refs = refs if refs is not None else self._get_schema_references(schema)
         required_refs = set(refs).difference(definitions)
         if not required_refs:
             return required_refs
         if not required_refs.issubset(self.definitions):
-            raise ValueError(
-                "Unresolved references (%s)"
-                % ", ".join(required_refs.difference(self.definitions))
-            )
+            raise ValueError("Unresolved references (%s)" % ", ".join(required_refs.difference(self.definitions)))
 
         # update required refs with all sub requirements
         last_required_refs = None
         while last_required_refs != required_refs:
             last_required_refs = required_refs.copy()
-            additional_refs = set(
-                itertools.chain(
-                    *(self.definitions_refs.get(ref, []) for ref in required_refs)
-                )
-            )
+            additional_refs = set(itertools.chain(*(self.definitions_refs.get(ref, []) for ref in required_refs)))
             required_refs.update(additional_refs)
         return required_refs
 
-    def _resolve_schema_references(self, schema, refs=None):
+    def _resolve_schema_references(self, schema: dict, refs: set = None) -> None:
         definitions = schema.get("definitions", {})
         definitions.update({k: v for k, v in self.definitions.items() if k in refs})
         schema["definitions"] = definitions
 
-    def _parse_action(self, action_name, action_version, action_config):
+    def _parse_action(self, action_name: str, action_version: float, action_config: dict) -> Action:
         data = self.default.copy()
         data.update(action_config)
 
@@ -190,11 +177,5 @@ class Service(object):
             version=action_version,
             definitions_keys=list(definitions_keys),
             service=self.name,
-            **(
-                {
-                    key: value
-                    for key, value in data.items()
-                    if key in attr.fields_dict(Action)
-                }
-            )
+            **({key: value for key, value in data.items() if key in attr.fields_dict(Action)})
         )

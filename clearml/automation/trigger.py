@@ -2,15 +2,15 @@ import json
 import logging
 from datetime import datetime
 from threading import enumerate as enumerate_threads
-from typing import List, Optional, Dict, Union, Callable
+from typing import List, Optional, Union, Callable, Set, Any
 
 from attr import attrs, attrib
 
 from .job import ClearmlJob
 from .scheduler import BaseScheduleJob, BaseScheduler, ExecutedJob
-from ..task import Task
 from ..backend_api.session.client import APIClient
 from ..backend_interface.util import datetime_to_isoformat, datetime_from_isoformat
+from ..task import Task
 
 
 @attrs
@@ -21,8 +21,8 @@ class BaseTrigger(BaseScheduleJob):
 
     project = attrib(default=None, type=str)
     match_name = attrib(default=None, type=str)
-    tags = attrib(default=None, type=list)  # type: List[str]
-    required_tags = attrib(default=None, type=list)  # type: List[str]
+    tags = attrib(default=None, type=list)
+    required_tags = attrib(default=None, type=list)
     add_tag = attrib(default=None, type=str)
     last_update = attrib(default=None, type=datetime, converter=datetime_from_isoformat)
 
@@ -30,15 +30,12 @@ class BaseTrigger(BaseScheduleJob):
     # any new object.id returned that is not in the list, is a new event
     # we store a dict of {object_id: datetime}
     # allowing us to ignore repeating object updates triggering multiple times
-    _triggered_instances = attrib(type=dict, default=None)  # type: Dict[str, datetime]
+    _triggered_instances = attrib(type=dict, default=None)
 
-    def build_query(self, ref_time, client=None):
-        # type: (datetime, APIClient) -> dict
-        server_supports_datetime_or_query = (
-            client and (
-              (client.session.feature_set == "basic" and client.session.check_min_server_version("1.16.3"))
-              or (client.session.feature_set != "basic" and client.session.check_min_server_version("3.22.6"))
-            )
+    def build_query(self, ref_time: datetime, client: APIClient = None) -> dict:
+        server_supports_datetime_or_query = client and (
+            (client.session.feature_set == "basic" and client.session.check_min_server_version("1.16.3"))
+            or (client.session.feature_set != "basic" and client.session.check_min_server_version("3.22.6"))
         )
 
         query = {
@@ -52,38 +49,34 @@ class BaseTrigger(BaseScheduleJob):
         else:
             query["_or_"] = {
                 "fields": [self._update_field, self._change_field],
-                "datetime": [">{}".format(ref_time.isoformat() if ref_time else self.last_update.isoformat())]
+                "datetime": [">{}".format(ref_time.isoformat() if ref_time else self.last_update.isoformat())],
             }
 
         return query
 
-    def verify(self):
-        # type: () -> None
+    def verify(self) -> None:
         super(BaseTrigger, self).verify()
-        if self.tags and (not isinstance(self.tags, (list, tuple)) or
-                          not all(isinstance(s, str) for s in self.tags)):
+        if self.tags and (not isinstance(self.tags, (list, tuple)) or not all(isinstance(s, str) for s in self.tags)):
             raise ValueError("Tags must be a list of strings: {}".format(self.tags))
-        if self.required_tags and (not isinstance(self.required_tags, (list, tuple)) or
-                                   not all(isinstance(s, str) for s in self.required_tags)):
+        if self.required_tags and (
+            not isinstance(self.required_tags, (list, tuple)) or not all(isinstance(s, str) for s in self.required_tags)
+        ):
             raise ValueError("Required tags must be a list of strings: {}".format(self.required_tags))
         if self.project and not isinstance(self.project, str):
             raise ValueError("Project must be a string: {}".format(self.project))
         if self.match_name and not isinstance(self.match_name, str):
             raise ValueError("Match name must be a string: {}".format(self.match_name))
 
-    def get_key(self):
-        return getattr(self, '_key', None)
+    def get_key(self) -> Optional[str]:
+        return getattr(self, "_key", None)
 
-    def get_ref_time(self, obj):
-        return max(
-            getattr(obj, self._update_field, 0),
-            getattr(obj, self._change_field, 0)
-        )
+    def get_ref_time(self, obj: Any) -> datetime:
+        return max(getattr(obj, self._update_field, 0), getattr(obj, self._change_field, 0))
 
 
 @attrs
 class ModelTrigger(BaseTrigger):
-    _task_param = '${model.id}'
+    _task_param = "${model.id}"
     _key = "models"
     _update_field = "last_update"
     _change_field = "last_change"
@@ -91,23 +84,23 @@ class ModelTrigger(BaseTrigger):
     on_publish = attrib(type=bool, default=None)
     on_archive = attrib(type=bool, default=None)
 
-    def build_query(self, ref_time, client=None):
+    def build_query(self, ref_time: datetime, client: Optional[APIClient] = None) -> dict:
         query = super(ModelTrigger, self).build_query(ref_time, client)
         if self.on_publish:
-            query.update({'ready': True})
+            query.update({"ready": True})
         if self.on_archive:
-            system_tags = list(set(query.get('system_tags', []) + ['archived']))
-            query.update({'system_tags': system_tags})
+            system_tags = list(set(query.get("system_tags", []) + ["archived"]))
+            query.update({"system_tags": system_tags})
         return query
 
     @property
-    def _only_fields(self):
+    def _only_fields(self) -> Set[str]:
         return {"id", "name", "ready", "tags", self._update_field, self._change_field}
 
 
 @attrs
 class DatasetTrigger(BaseTrigger):
-    _task_param = '${dataset.id}'
+    _task_param = "${dataset.id}"
     _key = "tasks"
     _update_field = "last_update"
     _change_field = "last_change"
@@ -115,28 +108,38 @@ class DatasetTrigger(BaseTrigger):
     on_publish = attrib(type=bool, default=None)
     on_archive = attrib(type=bool, default=None)
 
-    def build_query(self, ref_time, client=None):
+    def build_query(self, ref_time: datetime, client: Optional[APIClient] = None) -> dict:
         query = super(DatasetTrigger, self).build_query(ref_time, client)
-        query.update({
-            'system_tags': list(set(query.get('system_tags', []) + ['dataset'])),
-            'task_types': list(set(query.get('task_types', []) + [str(Task.TaskTypes.data_processing)])),
-            'status': ['published' if self.on_publish else 'completed']
-        })
+        query.update(
+            {
+                "system_tags": list(set(query.get("system_tags", []) + ["dataset"])),
+                "task_types": list(set(query.get("task_types", []) + [str(Task.TaskTypes.data_processing)])),
+                "status": ["published" if self.on_publish else "completed"],
+            }
+        )
 
         if self.on_archive:
-            system_tags = list(set(query.get('system_tags', []) + ['archived']))
-            query.update({'system_tags': system_tags})
+            system_tags = list(set(query.get("system_tags", []) + ["archived"]))
+            query.update({"system_tags": system_tags})
 
         return query
 
     @property
-    def _only_fields(self):
-        return {"id", "name", "status", "completed", "tags", self._update_field, self._change_field}
+    def _only_fields(self) -> Set[str]:
+        return {
+            "id",
+            "name",
+            "status",
+            "completed",
+            "tags",
+            self._update_field,
+            self._change_field,
+        }
 
 
 @attrs
 class TaskTrigger(BaseTrigger):
-    _task_param = '${task.id}'
+    _task_param = "${task.id}"
     _key = "tasks"
     _update_field = "last_update"
     _change_field = "last_change"
@@ -148,37 +151,45 @@ class TaskTrigger(BaseTrigger):
     exclude_dev = attrib(default=None, type=bool)
     on_status = attrib(type=list, default=None)
 
-    def build_query(self, ref_time, client=None):
+    def build_query(self, ref_time: datetime, client: Optional[APIClient] = None) -> dict:
         query = super(TaskTrigger, self).build_query(ref_time, client)
         if self.exclude_dev:
-            system_tags = list(set(query.get('system_tags', []) + ['-development']))
-            query.update({'system_tags': system_tags})
+            system_tags = list(set(query.get("system_tags", []) + ["-development"]))
+            query.update({"system_tags": system_tags})
         if self.on_status:
-            query.update({'status': self.on_status})
+            query.update({"status": self.on_status})
         if self.metrics and self.variant and self.threshold:
             metrics, title, series, values = ClearmlJob.get_metric_req_params(self.metrics, self.variant)
-            sign_max = (self.value_sign or '').lower() in ('max', 'maximum')
+            sign_max = (self.value_sign or "").lower() in ("max", "maximum")
             filter_key = "last_metrics.{}.{}.{}".format(title, series, "max_value" if sign_max else "min_value")
             filter_value = [self.threshold, None] if sign_max else [None, self.threshold]
             query.update({filter_key: filter_value})
         return query
 
-    def verify(self):
-        # type: () -> None
+    def verify(self) -> None:
         super(TaskTrigger, self).verify()
-        if (self.metrics or self.variant or self.threshold is not None) and \
-                not (self.metrics and self.variant and self.threshold is not None):
+        if (self.metrics or self.variant or self.threshold is not None) and not (
+            self.metrics and self.variant and self.threshold is not None
+        ):
             raise ValueError("You must provide metric/variant/threshold")
         valid_status = [str(s) for s in Task.TaskStatusEnum]
         if self.on_status and not all(s in valid_status for s in self.on_status):
             raise ValueError("Your on_status contains invalid status value: {}".format(self.on_status))
-        valid_signs = ['min', 'minimum', 'max', 'maximum']
+        valid_signs = ["min", "minimum", "max", "maximum"]
         if self.value_sign and self.value_sign not in valid_signs:
             raise ValueError("Invalid value_sign `{}`, valid options are: {}".format(self.value_sign, valid_signs))
 
     @property
-    def _only_fields(self):
-        return {"id", "name", "status", "completed", "tags", self._update_field, self._change_field}
+    def _only_fields(self) -> Set[str]:
+        return {
+            "id",
+            "name",
+            "status",
+            "completed",
+            "tags",
+            self._update_field,
+            self._change_field,
+        }
 
 
 @attrs
@@ -197,19 +208,19 @@ class TriggerScheduler(BaseScheduler):
     - General Task failed,
     - Task metric below/above threshold, alert every X minutes
     """
+
     _datasets_section = "datasets"
     _models_section = "models"
     _tasks_section = "tasks"
     _state_section = "state"
 
     def __init__(
-            self,
-            pooling_frequency_minutes=3.0,
-            sync_frequency_minutes=15,
-            force_create_task_name=None,
-            force_create_task_project=None
-    ):
-        # type: (float, float, Optional[str], Optional[str]) -> None
+        self,
+        pooling_frequency_minutes: float = 3.0,
+        sync_frequency_minutes: float = 15,
+        force_create_task_name: Optional[str] = None,
+        force_create_task_project: Optional[str] = None,
+    ) -> None:
         """
         Create a Task trigger service
 
@@ -234,25 +245,24 @@ class TriggerScheduler(BaseScheduler):
         self._client = None
 
     def add_model_trigger(
-            self,
-            schedule_task_id=None,  # type: Union[str, Task]
-            schedule_queue=None,  # type: str
-            schedule_function=None,  # type: Callable[[str], None]
-            trigger_project=None,  # type: str
-            trigger_name=None,  # type: Optional[str]
-            trigger_on_publish=None,  # type: bool
-            trigger_on_tags=None,  # type: Optional[List[str]]
-            trigger_on_archive=None,  # type: bool
-            trigger_required_tags=None,  # type: Optional[List[str]]
-            name=None,  # type: Optional[str]
-            target_project=None,  # type: Optional[str]
-            add_tag=True,  # type: Union[bool, str]
-            single_instance=False,  # type: bool
-            reuse_task=False,  # type: bool
-            task_parameters=None,  # type: Optional[dict]
-            task_overrides=None,  # type: Optional[dict]
-    ):
-        # type: (...) -> None
+        self,
+        schedule_task_id: Union[str, Task] = None,
+        schedule_queue: str = None,
+        schedule_function: Callable[[str], None] = None,
+        trigger_project: str = None,
+        trigger_name: Optional[str] = None,
+        trigger_on_publish: bool = None,
+        trigger_on_tags: Optional[List[str]] = None,
+        trigger_on_archive: bool = None,
+        trigger_required_tags: Optional[List[str]] = None,
+        name: Optional[str] = None,
+        target_project: Optional[str] = None,
+        add_tag: Union[bool, str] = True,
+        single_instance: bool = False,
+        reuse_task: bool = False,
+        task_parameters: Optional[dict] = None,
+        task_overrides: Optional[dict] = None,
+    ) -> None:
         """
         Create a cron job alike scheduling for a pre existing Task or function.
         Trigger the Task/function execution on changes in the model repository
@@ -315,24 +325,23 @@ class TriggerScheduler(BaseScheduler):
 
     def add_dataset_trigger(
         self,
-        schedule_task_id=None,  # type: Union[str, Task]
-        schedule_queue=None,  # type: str
-        schedule_function=None,  # type: Callable[[str], None]
-        trigger_project=None,  # type: str
-        trigger_name=None,  # type: Optional[str]
-        trigger_on_publish=None,  # type: bool
-        trigger_on_tags=None,  # type: Optional[List[str]]
-        trigger_on_archive=None,  # type: bool
-        trigger_required_tags=None,  # type: Optional[List[str]]
-        name=None,  # type: Optional[str]
-        target_project=None,  # type: Optional[str]
-        add_tag=True,  # type: Union[bool, str]
-        single_instance=False,  # type: bool
-        reuse_task=False,  # type: bool
-        task_parameters=None,  # type: Optional[dict]
-        task_overrides=None,  # type: Optional[dict]
-    ):
-        # type: (...) -> None
+        schedule_task_id: Union[str, Task] = None,
+        schedule_queue: str = None,
+        schedule_function: Callable[[str], None] = None,
+        trigger_project: str = None,
+        trigger_name: Optional[str] = None,
+        trigger_on_publish: bool = None,
+        trigger_on_tags: Optional[List[str]] = None,
+        trigger_on_archive: bool = None,
+        trigger_required_tags: Optional[List[str]] = None,
+        name: Optional[str] = None,
+        target_project: Optional[str] = None,
+        add_tag: Union[bool, str] = True,
+        single_instance: bool = False,
+        reuse_task: bool = False,
+        task_parameters: Optional[dict] = None,
+        task_overrides: Optional[dict] = None,
+    ) -> None:
         """
         Create a cron job alike scheduling for a pre existing Task or function.
         Trigger the Task/function execution on changes in the dataset repository (notice this is not the hyper-datasets).
@@ -376,7 +385,9 @@ class TriggerScheduler(BaseScheduler):
         """
         if trigger_project:
             trigger_project_list = Task.get_projects(
-                name="^{}/\\.datasets/.*".format(trigger_project), search_hidden=True, _allow_extra_fields_=True
+                name="^{}/\\.datasets/.*".format(trigger_project),
+                search_hidden=True,
+                _allow_extra_fields_=True,
             )
             for project in trigger_project_list:
                 trigger = DatasetTrigger(
@@ -421,29 +432,28 @@ class TriggerScheduler(BaseScheduler):
             self._dataset_triggers.append(trigger)
 
     def add_task_trigger(
-            self,
-            schedule_task_id=None,  # type: Union[str, Task]
-            schedule_queue=None,  # type: str
-            schedule_function=None,  # type: Callable[[str], None]
-            trigger_project=None,  # type: str
-            trigger_name=None,  # type: Optional[str]
-            trigger_on_tags=None,  # type: Optional[List[str]]
-            trigger_on_status=None,  # type: Optional[List[str]]
-            trigger_exclude_dev_tasks=None,  # type: Optional[bool]
-            trigger_on_metric=None,  # type: Optional[str]
-            trigger_on_variant=None,  # type: Optional[str]
-            trigger_on_threshold=None,  # type: Optional[float]
-            trigger_on_sign=None,  # type: Optional[str]
-            trigger_required_tags=None,  # type: Optional[List[str]]
-            name=None,  # type: Optional[str]
-            target_project=None,  # type: Optional[str]
-            add_tag=True,  # type: Union[bool, str]
-            single_instance=False,  # type: bool
-            reuse_task=False,  # type: bool
-            task_parameters=None,  # type: Optional[dict]
-            task_overrides=None,  # type: Optional[dict]
-    ):
-        # type: (...) -> None
+        self,
+        schedule_task_id: Union[str, Task] = None,
+        schedule_queue: str = None,
+        schedule_function: Callable[[str], None] = None,
+        trigger_project: str = None,
+        trigger_name: Optional[str] = None,
+        trigger_on_tags: Optional[List[str]] = None,
+        trigger_on_status: Optional[List[str]] = None,
+        trigger_exclude_dev_tasks: Optional[bool] = None,
+        trigger_on_metric: Optional[str] = None,
+        trigger_on_variant: Optional[str] = None,
+        trigger_on_threshold: Optional[float] = None,
+        trigger_on_sign: Optional[str] = None,
+        trigger_required_tags: Optional[List[str]] = None,
+        name: Optional[str] = None,
+        target_project: Optional[str] = None,
+        add_tag: Union[bool, str] = True,
+        single_instance: bool = False,
+        reuse_task: bool = False,
+        task_parameters: Optional[dict] = None,
+        task_overrides: Optional[dict] = None,
+    ) -> None:
         """
         Create a cron job alike scheduling for a pre existing Task or function.
         Trigger the Task/function execution on changes in the Task
@@ -509,31 +519,30 @@ class TriggerScheduler(BaseScheduler):
             metrics=trigger_on_metric,
             variant=trigger_on_variant,
             threshold=trigger_on_threshold,
-            value_sign=trigger_on_sign
+            value_sign=trigger_on_sign,
         )
         trigger.verify()
         self._task_triggers.append(trigger)
 
-    def start(self):
+    def start(self) -> None:
         """
         Start the Task trigger loop (notice this function does not return)
         """
         super(TriggerScheduler, self).start()
 
-    def get_triggers(self):
-        # type: () -> List[BaseTrigger]
+    def get_triggers(self) -> List[BaseTrigger]:
         """
         Return all triggers (models, datasets, tasks)
         :return: List of trigger objects
         """
         return self._model_triggers + self._dataset_triggers + self._task_triggers
 
-    def _step(self):
+    def _step(self) -> bool:
         if not self._client:
             self._client = APIClient()
 
         executed = False
-        for trigger in (self._model_triggers + self._dataset_triggers + self._task_triggers):
+        for trigger in self._model_triggers + self._dataset_triggers + self._task_triggers:
             ref_time = datetime_from_isoformat(trigger.last_update or datetime.utcnow())
             objects = []
             try:
@@ -566,14 +575,12 @@ class TriggerScheduler(BaseScheduler):
         return executed
 
     # noinspection PyMethodOverriding
-    def _launch_job(self, job, trigger_id):
-        # type: (BaseTrigger, str) -> None
+    def _launch_job(self, job: BaseTrigger, trigger_id: str) -> None:
         if job.base_task_id:
             task_parameters = None
             if job.task_parameters:
                 task_parameters = {
-                    k: trigger_id if v == job._task_param else v # noqa
-                    for k, v in job.task_parameters.items()
+                    k: trigger_id if v == job._task_param else v for k, v in job.task_parameters.items()  # noqa
                 }
             task_job = self._launch_job_task(
                 job,
@@ -586,66 +593,91 @@ class TriggerScheduler(BaseScheduler):
                         name=job.name,
                         task_id=task_job.task_id(),
                         started=datetime.utcnow(),
-                        trigger=str(job.__class__.__name__))
+                        trigger=str(job.__class__.__name__),
+                    )
                 )
         if job.base_function:
-            thread_job = self._launch_job_function(job, func_args=(trigger_id, ))
+            thread_job = self._launch_job_function(job, func_args=(trigger_id,))
             if thread_job:
                 self._executed_triggers.append(
                     ExecutedTrigger(
                         name=job.name,
                         thread_id=str(thread_job.ident),
                         started=datetime.utcnow(),
-                        trigger=str(job.__class__.__name__))
+                        trigger=str(job.__class__.__name__),
+                    )
                 )
 
-    def _serialize(self):
+    def _serialize(self) -> None:
         # noinspection PyProtectedMember
         self._task._set_configuration(
-            config_type='json',
-            description='Dataset trigger configuration',
+            config_type="json",
+            description="Dataset trigger configuration",
             config_text=json.dumps(
-                [j.to_dict() for j in self._dataset_triggers], default=datetime_to_isoformat),
+                [j.to_dict() for j in self._dataset_triggers],
+                default=datetime_to_isoformat,
+            ),
             name=self._datasets_section,
         )
         # noinspection PyProtectedMember
         self._task._set_configuration(
-            config_type='json',
-            description='Model trigger configuration',
+            config_type="json",
+            description="Model trigger configuration",
             config_text=json.dumps(
-                [j.to_dict() for j in self._model_triggers], default=datetime_to_isoformat),
+                [j.to_dict() for j in self._model_triggers],
+                default=datetime_to_isoformat,
+            ),
             name=self._models_section,
         )
         # noinspection PyProtectedMember
         self._task._set_configuration(
-            config_type='json',
-            description='Task trigger configuration',
+            config_type="json",
+            description="Task trigger configuration",
             config_text=json.dumps(
-                [j.to_dict() for j in self._task_triggers], default=datetime_to_isoformat),
+                [j.to_dict() for j in self._task_triggers],
+                default=datetime_to_isoformat,
+            ),
             name=self._tasks_section,
         )
 
-    def _deserialize(self):
+    def _deserialize(self) -> None:
         self._task.reload()
         self._dataset_triggers = self.__deserialize_section(
-            section=self._datasets_section, trigger_class=DatasetTrigger, current_triggers=self._dataset_triggers)
+            section=self._datasets_section,
+            trigger_class=DatasetTrigger,
+            current_triggers=self._dataset_triggers,
+        )
         self._model_triggers = self.__deserialize_section(
-            section=self._models_section, trigger_class=ModelTrigger, current_triggers=self._model_triggers)
+            section=self._models_section,
+            trigger_class=ModelTrigger,
+            current_triggers=self._model_triggers,
+        )
         self._task_triggers = self.__deserialize_section(
-            section=self._tasks_section, trigger_class=TaskTrigger, current_triggers=self._task_triggers)
+            section=self._tasks_section,
+            trigger_class=TaskTrigger,
+            current_triggers=self._task_triggers,
+        )
 
-    def __deserialize_section(self, section, trigger_class, current_triggers):
+    def __deserialize_section(
+        self,
+        section: str,
+        trigger_class: BaseTrigger,
+        current_triggers: List[BaseTrigger],
+    ) -> List[BaseTrigger]:
         # noinspection PyProtectedMember
         json_str = self._task._get_configuration_text(name=section)
         try:
             return self.__deserialize_triggers(json.loads(json_str), trigger_class, current_triggers)
         except Exception as ex:
-            self._log('Failed deserializing configuration: {}'.format(ex), level=logging.WARN)
+            self._log("Failed deserializing configuration: {}".format(ex), level=logging.WARN)
             return current_triggers
 
     @staticmethod
-    def __deserialize_triggers(trigger_jobs, trigger_class, current_triggers):
-        # type:  (List[dict], BaseTrigger, List[BaseTrigger]) -> List[BaseTrigger]
+    def __deserialize_triggers(
+        trigger_jobs: List[dict],
+        trigger_class: BaseTrigger,
+        current_triggers: List[BaseTrigger],
+    ) -> List[BaseTrigger]:
         trigger_jobs = [trigger_class().update(j) for j in trigger_jobs]  # noqa
 
         trigger_jobs = {j.name: j for j in trigger_jobs}
@@ -653,8 +685,7 @@ class TriggerScheduler(BaseScheduler):
 
         # select only valid jobs, and update the valid ones state from the current one
         new_triggers = [
-            current_triggers[name].update(j) if name in current_triggers else j
-            for name, j in trigger_jobs.items()
+            current_triggers[name].update(j) if name in current_triggers else j for name, j in trigger_jobs.items()
         ]
         # verify all jobs
         for j in new_triggers:
@@ -662,7 +693,7 @@ class TriggerScheduler(BaseScheduler):
 
         return new_triggers
 
-    def _serialize_state(self):
+    def _serialize_state(self) -> None:
         json_str = json.dumps(
             dict(
                 dataset_triggers=[j.to_dict(full=True) for j in self._dataset_triggers],
@@ -671,15 +702,15 @@ class TriggerScheduler(BaseScheduler):
                 # pooling_frequency_minutes=self._pooling_frequency_minutes,
                 # sync_frequency_minutes=self._sync_frequency_minutes,
             ),
-            default=datetime_to_isoformat
+            default=datetime_to_isoformat,
         )
         self._task.upload_artifact(
             name=self._state_section,
             artifact_object=json_str,
-            preview='scheduler internal state'
+            preview="scheduler internal state",
         )
 
-    def _deserialize_state(self):
+    def _deserialize_state(self) -> None:
         # get artifact
         self._task.reload()
         artifact_object = self._task.artifacts.get(self._state_section)
@@ -691,37 +722,38 @@ class TriggerScheduler(BaseScheduler):
 
         state_dict = json.loads(state_json_str)
         self._dataset_triggers = self.__deserialize_triggers(
-            state_dict.get('dataset_triggers', []),
+            state_dict.get("dataset_triggers", []),
             trigger_class=DatasetTrigger,  # noqa
-            current_triggers=self._dataset_triggers
+            current_triggers=self._dataset_triggers,
         )
         self._model_triggers = self.__deserialize_triggers(
-            state_dict.get('model_triggers', []),
+            state_dict.get("model_triggers", []),
             trigger_class=ModelTrigger,  # noqa
-            current_triggers=self._model_triggers
+            current_triggers=self._model_triggers,
         )
         self._task_triggers = self.__deserialize_triggers(
-            state_dict.get('task_triggers', []),
-            trigger_class=TaskTrigger,  # noqa
-            current_triggers=self._task_triggers
+            state_dict.get("task_triggers", []),
+            trigger_class=TaskTrigger,
+            current_triggers=self._task_triggers,  # noqa
         )
 
-    def _update_execution_plots(self):
-        # type: () -> None
+    def _update_execution_plots(self) -> None:
         if not self._task:
             return
 
-        task_link_template = self._task.get_output_log_web_page() \
-            .replace('/{}/'.format(self._task.project), '/{project}/') \
-            .replace('/{}/'.format(self._task.id), '/{task}/')
+        task_link_template = (
+            self._task.get_output_log_web_page()
+            .replace("/{}/".format(self._task.project), "/{project}/")
+            .replace("/{}/".format(self._task.id), "/{task}/")
+        )
 
         # plot the already executed Tasks
-        executed_table = [['trigger', 'name', 'task id', 'started', 'finished']]
+        executed_table = [["trigger", "name", "task id", "started", "finished"]]
         for executed_job in sorted(self._executed_triggers, key=lambda x: x.started, reverse=True):
             if not executed_job.finished:
                 if executed_job.task_id:
                     t = Task.get_task(task_id=executed_job.task_id)
-                    if t.status not in ('in_progress', 'queued'):
+                    if t.status not in ("in_progress", "queued"):
                         executed_job.finished = t.data.completed or datetime.utcnow()
                 elif executed_job.thread_id:
                     # noinspection PyBroadException
@@ -733,59 +765,70 @@ class TriggerScheduler(BaseScheduler):
                         pass
 
             executed_table += [
-                [executed_job.trigger,
-                 executed_job.name,
-                 '<a href="{}">{}</a>'.format(task_link_template.format(
-                     project='*', task=executed_job.task_id), executed_job.task_id)
-                 if executed_job.task_id else 'function',
-                 str(executed_job.started).split('.', 1)[0],
-                 str(executed_job.finished).split('.', 1)[0]
-                 ]
+                [
+                    executed_job.trigger,
+                    executed_job.name,
+                    '<a href="{}">{}</a>'.format(
+                        task_link_template.format(project="*", task=executed_job.task_id),
+                        executed_job.task_id,
+                    )
+                    if executed_job.task_id
+                    else "function",
+                    str(executed_job.started).split(".", 1)[0],
+                    str(executed_job.finished).split(".", 1)[0],
+                ]
             ]
 
         # plot the schedule definition
         self._task.get_logger().report_table(
-            title='Triggers Executed', series=' ', iteration=0,
-            table_plot=executed_table
+            title="Triggers Executed",
+            series=" ",
+            iteration=0,
+            table_plot=executed_table,
         )
-        self.__report_trigger_table(triggers=self._model_triggers, title='Model Triggers')
-        self.__report_trigger_table(triggers=self._dataset_triggers, title='Dataset Triggers')
-        self.__report_trigger_table(triggers=self._task_triggers, title='Task Triggers')
+        self.__report_trigger_table(triggers=self._model_triggers, title="Model Triggers")
+        self.__report_trigger_table(triggers=self._dataset_triggers, title="Dataset Triggers")
+        self.__report_trigger_table(triggers=self._task_triggers, title="Task Triggers")
 
-    def __report_trigger_table(self, triggers, title):
+    def __report_trigger_table(self, triggers: List[BaseTrigger], title: str) -> None:
         if not triggers:
             return
 
-        task_link_template = self._task.get_output_log_web_page() \
-            .replace('/{}/'.format(self._task.project), '/{project}/') \
-            .replace('/{}/'.format(self._task.id), '/{task}/')
+        task_link_template = (
+            self._task.get_output_log_web_page()
+            .replace("/{}/".format(self._task.project), "/{project}/")
+            .replace("/{}/".format(self._task.id), "/{task}/")
+        )
 
-        columns = [k for k in BaseTrigger().__dict__.keys() if not k.startswith('_')]
-        columns += [k for k in triggers[0].__dict__.keys() if k not in columns and not k.startswith('_')]
+        columns = [k for k in BaseTrigger().__dict__.keys() if not k.startswith("_")]
+        columns += [k for k in triggers[0].__dict__.keys() if k not in columns and not k.startswith("_")]
 
-        column_task_id = columns.index('base_task_id')
+        column_task_id = columns.index("base_task_id")
 
         scheduler_table = [columns]
         for j in triggers:
             j_dict = j.to_dict()
-            j_dict['base_function'] = "{}.{}".format(
-                getattr(j.base_function, '__module__', ''),
-                getattr(j.base_function, '__name__', '')
-            ) if j.base_function else ''
+            j_dict["base_function"] = (
+                "{}.{}".format(
+                    getattr(j.base_function, "__module__", ""),
+                    getattr(j.base_function, "__name__", ""),
+                )
+                if j.base_function
+                else ""
+            )
 
-            if not j_dict.get('base_task_id'):
-                j_dict['clone_task'] = ''
+            if not j_dict.get("base_task_id"):
+                j_dict["clone_task"] = ""
 
             row = [
-                str(j_dict.get(c)).split('.', 1)[0] if isinstance(j_dict.get(c), datetime) else str(j_dict.get(c) or '')
+                str(j_dict.get(c)).split(".", 1)[0] if isinstance(j_dict.get(c), datetime) else str(j_dict.get(c) or "")
                 for c in columns
             ]
             if row[column_task_id]:
                 row[column_task_id] = '<a href="{}">{}</a>'.format(
-                    task_link_template.format(project='*', task=row[column_task_id]), row[column_task_id])
+                    task_link_template.format(project="*", task=row[column_task_id]),
+                    row[column_task_id],
+                )
             scheduler_table += [row]
 
-        self._task.get_logger().report_table(
-            title=title, series=' ', iteration=0,
-            table_plot=scheduler_table
-        )
+        self._task.get_logger().report_table(title=title, series=" ", iteration=0, table_plot=scheduler_table)

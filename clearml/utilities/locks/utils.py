@@ -1,11 +1,14 @@
-import os
-import time
 import atexit
-import tempfile
 import contextlib
+import os
+import tempfile
+import time
 from multiprocessing import RLock as ProcessRLock
-from . import exceptions
+from types import TracebackType
+from typing import Generator, TextIO, Optional, Type, Any
+
 from . import constants
+from . import exceptions
 from . import portalocker
 
 current_time = getattr(time, "monotonic", time.time)
@@ -22,7 +25,7 @@ __all__ = [
 
 
 @contextlib.contextmanager
-def open_atomic(filename, binary=True):
+def open_atomic(filename: str, binary: bool = True) -> Generator[tempfile._TemporaryFileWrapper, None, None]:
     """Open a file for atomic writing. Instead of locking this method allows
     you to write the entire file and move it to the actual location. Note that
     this makes the assumption that a rename is atomic on your platform which
@@ -68,14 +71,14 @@ def open_atomic(filename, binary=True):
 class Lock(object):
     def __init__(
         self,
-        filename,
-        mode="a",
-        timeout=DEFAULT_TIMEOUT,
-        check_interval=DEFAULT_CHECK_INTERVAL,
-        fail_when_locked=False,
-        flags=LOCK_METHOD,
-        **file_open_kwargs
-    ):
+        filename: str,
+        mode: str = "a",
+        timeout: float = DEFAULT_TIMEOUT,
+        check_interval: float = DEFAULT_CHECK_INTERVAL,
+        fail_when_locked: bool = False,
+        flags: int = LOCK_METHOD,
+        **file_open_kwargs: Any,
+    ) -> None:
         """Lock manager with build-in timeout
 
         filename -- filename
@@ -112,7 +115,12 @@ class Lock(object):
         self.flags = flags
         self.file_open_kwargs = file_open_kwargs
 
-    def acquire(self, timeout=None, check_interval=None, fail_when_locked=None):
+    def acquire(
+        self,
+        timeout: float = None,
+        check_interval: float = None,
+        fail_when_locked: bool = None,
+    ) -> Any:
         """Acquire the locked filehandle"""
         if timeout is None:
             timeout = self.timeout
@@ -144,7 +152,6 @@ class Lock(object):
 
                 # Try again
                 try:
-
                     # We already tried to the get the lock
                     # If fail_when_locked is true, then stop trying
                     if fail_when_locked:
@@ -168,7 +175,7 @@ class Lock(object):
         self.fh = fh
         return fh
 
-    def release(self):
+    def release(self) -> None:
         """Releases the currently locked file handle"""
         if self.fh:
             # noinspection PyBroadException
@@ -183,8 +190,7 @@ class Lock(object):
                 pass
             self.fh = None
 
-    def delete_lock_file(self):
-        # type: () -> bool
+    def delete_lock_file(self) -> bool:
         """
         Remove the local file used for locking (fail if file is locked)
 
@@ -199,7 +205,7 @@ class Lock(object):
             return False
         return True
 
-    def _get_fh(self):
+    def _get_fh(self) -> TextIO:
         """Get a new filehandle"""
         # Create the parent directory if it doesn't exist
         path, name = os.path.split(self.filename)
@@ -208,7 +214,7 @@ class Lock(object):
 
         return open(self.filename, self.mode, **self.file_open_kwargs)
 
-    def _get_lock(self, fh):
+    def _get_lock(self, fh: Any) -> Any:
         """
         Try to lock the given filehandle
 
@@ -216,7 +222,7 @@ class Lock(object):
         portalocker.lock(fh, self.flags)
         return fh
 
-    def _prepare_fh(self, fh):
+    def _prepare_fh(self, fh: Any) -> Any:
         """
         Prepare the filehandle for usage
 
@@ -229,13 +235,18 @@ class Lock(object):
 
         return fh
 
-    def __enter__(self):
+    def __enter__(self) -> Any:
         return self.acquire()
 
-    def __exit__(self, type_, value, tb):
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
         self.release()
 
-    def __delete__(self, instance):  # pragma: no cover
+    def __delete__(self, instance: "Lock") -> None:  # pragma: no cover
         instance.release()
 
 
@@ -248,19 +259,24 @@ class RLock(Lock):
 
     def __init__(
         self,
-        filename,
-        mode="a",
-        timeout=DEFAULT_TIMEOUT,
-        check_interval=DEFAULT_CHECK_INTERVAL,
-        fail_when_locked=False,
-        flags=LOCK_METHOD
-    ):
+        filename: str,
+        mode: str = "a",
+        timeout: float = DEFAULT_TIMEOUT,
+        check_interval: float = DEFAULT_CHECK_INTERVAL,
+        fail_when_locked: bool = False,
+        flags: int = LOCK_METHOD,
+    ) -> None:
         super(RLock, self).__init__(filename, mode, timeout, check_interval, fail_when_locked, flags)
         self._acquire_count = 0
         self._lock = ProcessRLock()
         self._pid = os.getpid()
 
-    def acquire(self, timeout=None, check_interval=None, fail_when_locked=None):
+    def acquire(
+        self,
+        timeout: float = None,
+        check_interval: float = None,
+        fail_when_locked: bool = None,
+    ) -> Any:
         if self._lock:
             # cleanup bad python behaviour when forking while lock is acquired
             # see Issue https://github.com/allegroai/clearml-agent/issues/73
@@ -299,7 +315,7 @@ class RLock(Lock):
         self._acquire_count += 1
         return fh
 
-    def release(self):
+    def release(self) -> None:
         if self._acquire_count == 0:
             raise exceptions.LockException("Cannot release more times than acquired")
 
@@ -310,7 +326,7 @@ class RLock(Lock):
         if self._lock:
             self._lock.release()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self._lock = None
         # try to remove the file when we are done
         if not os.path.isfile(self.filename):
@@ -335,13 +351,12 @@ class RLock(Lock):
 class TemporaryFileLock(Lock):
     def __init__(
         self,
-        filename=".lock",
-        timeout=DEFAULT_TIMEOUT,
-        check_interval=DEFAULT_CHECK_INTERVAL,
-        fail_when_locked=True,
-        flags=LOCK_METHOD
-    ):
-
+        filename: str = ".lock",
+        timeout: int = DEFAULT_TIMEOUT,
+        check_interval: float = DEFAULT_CHECK_INTERVAL,
+        fail_when_locked: bool = True,
+        flags: int = LOCK_METHOD,
+    ) -> None:
         Lock.__init__(
             self,
             filename=filename,
@@ -353,7 +368,7 @@ class TemporaryFileLock(Lock):
         )
         atexit.register(self.release)
 
-    def release(self):
+    def release(self) -> None:
         Lock.release(self)
         if os.path.isfile(self.filename):  # pragma: no branch
             os.unlink(self.filename)

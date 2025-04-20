@@ -1,14 +1,17 @@
-import json
 import copy
+import json
 import logging
+from typing import Optional, Callable, Tuple, Union, List, Dict, TYPE_CHECKING, Any
 
 try:
     # public import capabilities of namespace, util, actions will be deprecated
     # import from "protected" instead
 
     from jsonargparse._namespace import Namespace
+
     # noinspection PyProtectedMember
     from jsonargparse._util import Path
+
     # noinspection PyProtectedMember
     from jsonargparse import ArgumentParser
 except ImportError:
@@ -35,6 +38,10 @@ from ..config import running_remotely, get_remote_task_id
 from .frameworks import _patched_call  # noqa
 from ..utilities.proxy_object import verify_basic_type, flatten_dictionary
 
+if TYPE_CHECKING:
+    from .. import Task
+    from jsonargparse import ArgumentParser
+
 
 class PatchJsonArgParse(object):
     namespace_type = "jsonargparse_namespace"
@@ -55,14 +62,14 @@ class PatchJsonArgParse(object):
     __patched = False
 
     @classmethod
-    def update_current_task(cls, task):
+    def update_current_task(cls, task: Any) -> None:
         cls._current_task = task
         if not task:
             return
         cls.patch(task)
 
     @classmethod
-    def patch(cls, task=None):
+    def patch(cls, task: Optional["Task"] = None) -> None:
         if ArgumentParser is None:
             return
         PatchJsonArgParse._update_task_args()
@@ -72,11 +79,12 @@ class PatchJsonArgParse(object):
             ArgumentParser.parse_args = _patched_call(ArgumentParser.parse_args, PatchJsonArgParse._parse_args)
             if jsonargparse_typehints:
                 jsonargparse_typehints.adapt_typehints = _patched_call(
-                    jsonargparse_typehints.adapt_typehints, PatchJsonArgParse._adapt_typehints
+                    jsonargparse_typehints.adapt_typehints,
+                    PatchJsonArgParse._adapt_typehints,
                 )
 
     @classmethod
-    def _update_task_args(cls, parser=None, subcommand=None):
+    def _update_task_args(cls, parser: "ArgumentParser" = None, subcommand: str = None) -> None:
         if running_remotely() or not cls._current_task or not cls._args:
             return
         args = {}
@@ -109,17 +117,18 @@ class PatchJsonArgParse(object):
             cls._current_task.set_parameter(
                 cls._section_name + cls._args_sep + cls._ignore_ui_overrides,
                 False,
-                description="If True, values in the config file will be overriden by values found in the UI. Otherwise, the values in the config file have priority",  # noqa
+                description="If True, values in the config file will be overriden by values found in the UI. Otherwise, the values in the config file have priority",
+                # noqa
             )
 
     @staticmethod
-    def _adapt_typehints(original_fn, val, *args, **kwargs):
+    def _adapt_typehints(original_fn: Callable, val: Any, *args: Any, **kwargs: Any) -> Any:
         if not PatchJsonArgParse._current_task or not running_remotely():
             return original_fn(val, *args, **kwargs)
         return original_fn(val, *args, **kwargs)
 
     @staticmethod
-    def __restore_args(parser, args, subcommand=None):
+    def __restore_args(parser: "ArgumentParser", args: "Namespace", subcommand: str = None) -> "Namespace":
         paths = PatchJsonArgParse.__get_paths_from_dict(args)
         for path in paths:
             args_to_restore = PatchJsonArgParse.__get_args_from_path(parser, path, subcommand=subcommand)
@@ -130,7 +139,7 @@ class PatchJsonArgParse(object):
         return args
 
     @staticmethod
-    def _parse_args(original_fn, obj, *args, **kwargs):
+    def _parse_args(original_fn: Callable, obj: "ArgumentParser", *args: Any, **kwargs: Any) -> "Namespace":
         if len(args) == 1:
             kwargs["args"] = args[0]
             args = []
@@ -152,7 +161,7 @@ class PatchJsonArgParse(object):
                     params_namespace = PatchJsonArgParse.__restore_args(
                         obj,
                         params_namespace,
-                        subcommand=params_namespace.get(PatchJsonArgParse._command_name)
+                        subcommand=params_namespace.get(PatchJsonArgParse._command_name),
                     )
                 if PatchJsonArgParse._allow_jsonargparse_overrides in params_namespace:
                     del params_namespace[PatchJsonArgParse._allow_jsonargparse_overrides]
@@ -195,7 +204,7 @@ class PatchJsonArgParse(object):
         return parsed_args
 
     @classmethod
-    def _load_task_params(cls, parser=None):
+    def _load_task_params(cls, parser: "ArgumentParser" = None) -> None:
         if cls.__remote_task_params:
             return
         from clearml import Task
@@ -218,7 +227,7 @@ class PatchJsonArgParse(object):
         cls.__update_remote_task_params_dict_based_on_paths(parser)
 
     @classmethod
-    def __update_remote_task_params_dict_based_on_paths(cls, parser):
+    def __update_remote_task_params_dict_based_on_paths(cls, parser: "ArgumentParser") -> None:
         paths = PatchJsonArgParse.__get_paths_from_dict(cls.__remote_task_params_dict)
         for path in paths:
             args = PatchJsonArgParse.__get_args_from_path(
@@ -229,7 +238,7 @@ class PatchJsonArgParse(object):
                     cls.__remote_task_params_dict[subarg_key] = subarg_value
 
     @staticmethod
-    def __get_paths_from_dict(dict_):
+    def __get_paths_from_dict(dict_: dict) -> list:
         paths = [(path_key, path) for path_key, path in dict_.items() if isinstance(path, Path)]
         for subargs_key, subargs in dict_.items():
             if isinstance(subargs, list) and all(isinstance(path, Path) for path in subargs):
@@ -237,15 +246,23 @@ class PatchJsonArgParse(object):
         return paths
 
     @staticmethod
-    def __get_args_from_path(parser, path, subcommand=None):
+    def __get_args_from_path(
+        parser: "ArgumentParser",
+        path: Tuple[str, "Path"],
+        subcommand: Optional[str] = None,
+    ) -> "Namespace":
         try:
             # make sure no side effects happen in parser
             parser = copy.deepcopy(parser)
             argument = path[0]
             if subcommand and argument.startswith(subcommand + PatchJsonArgParse._commands_sep):
-                argument = argument[len(subcommand + PatchJsonArgParse._commands_sep):]
+                argument = argument[len(subcommand + PatchJsonArgParse._commands_sep) :]
                 result = parser.parse_args(
-                    [subcommand, parser.prefix_chars[0] * 2 + argument, path[1].rel_path],
+                    [
+                        subcommand,
+                        parser.prefix_chars[0] * 2 + argument,
+                        path[1].rel_path,
+                    ],
                     _skip_check=True,
                     defaults=False,
                 )
@@ -253,7 +270,9 @@ class PatchJsonArgParse(object):
                     del result[PatchJsonArgParse._command_name]
             else:
                 result = parser.parse_args(
-                    [parser.prefix_chars[0] * 2 + argument, path[1].rel_path], _skip_check=True, defaults=False
+                    [parser.prefix_chars[0] * 2 + argument, path[1].rel_path],
+                    _skip_check=True,
+                    defaults=False,
                 )
             if argument in result:
                 del result[argument]
@@ -263,26 +282,31 @@ class PatchJsonArgParse(object):
             return Namespace()
 
     @staticmethod
-    def _handle_namespace(value):
+    def _handle_namespace(value: Union["Namespace", List["Namespace"]]) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         if isinstance(value, list):
             return [PatchJsonArgParse._handle_namespace(sub_value) for sub_value in value]
         return value.as_dict()
 
     @staticmethod
-    def _handle_path(value):
+    def _handle_path(value: Union["Path", List["Path"]]) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         if isinstance(value, list):
             return [PatchJsonArgParse._handle_path(sub_value) for sub_value in value]
-        return {"path": str(value.rel_path), "mode": value.mode, "cwd": None, "skip_check": value.skip_check}
+        return {
+            "path": str(value.rel_path),
+            "mode": value.mode,
+            "cwd": None,
+            "skip_check": value.skip_check,
+        }
 
     @staticmethod
-    def _get_namespace_from_json(json_):
+    def _get_namespace_from_json(json_: str) -> Union["Namespace", List["Namespace"]]:
         json_ = json.loads(json_)
         if isinstance(json_, list):
             return [Namespace(dict_) for dict_ in json_]
         return Namespace(json_)
 
     @staticmethod
-    def _get_path_from_json(json_):
+    def _get_path_from_json(json_: str) -> Union["Path", List["Path"]]:
         json_ = json.loads(json_)
         if isinstance(json_, list):
             return [Path(**dict_) for dict_ in json_]

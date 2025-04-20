@@ -5,10 +5,10 @@ import sys
 import warnings
 from math import ceil, log10
 from time import time
+from typing import Text, Dict, List, Any
 
 import psutil
 from pathlib2 import Path
-from typing import Text
 
 from .process.mp import BackgroundMonitor
 from ..backend_api import Session
@@ -32,14 +32,14 @@ class ResourceMonitor(BackgroundMonitor):
 
     def __init__(
         self,
-        task,
-        sample_frequency_per_sec=2.0,
-        report_frequency_sec=30.0,
-        first_report_sec=None,
-        wait_for_first_iteration_to_start_sec=None,
-        max_wait_for_first_iteration_to_start_sec=None,
-        report_mem_used_per_process=True
-    ):
+        task: Session,
+        sample_frequency_per_sec: float = 2.0,
+        report_frequency_sec: float = 30.0,
+        first_report_sec: float = None,
+        wait_for_first_iteration_to_start_sec: float = None,
+        max_wait_for_first_iteration_to_start_sec: float = None,
+        report_mem_used_per_process: bool = True,
+    ) -> None:
         super(ResourceMonitor, self).__init__(task=task, wait_period=sample_frequency_per_sec)
         # noinspection PyProtectedMember
         ResourceMonitor._resource_monitor_instances.append(self)
@@ -51,7 +51,11 @@ class ResourceMonitor(BackgroundMonitor):
         self._first_report_sec = next(
             value
             # noinspection PyProtectedMember
-            for value in (first_report_sec, ResourceMonitor._first_report_sec_default, report_frequency_sec)
+            for value in (
+                first_report_sec,
+                ResourceMonitor._first_report_sec_default,
+                report_frequency_sec,
+            )
             if value is not None
         )
         self.wait_for_first_iteration = next(
@@ -60,7 +64,7 @@ class ResourceMonitor(BackgroundMonitor):
                 wait_for_first_iteration_to_start_sec,
                 # noinspection PyProtectedMember
                 ResourceMonitor._wait_for_first_iteration_to_start_sec_default,
-                0.0
+                0.0,
             )
             if value is not None
         )
@@ -70,7 +74,7 @@ class ResourceMonitor(BackgroundMonitor):
                 max_wait_for_first_iteration_to_start_sec,
                 # noinspection PyProtectedMember
                 ResourceMonitor._max_wait_for_first_iteration_to_start_sec_default,
-                0.0
+                0.0,
             )
             if value is not None
         )
@@ -108,7 +112,7 @@ class ResourceMonitor(BackgroundMonitor):
             except Exception:
                 pass
 
-    def daemon(self):
+    def daemon(self) -> None:
         if self._is_thread_mode_and_not_main_process():
             return
 
@@ -199,7 +203,7 @@ class ResourceMonitor(BackgroundMonitor):
                 if self._check_logger_reported():
                     fallback_to_sec_as_iterations = False
                     self._task.get_logger().report_text(
-                        "ClearML Monitor: Reporting detected, " "reverting back to iteration based reporting"
+                        "ClearML Monitor: Reporting detected, reverting back to iteration based reporting"
                     )
 
             clear_readouts = True
@@ -247,7 +251,10 @@ class ResourceMonitor(BackgroundMonitor):
                                 # can always check the default cpu/gpu utilization
                                 if rank == 0:
                                     self._task.get_logger().report_scalar(
-                                        title=title, series=series, iteration=iteration, value=value
+                                        title=title,
+                                        series=series,
+                                        iteration=iteration,
+                                        value=value,
                                     )
 
                                 # now let's create an additional report
@@ -277,7 +284,7 @@ class ResourceMonitor(BackgroundMonitor):
             # count reported iterations
             reported += 1
 
-    def _update_readouts(self):
+    def _update_readouts(self) -> None:
         readouts = self._machine_stats()
         elapsed = time() - self._previous_readouts_ts
         self._previous_readouts_ts = time()
@@ -290,18 +297,18 @@ class ResourceMonitor(BackgroundMonitor):
         self._num_readouts += 1
         self._previous_readouts = readouts
 
-    def _get_num_readouts(self):
+    def _get_num_readouts(self) -> int:
         return self._num_readouts
 
-    def _get_average_readouts(self):
+    def _get_average_readouts(self) -> dict:
         average_readouts = dict((k, v / float(self._num_readouts)) for k, v in self._readouts.items())
         return average_readouts
 
-    def _clear_readouts(self):
+    def _clear_readouts(self) -> None:
         self._readouts = {}
         self._num_readouts = 0
 
-    def _machine_stats(self):
+    def _machine_stats(self) -> Dict[str, float]:
         """
         :return: machine stats dictionary, all values expressed in megabytes
         """
@@ -312,7 +319,7 @@ class ResourceMonitor(BackgroundMonitor):
 
         bytes_per_megabyte = 1024**2
 
-        def bytes_to_megabytes(x):
+        def bytes_to_megabytes(x: float) -> float:
             return x / bytes_per_megabyte
 
         virtual_memory = psutil.virtual_memory()
@@ -369,12 +376,12 @@ class ResourceMonitor(BackgroundMonitor):
 
         return stats
 
-    def _check_logger_reported(self):
+    def _check_logger_reported(self) -> bool:
         titles = self.get_logger_reported_titles(self._task)
         return len(titles) > 0
 
     @classmethod
-    def get_logger_reported_titles(cls, task):
+    def get_logger_reported_titles(cls, task: Session) -> List[str]:
         # noinspection PyProtectedMember
         titles = list(task.get_logger()._get_used_title_series().keys())
 
@@ -408,8 +415,8 @@ class ResourceMonitor(BackgroundMonitor):
 
         return titles
 
-    def _get_process_used_memory(self):
-        def mem_usage_children(a_mem_size, pr, parent_mem=None):
+    def _get_process_used_memory(self) -> int:
+        def mem_usage_children(a_mem_size: int, pr: psutil.Process, parent_mem: psutil.Process = None) -> int:
             self._last_process_id_list.append(pr.pid)
             # add out memory usage
             our_mem = pr.memory_info()
@@ -439,7 +446,7 @@ class ResourceMonitor(BackgroundMonitor):
 
         return mem_size
 
-    def _skip_nonactive_gpu(self, gpu):
+    def _skip_nonactive_gpu(self, gpu: Any) -> bool:
         if not self._active_gpus:
             return False
         # noinspection PyBroadException
@@ -455,7 +462,7 @@ class ResourceMonitor(BackgroundMonitor):
             pass
         return False
 
-    def _get_gpu_stats(self):
+    def _get_gpu_stats(self) -> dict:
         if not self._gpustat:
             return {}
 
@@ -515,7 +522,8 @@ class ResourceMonitor(BackgroundMonitor):
                 if not self._gpu_utilization_warning_sent:
                     if g.mig_index is not None:
                         self._task.get_logger().report_text(
-                            "Running inside MIG, Nvidia driver cannot export utilization, pushing fixed value {}".format(  # noqa
+                            "Running inside MIG, Nvidia driver cannot export utilization, pushing fixed value {}".format(
+                                # noqa
                                 self._default_gpu_utilization
                             )
                         )
@@ -534,8 +542,7 @@ class ResourceMonitor(BackgroundMonitor):
 
         return stats
 
-    def _get_machine_specs(self):
-        # type: () -> dict
+    def _get_machine_specs(self) -> dict:
         specs = {}
         # noinspection PyBroadException
         try:
@@ -566,3 +573,7 @@ class ResourceMonitor(BackgroundMonitor):
             pass
 
         return specs
+
+    @property
+    def resource_monitor_instances(self) -> None:
+        return self._resource_monitor_instances

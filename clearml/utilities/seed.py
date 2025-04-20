@@ -1,5 +1,5 @@
-import sys
 import random
+import sys
 
 try:
     import numpy as np
@@ -7,7 +7,7 @@ except Exception:
     np = None
 
 
-def make_deterministic(seed=1337, cudnn_deterministic=False):
+def make_deterministic(seed: int = 1337, cudnn_deterministic: bool = False) -> None:
     """
     Ensure deterministic behavior across PyTorch using the provided random seed.
     This function makes sure that torch, numpy and random use the same random seed.
@@ -48,6 +48,7 @@ def make_deterministic(seed=1337, cudnn_deterministic=False):
         try:
             import tensorflow  # noqa: F401
             from tensorflow.python.eager.context import _context
+
             eager_mode_bypass = _context is None
         except Exception:
             eager_mode_bypass = False

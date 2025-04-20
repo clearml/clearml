@@ -1,13 +1,14 @@
 import attr
 from attr.validators import and_, instance_of, optional
 from six import string_types
+from typing import Any
 
 # noinspection PyTypeChecker
 sequence = instance_of((list, tuple))
 
 
-def sequence_of(types):
-    def validator(_, attrib, value):
+def sequence_of(types: type) -> attr.validators._AndValidator:
+    def validator(_: Any, attrib: attr.Attribute, value: Any) -> None:
         assert all(isinstance(x, types) for x in value), attrib.name
 
     return and_(sequence, validator)

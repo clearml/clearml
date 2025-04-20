@@ -74,7 +74,7 @@ task.set_model_label_enumeration(labels)
 output_folder = os.path.join(tempfile.gettempdir(), 'keras_example')
 
 board = TensorBoard(log_dir=output_folder, write_images=False)
-model_store = ModelCheckpoint(filepath=os.path.join(output_folder, 'weight.hdf5'))
+model_store = ModelCheckpoint(filepath=os.path.join(output_folder, 'weight.keras'))
 
 history = model.fit(X_train, Y_train,
                     batch_size=args['batch_size'], epochs=args['epochs'],

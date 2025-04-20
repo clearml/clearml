@@ -1,4 +1,6 @@
 """ absl-py FLAGS binding utility functions """
+from typing import Any
+
 import six
 
 from ..backend_interface.task.args import _Arguments
@@ -12,19 +14,20 @@ class PatchAbsl(object):
     __patched = False
 
     @classmethod
-    def update_current_task(cls, task):
+    def update_current_task(cls, task: _Arguments) -> None:
         cls._current_task = task
         if not cls.__patched:
             cls._patch_absl()
             cls.__patched = True
 
     @classmethod
-    def _patch_absl(cls):
+    def _patch_absl(cls) -> None:
         if cls._original_DEFINE_flag:
             return
         # noinspection PyBroadException
         try:
             from absl.flags import _defines
+
             if six.PY2:
                 cls._original_DEFINE_flag = staticmethod(_defines.DEFINE_flag)
             else:
@@ -36,6 +39,7 @@ class PatchAbsl(object):
 
         try:
             from absl.flags._flagvalues import FlagValues
+
             if six.PY2:
                 cls._original_FLAGS_parse_call = staticmethod(FlagValues.__call__)
             else:
@@ -49,13 +53,14 @@ class PatchAbsl(object):
             try:
                 # if absl was already set, let's update our task params
                 from absl import flags
+
                 cls._update_current_flags(flags.FLAGS)
             except Exception:
                 # there is no absl
                 pass
 
     @staticmethod
-    def _patched_define_flag(*args, **kwargs):
+    def _patched_define_flag(*args: Any, **kwargs: Any) -> Any:
         if not PatchAbsl._current_task or not PatchAbsl._original_DEFINE_flag:
             if PatchAbsl._original_DEFINE_flag:
                 return PatchAbsl._original_DEFINE_flag(*args, **kwargs)
@@ -67,7 +72,7 @@ class PatchAbsl(object):
             module_name = args[2] if len(args) >= 3 else None
             param_name = None
             if flag:
-                param_name = ((module_name + _Arguments._prefix_sep) if module_name else '') + flag.name
+                param_name = ((module_name + _Arguments._prefix_sep) if module_name else "") + flag.name
         except Exception:
             flag = None
             param_name = None
@@ -77,7 +82,8 @@ class PatchAbsl(object):
             try:
                 if param_name and flag:
                     param_dict = PatchAbsl._current_task._arguments.copy_to_dict(
-                        {param_name: flag.value}, prefix=_Arguments._prefix_tf_defines)
+                        {param_name: flag.value}, prefix=_Arguments._prefix_tf_defines
+                    )
                     flag.value = param_dict.get(param_name, flag.value)
             except Exception:
                 pass
@@ -92,7 +98,7 @@ class PatchAbsl(object):
         return ret
 
     @staticmethod
-    def _patched_FLAGS_parse_call(self, *args, **kwargs):
+    def _patched_FLAGS_parse_call(self, *args: Any, **kwargs: Any) -> Any:
         ret = PatchAbsl._original_FLAGS_parse_call(self, *args, **kwargs)
         if not PatchAbsl._current_task:
             return ret
@@ -104,7 +110,7 @@ class PatchAbsl(object):
         return ret
 
     @classmethod
-    def _update_current_flags(cls, FLAGS):
+    def _update_current_flags(cls, FLAGS: Any) -> None:
         if not cls._current_task:
             return
         # noinspection PyBroadException
@@ -137,7 +143,8 @@ class PatchAbsl(object):
                 cls._current_task._arguments.copy_from_dict(
                     parameters,
                     prefix=_Arguments._prefix_tf_defines,
-                    descriptions=descriptions, param_types=param_types,
+                    descriptions=descriptions,
+                    param_types=param_types,
                 )
         except Exception:
             pass

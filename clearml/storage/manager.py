@@ -13,8 +13,8 @@ from .cache import CacheManager
 from .callbacks import ProgressReport
 from .helper import StorageHelper
 from .util import encode_string_to_filename, safe_extract, create_zip_directories
-from ..debugging.log import LoggerRoot
 from ..config import deferred_config
+from ..debugging.log import LoggerRoot
 
 
 class StorageManager(object):
@@ -27,8 +27,14 @@ class StorageManager(object):
     _file_upload_retries = deferred_config("network.file_upload_retries", 3)
 
     @classmethod
-    def get_local_copy(cls, remote_url, cache_context=None, extract_archive=True, name=None, force_download=False):
-        # type: (str, Optional[str], bool, Optional[str], bool) -> [str, None]
+    def get_local_copy(
+        cls,
+        remote_url: str,
+        cache_context: Optional[str] = None,
+        extract_archive: bool = True,
+        name: Optional[str] = None,
+        force_download: bool = False,
+    ) -> [str, None]:
         """
         Get a local copy of the remote file. If the remote URL is a direct file access,
         the returned link is the same, otherwise a link to a local copy of the url file is returned.
@@ -51,14 +57,21 @@ class StorageManager(object):
             # this will get us the actual cache (even with direct access)
             cache_path_encoding = Path(cache.get_cache_folder()) / cache.get_hashed_url_file(remote_url)
             return cls._extract_to_cache(
-                cached_file, name, cache_context, cache_path_encoding=cache_path_encoding.as_posix()
+                cached_file,
+                name,
+                cache_context,
+                cache_path_encoding=cache_path_encoding.as_posix(),
             )
         return cached_file
 
     @classmethod
     def upload_file(
-        cls, local_file, remote_url, wait_for_upload=True, retries=None
-    ):  # type: (str, str, bool, Optional[int]) -> str
+        cls,
+        local_file: str,
+        remote_url: str,
+        wait_for_upload: bool = True,
+        retries: Optional[int] = None,
+    ) -> str:
         """
         Upload a local file to a remote location. remote url is the final destination of the uploaded file.
 
@@ -84,7 +97,7 @@ class StorageManager(object):
         )
 
     @classmethod
-    def set_cache_file_limit(cls, cache_file_limit, cache_context=None):  # type: (int, Optional[str]) -> int
+    def set_cache_file_limit(cls, cache_file_limit: int, cache_context: Optional[str] = None) -> int:
         """
         Set the cache context file limit. File limit is the maximum number of files the specific cache context holds.
         Notice, there is no limit on the size of these files, only the total number of cached files.
@@ -100,14 +113,13 @@ class StorageManager(object):
     @classmethod
     def _extract_to_cache(
         cls,
-        cached_file,  # type: str
-        name,  # type: str
-        cache_context=None,  # type: Optional[str]
-        target_folder=None,  # type: Optional[str]
-        cache_path_encoding=None,  # type: Optional[str]
-        force=False,  # type: bool
-    ):
-        # type: (...) -> str
+        cached_file: str,
+        name: str,
+        cache_context: Optional[str] = None,
+        target_folder: Optional[str] = None,
+        cache_path_encoding: Optional[str] = None,
+        force: bool = False,
+    ) -> str:
         """
         Extract cached file to cache folder
         :param str cached_file: local copy of archive file
@@ -206,14 +218,19 @@ class StorageManager(object):
         return target_folder.as_posix()
 
     @classmethod
-    def get_files_server(cls):
+    def get_files_server(cls) -> str:
         from ..backend_api import Session
 
         return Session.get_files_server_host()
 
     @classmethod
-    def upload_folder(cls, local_folder, remote_url, match_wildcard=None, retries=None):
-        # type: (str, str, Optional[str], Optional[int]) -> Optional[str]
+    def upload_folder(
+        cls,
+        local_folder: str,
+        remote_url: str,
+        match_wildcard: Optional[str] = None,
+        retries: Optional[int] = None,
+    ) -> Optional[str]:
         """
         Upload local folder recursively to a remote storage, maintaining the sub folder structure
         in the remote storage.
@@ -273,9 +290,13 @@ class StorageManager(object):
 
     @classmethod
     def download_file(
-        cls, remote_url, local_folder=None, overwrite=False, skip_zero_size_check=False, silence_errors=False
-    ):
-        # type: (str, Optional[str], bool, bool, bool) -> Optional[str]
+        cls,
+        remote_url: str,
+        local_folder: Optional[str] = None,
+        overwrite: bool = False,
+        skip_zero_size_check: bool = False,
+        silence_errors: bool = False,
+    ) -> Optional[str]:
         """
         Download remote file to the local machine, maintaining the sub folder structure from the
         remote storage.
@@ -297,8 +318,7 @@ class StorageManager(object):
         :return: Path to downloaded file or None on error
         """
 
-        def remove_prefix_from_str(target_str, prefix_to_be_removed):
-            # type: (str, str) -> str
+        def remove_prefix_from_str(target_str: str, prefix_to_be_removed: str) -> str:
             if target_str.startswith(prefix_to_be_removed):
                 return target_str[len(prefix_to_be_removed) :]
             return target_str
@@ -320,8 +340,7 @@ class StorageManager(object):
         )
 
     @classmethod
-    def exists_file(cls, remote_url):
-        # type: (str) -> bool
+    def exists_file(cls, remote_url: str) -> bool:
         """
         Check if remote file exists. Note that this function will return
         False for directories.
@@ -341,8 +360,7 @@ class StorageManager(object):
             return False
 
     @classmethod
-    def get_file_size_bytes(cls, remote_url, silence_errors=False):
-        # type: (str, bool) -> [int, None]
+    def get_file_size_bytes(cls, remote_url: str, silence_errors: bool = False) -> [int, None]:
         """
         Get size of the remote file in bytes.
 
@@ -360,15 +378,14 @@ class StorageManager(object):
     @classmethod
     def download_folder(
         cls,
-        remote_url,
-        local_folder=None,
-        match_wildcard=None,
-        overwrite=False,
-        skip_zero_size_check=False,
-        silence_errors=False,
-        max_workers=None,
-    ):
-        # type: (str, Optional[str], Optional[str], bool, bool, bool, Optional[int]) -> Optional[str]
+        remote_url: str,
+        local_folder: Optional[str] = None,
+        match_wildcard: Optional[str] = None,
+        overwrite: bool = False,
+        skip_zero_size_check: bool = False,
+        silence_errors: bool = False,
+        max_workers: Optional[int] = None,
+    ) -> Optional[str]:
         """
         Download remote folder recursively to the local machine, maintaining the sub folder structure
         from the remote storage.
@@ -441,8 +458,12 @@ class StorageManager(object):
         return local_folder
 
     @classmethod
-    def list(cls, remote_url, return_full_path=False, with_metadata=False):
-        # type: (str, bool, bool) -> Optional[List[Union[str, dict]]]
+    def list(
+        cls,
+        remote_url: str,
+        return_full_path: bool = False,
+        with_metadata: bool = False,
+    ) -> Optional[List[Union[str, dict]]]:
         """
         Return a list of object names inside the base path or dictionaries containing the corresponding
         objects' metadata (in case `with_metadata` is True)
@@ -483,8 +504,7 @@ class StorageManager(object):
             return helper_list_result
 
     @classmethod
-    def get_metadata(cls, remote_url, return_full_path=False):
-        # type: (str, bool) -> Optional[dict]
+    def get_metadata(cls, remote_url: str, return_full_path: bool = False) -> Optional[dict]:
         """
         Get the metadata of the remote object.
         The metadata is a dict containing the following keys: `name`, `size`.
@@ -507,8 +527,7 @@ class StorageManager(object):
         return metadata
 
     @classmethod
-    def set_report_upload_chunk_size(cls, chunk_size_mb):
-        # type: (int) -> ()
+    def set_report_upload_chunk_size(cls, chunk_size_mb: int) -> ():
         """
         Set the upload progress report chunk size (in MB). The chunk size
         determines how often the progress reports are logged:
@@ -522,8 +541,7 @@ class StorageManager(object):
         ProgressReport.report_upload_chunk_size_mb = int(chunk_size_mb)
 
     @classmethod
-    def set_report_download_chunk_size(cls, chunk_size_mb):
-        # type: (int) -> ()
+    def set_report_download_chunk_size(cls, chunk_size_mb: int) -> ():
         """
         Set the download progress report chunk size (in MB). The chunk size
         determines how often the progress reports are logged:

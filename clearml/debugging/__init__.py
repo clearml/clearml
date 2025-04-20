@@ -1,5 +1,4 @@
 """ Debugging module """
-from .timer import Timer
 from .log import (
     get_logger,
     get_null_logger,
@@ -9,6 +8,7 @@ from .log import (
     add_rotating_file_handler,
     add_time_rotating_file_handler,
 )
+from .timer import Timer
 
 __all__ = [
     "Timer",

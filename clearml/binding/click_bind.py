@@ -1,3 +1,8 @@
+from typing import Optional, Tuple, Dict, Callable, TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .. import Task
+
 try:
     from click.core import Command, Option, Argument, Group, Context  # noqa
     from click.types import BoolParamType  # noqa
@@ -22,7 +27,7 @@ class PatchClick:
     __patched = False
 
     @classmethod
-    def patch(cls, task=None):
+    def patch(cls, task: Optional["Task"] = None) -> None:
         if Command is None:
             return
 
@@ -33,13 +38,13 @@ class PatchClick:
         if not cls.__patched:
             cls.__patched = True
             Command.__init__ = _patched_call(Command.__init__, PatchClick._command_init)
-            Command.parse_args = _patched_call(
-                Command.parse_args, PatchClick._parse_args
-            )
+            Command.parse_args = _patched_call(Command.parse_args, PatchClick._parse_args)
             Context.__init__ = _patched_call(Context.__init__, PatchClick._context_init)
 
     @classmethod
-    def args(cls):
+    def args(
+        cls,
+    ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
         # ignore None keys
         cls._args = {k: v for k, v in cls._args.items() if k is not None}
 
@@ -50,26 +55,14 @@ class PatchClick:
         else:
             skip = 0
 
-        _args = {
-            cls._section_name + "/" + k[skip:]: v
-            for k, v in cls._args.items()
-            if k[skip:]
-        }
-        _args_type = {
-            cls._section_name + "/" + k[skip:]: v
-            for k, v in cls._args_type.items()
-            if k[skip:]
-        }
-        _args_desc = {
-            cls._section_name + "/" + k[skip:]: v
-            for k, v in cls._args_desc.items()
-            if k[skip:]
-        }
+        _args = {cls._section_name + "/" + k[skip:]: v for k, v in cls._args.items() if k[skip:]}
+        _args_type = {cls._section_name + "/" + k[skip:]: v for k, v in cls._args_type.items() if k[skip:]}
+        _args_desc = {cls._section_name + "/" + k[skip:]: v for k, v in cls._args_desc.items() if k[skip:]}
 
         return _args, _args_type, _args_desc
 
     @classmethod
-    def _update_task_args(cls):
+    def _update_task_args(cls) -> None:
         if running_remotely() or not cls._current_task or not cls._args:
             return
         param_val, param_types, param_desc = cls.args()
@@ -82,7 +75,7 @@ class PatchClick:
         )
 
     @staticmethod
-    def _command_init(original_fn, self, *args, **kwargs):
+    def _command_init(original_fn: Callable, self: Any, *args: Any, **kwargs: Any) -> Any:
         if isinstance(self, (Command, Group)) and "name" in kwargs:
             if isinstance(self, Command):
                 PatchClick._num_commands += 1
@@ -104,24 +97,18 @@ class PatchClick:
                     ):
                         continue
                     # store default value
-                    PatchClick._args[name + "/" + option.name] = str(
-                        option.default or ""
-                    )
+                    PatchClick._args[name + "/" + option.name] = str(option.default or "")
                     # store value type
                     if option.type is not None:
-                        PatchClick._args_type[name + "/" + option.name] = str(
-                            option.type
-                        )
+                        PatchClick._args_type[name + "/" + option.name] = str(option.type)
                     # store value help
                     if getattr(option, "help", None):
-                        PatchClick._args_desc[name + "/" + option.name] = str(
-                            option.help
-                        )
+                        PatchClick._args_desc[name + "/" + option.name] = str(option.help)
 
         return original_fn(self, *args, **kwargs)
 
     @staticmethod
-    def _parse_args(original_fn, self, *args, **kwargs):
+    def _parse_args(original_fn: Callable, self: Any, *args: Any, **kwargs: Any) -> Any:
         if running_remotely() and isinstance(self, Command) and isinstance(self, Group):
             command = PatchClick._load_task_params()
             if command:
@@ -139,17 +126,11 @@ class PatchClick:
             if running_remotely():
                 PatchClick._load_task_params()
                 for p in self.params:
-                    name = (
-                        "{}/{}".format(self.name, p.name)
-                        if PatchClick._num_commands > 1
-                        else p.name
-                    )
+                    name = "{}/{}".format(self.name, p.name) if PatchClick._num_commands > 1 else p.name
                     value = PatchClick.__remote_task_params_dict.get(name)
                     ctx.params[p.name] = p.process_value(
                         ctx,
-                        cast_str_to_bool(value, strip=True)
-                        if isinstance(p.type, BoolParamType)
-                        else value,
+                        cast_str_to_bool(value, strip=True) if isinstance(p.type, BoolParamType) else value,
                     )
             else:
                 if not isinstance(self, Group):
@@ -162,13 +143,13 @@ class PatchClick:
         return ret
 
     @staticmethod
-    def _context_init(original_fn, self, *args, **kwargs):
+    def _context_init(original_fn: Callable, self: Any, *args: Any, **kwargs: Any) -> None:
         if running_remotely():
             kwargs["resilient_parsing"] = True
         return original_fn(self, *args, **kwargs)
 
     @staticmethod
-    def _load_task_params():
+    def _load_task_params() -> Optional[str]:
         if not PatchClick.__remote_task_params:
             from clearml import Task
 
@@ -178,9 +159,7 @@ class PatchClick:
             params_dict = t.get_parameters(backwards_compatibility=False)
             skip = len(PatchClick._section_name) + 1
             PatchClick.__remote_task_params_dict = {
-                k[skip:]: v
-                for k, v in params_dict.items()
-                if k.startswith(PatchClick._section_name + "/")
+                k[skip:]: v for k, v in params_dict.items() if k.startswith(PatchClick._section_name + "/")
             }
 
         params = PatchClick.__remote_task_params
@@ -189,8 +168,7 @@ class PatchClick:
         command = [
             p.name
             for p in params["Args"].values()
-            if p.type == PatchClick._command_type
-            and cast_str_to_bool(p.value, strip=True)
+            if p.type == PatchClick._command_type and cast_str_to_bool(p.value, strip=True)
         ]
         return command[0] if command else None
 

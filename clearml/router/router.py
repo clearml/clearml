@@ -1,5 +1,7 @@
-from typing import Optional, Callable, Dict, Union, List  # noqa
+from typing import Optional, Callable, Dict, Union, List, Any  # noqa
+
 from fastapi import Request, Response  # noqa
+
 from .proxy import HttpProxy
 
 
@@ -37,7 +39,7 @@ class HttpRouter:
 
     _instance = None
 
-    def __init__(self, task):
+    def __init__(self, task: Any) -> None:
         """
         Do not use directly. Use `Task.get_router` instead
         """
@@ -47,9 +49,13 @@ class HttpRouter:
         self._proxy_params = {"port": HttpProxy.DEFAULT_PORT, "access_log": True}
 
     def set_local_proxy_parameters(
-        self, incoming_port=None, default_target=None, log_level=None, access_log=True, enable_streaming=True
-    ):
-        # type: (Optional[int], Optional[str], Optional[str], bool) -> ()
+        self,
+        incoming_port: Optional[int] = None,
+        default_target: Optional[str] = None,
+        log_level: Optional[str] = None,
+        access_log: bool = True,
+        enable_streaming: bool = True,
+    ) -> None:
         """
         Set the parameters with which the local proxy is initialized
 
@@ -68,7 +74,7 @@ class HttpRouter:
         self._proxy_params["access_log"] = access_log
         self._proxy_params["enable_streaming"] = enable_streaming
 
-    def start_local_proxy(self):
+    def start_local_proxy(self) -> None:
         """
         Start the local proxy without deploying the router, i.e. requesting an external endpoint
         """
@@ -76,13 +82,13 @@ class HttpRouter:
 
     def create_local_route(
         self,
-        source,  # type: str
-        target,  # type: str
-        request_callback=None,  # type: Callable[Request, Dict]
-        response_callback=None,  # type: Callable[Response, Request, Dict]
-        endpoint_telemetry=True,  # type: Union[bool, Dict]
-        error_callback=None,  # type: Callable[Request, Exception, Dict]
-    ):
+        source: str,
+        target: str,
+        request_callback: Callable[[Request], Dict] = None,
+        response_callback: Callable[[Response, Request], Dict] = None,
+        endpoint_telemetry: Union[bool, Dict] = True,
+        error_callback: Callable[[Request, Exception], Dict] = None,
+    ) -> None:
         """
         Create a local route from a source to a target through a proxy. If no proxy instance
         exists, one is automatically created.
@@ -144,8 +150,7 @@ class HttpRouter:
             error_callback=error_callback,
         )
 
-    def remove_local_route(self, source):
-        # type: (str) -> ()
+    def remove_local_route(self, source: str) -> ():
         """
         Remove a local route. If endpoint telemetry is enabled for that route, disable it
 
@@ -154,8 +159,12 @@ class HttpRouter:
         if self._proxy:
             self._proxy.remove_route(source)
 
-    def deploy(self, wait=False, wait_interval_seconds=3.0, wait_timeout_seconds=90.0):
-        # type: (Optional[int], str, bool, float, float) -> Optional[Dict]
+    def deploy(
+        self,
+        wait: bool = False,
+        wait_interval_seconds: float = 3.0,
+        wait_timeout_seconds: float = 90.0,
+    ) -> Optional[Dict]:
         """
         Start the local HTTP proxy and request an external endpoint for an application
 
@@ -186,8 +195,11 @@ class HttpRouter:
             wait_timeout_seconds=wait_timeout_seconds,
         )
 
-    def wait_for_external_endpoint(self, wait_interval_seconds=3.0, wait_timeout_seconds=90.0):
-        # type: (float) -> Optional[Dict]
+    def wait_for_external_endpoint(
+        self,
+        wait_interval_seconds: float = 3.0,
+        wait_timeout_seconds: float = 90.0,
+    ) -> Optional[Dict]:
         """
         Wait for an external endpoint to be assigned
 
@@ -203,11 +215,12 @@ class HttpRouter:
             - protocol - the protocol used by the endpoint
         """
         return self._task.wait_for_external_endpoint(
-            protocol="http", wait_interval_seconds=wait_interval_seconds, wait_timeout_seconds=wait_timeout_seconds
+            protocol="http",
+            wait_interval_seconds=wait_interval_seconds,
+            wait_timeout_seconds=wait_timeout_seconds,
         )
 
-    def list_external_endpoints(self):
-        # type: () -> List[Dict]
+    def list_external_endpoints(self) -> List[Dict]:
         """
         List all external endpoints assigned
 

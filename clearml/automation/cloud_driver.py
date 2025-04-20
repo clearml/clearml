@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from os import environ
+from typing import List, Tuple, Any
 
 import attr
 
@@ -79,12 +80,12 @@ class CloudDriver(ABC):
     tags = attr.ib(default="")
     session = attr.ib(default=None)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         if self.session is None:
             self.session = Session()
 
     @abstractmethod
-    def spin_up_worker(self, resource, worker_prefix, queue_name, task_id):
+    def spin_up_worker(self, resource: dict, worker_prefix: str, queue_name: str, task_id: str) -> None:
         """Creates a new worker for clearml.
 
         First, create an instance in the cloud and install some required packages.
@@ -99,29 +100,35 @@ class CloudDriver(ABC):
         """
 
     @abstractmethod
-    def spin_down_worker(self, instance_id):
+    def spin_down_worker(self, instance_id: str) -> None:
         """Destroys the cloud instance.
 
         :param str instance_id: Cloud instance ID to be destroyed (currently, only AWS EC2 is supported)
         """
 
     @abstractmethod
-    def kind(self):
+    def kind(self) -> str:
         """Return driver kind (e.g. 'AWS')"""
 
     @abstractmethod
-    def instance_id_command(self):
+    def instance_id_command(self) -> str:
         """Return a shell command to get instance ID"""
 
     @abstractmethod
-    def instance_type_key(self):
+    def instance_type_key(self) -> str:
         """Return key in configuration for instance type"""
 
-    def console_log(self, instance_id):
+    def console_log(self, instance_id: str) -> str:
         """Return log for instance"""
         return ""
 
-    def gen_user_data(self, worker_prefix, queue_name, task_id, cpu_only=False):
+    def gen_user_data(
+        self,
+        worker_prefix: str,
+        queue_name: str,
+        task_id: str,
+        cpu_only: bool = False,
+    ) -> str:
         return bash_script_template.format(
             queue=queue_name,
             worker_prefix=worker_prefix,
@@ -138,7 +145,7 @@ class CloudDriver(ABC):
             instance_id_command=self.instance_id_command(),
         )
 
-    def clearml_conf(self):
+    def clearml_conf(self) -> str:
         # TODO: This need to be documented somewhere
         git_user = environ.get(env_git_user) or self.git_user or ""
         git_pass = environ.get(env_git_pass) or self.git_pass or ""
@@ -149,13 +156,13 @@ class CloudDriver(ABC):
             extra_clearml_conf=self.extra_clearml_conf,
         )
 
-    def driver_bash_extra(self, task_id):
+    def driver_bash_extra(self, task_id: str) -> str:
         if not task_id:
             return ""
         return "python -m clearml_agent --config-file ~/clearml.conf execute --id {}".format(task_id)
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config: dict) -> "CloudDriver":
         session = Session()
         hyper_params, configurations = config["hyper_params"], config["configurations"]
         opts = {
@@ -175,17 +182,17 @@ class CloudDriver(ABC):
         }
         return cls(**opts)
 
-    def set_scaler(self, scaler):
+    def set_scaler(self, scaler: Any) -> None:
         self.scaler = scaler
 
     @property
-    def logger(self):
+    def logger(self) -> logging.Logger:
         if self.scaler:
             return self.scaler.logger
         return logging.getLogger("AWSDriver")
 
 
-def parse_tags(s):
+def parse_tags(s: str) -> List[Tuple[str, str]]:
     """
     >>> parse_tags('k1=v1, k2=v2')
     [('k1', 'v1'), ('k2', 'v2')]

@@ -1,22 +1,32 @@
 from collections import defaultdict
-from typing import Optional, Any, Sequence, Callable, Mapping, Union, Dict, Iterable, Generator
+from typing import (
+    Optional,
+    Sequence,
+    Callable,
+    Mapping,
+    Union,
+    Dict,
+    Iterable,
+    Generator,
+    Tuple,
+    Any,
+)
 
 from ...backend_api import Session
 from ...backend_api.services import tasks
 
 
 class HyperParams(object):
-    def __init__(self, task):
+    def __init__(self, task: Any) -> None:
         self.task = task
 
     def get_hyper_params(
         self,
-        sections=None,  # type: Optional[Sequence[str]]
-        selector=None,  # type: Optional[Callable[[dict], bool]]
-        projector=None,  # type: Optional[Callable[[dict], Any]]
-        return_obj=False  # type: Optional[bool]
-    ):
-        # type: (...) -> Dict[str, Dict[Union[dict, Any]]]
+        sections: Optional[Sequence[str]] = None,
+        selector: Optional[Callable[[dict], bool]] = None,
+        projector: Optional[Callable[[dict], Any]] = None,
+        return_obj: Optional[bool] = False,
+    ) -> Dict[str, Union[Dict, Any]]:
         """
         Get hyper-parameters for this task.
         Returns a dictionary mapping user property name to user property details dict.
@@ -38,9 +48,7 @@ class HyperParams(object):
                     for item in entry.get("hyperparams", []):
                         # noinspection PyBroadException
                         try:
-                            if (sections and item.get("section") not in sections) or (
-                                selector and not selector(item)
-                            ):
+                            if (sections and item.get("section") not in sections) or (selector and not selector(item)):
                                 continue
                             if return_obj:
                                 item = tasks.ParamsItem()
@@ -53,12 +61,14 @@ class HyperParams(object):
 
     def edit_hyper_params(
         self,
-        iterables,  # type: Union[Mapping[str, Union[str, dict, None]], Iterable[dict, tasks.ParamsItem]]
-        replace=None,  # type: Optional[str]
-        default_section=None,  # type: Optional[str]
-        force_section=None  # type: Optional[str]
-    ):
-        # type: (...) -> bool
+        iterables: Union[
+            Mapping[str, Union[str, Dict, None]],
+            Iterable[Union[Dict, tasks.ParamsItem]],
+        ],
+        replace: Optional[str] = None,
+        default_section: Optional[str] = None,
+        force_section: Optional[str] = None,
+    ) -> bool:
         """
         Set hyper-parameters for this task.
         :param iterables: Hyper parameter iterables, each can be:
@@ -83,14 +93,15 @@ class HyperParams(object):
         if not tasks.ReplaceHyperparamsEnum.has_value(replace):
             replace = None
 
-        def make_item(value, name=None):
+        def make_item(value: Union[tasks.ParamsItem, dict, tuple], name: Optional[str] = None) -> tasks.ParamsItem:
             if isinstance(value, tasks.ParamsItem):
                 a_item = value
             elif isinstance(value, dict):
                 a_item = tasks.ParamsItem(**{k: None if v is None else str(v) for k, v in value.items()})
-            elif isinstance(value, tuple) and len(value) == 2 and isinstance(value[1], dict) and 'value' in value[1]:
+            elif isinstance(value, tuple) and len(value) == 2 and isinstance(value[1], dict) and "value" in value[1]:
                 a_item = tasks.ParamsItem(
-                    name=str(value[0]), **{k: None if v is None else str(v) for k, v in value[1].items()})
+                    name=str(value[0]), **{k: None if v is None else str(v) for k, v in value[1].items()}
+                )
             elif isinstance(value, tuple):
                 a_item = tasks.ParamsItem(name=str(value[0]), value=str(value[1]))
             else:
@@ -138,8 +149,9 @@ class HyperParams(object):
 
         return False
 
-    def delete_hyper_params(self, *iterables):
-        # type: (Iterable[Union[dict, Iterable[str, str], tasks.ParamKey, tasks.ParamsItem]]) -> bool
+    def delete_hyper_params(
+        self, *iterables: Iterable[Union[dict, Iterable[str], tasks.ParamKey, tasks.ParamsItem]]
+    ) -> bool:
         """
         Delete hyper-parameters for this task.
         :param iterables: Hyper parameter key iterables. Each an iterable whose possible values each represent
@@ -151,7 +163,7 @@ class HyperParams(object):
         if not Session.check_min_api_version("2.9"):
             raise ValueError("Not supported by server")
 
-        def get_key(value):
+        def get_key(value: Union[dict, Iterable[str], tasks.ParamKey, tasks.ParamsItem]) -> Tuple[str, str]:
             if isinstance(value, dict):
                 key = (value.get("section"), value.get("name"))
             elif isinstance(value, (tasks.ParamKey, tasks.ParamsItem)):
@@ -176,9 +188,8 @@ class HyperParams(object):
 
         return False
 
-    def _escape_unsafe_values(self, *values):
-        # type: (str) -> Generator[str]
-        """ Escape unsafe values (name, section name) for API version 2.10 and below """
+    def _escape_unsafe_values(self, *values: str) -> Generator[str, None, None]:
+        """Escape unsafe values (name, section name) for API version 2.10 and below"""
         for value in values:
             if value not in UNSAFE_NAMES_2_10:
                 yield value
