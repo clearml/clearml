@@ -2467,12 +2467,18 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         Force the adding of a package to the requirements list. If ``package_version`` is None, use the
         installed package version, if found.
-        Example: Task.add_requirements('tensorflow', '2.4.0')
-        Example: Task.add_requirements('tensorflow', '>=2.4')
-        Example: Task.add_requirements('tensorflow') -> use the installed tensorflow version
-        Example: Task.add_requirements('tensorflow', '') -> no version limit
-        Alternatively, you can add all requirements from a file.
-        Example: Task.add_requirements('/path/to/your/project/requirements.txt')
+
+        Example: ``Task.add_requirements('tensorflow', '2.4.0')``
+
+        Example: ``Task.add_requirements('tensorflow', '>=2.4')``
+
+        Example: ``Task.add_requirements('tensorflow')`` -> use the installed tensorflow version
+
+        Example: ``Task.add_requirements('tensorflow', '')`` -> no version limit
+
+        Alternatively, you can add all requirements from a file:
+
+        Example: ``Task.add_requirements('/path/to/your/project/requirements.txt')``
 
         .. note::
             Task.add_requirements does not directly modify the task's requirements. Instead, it improves the accuracy

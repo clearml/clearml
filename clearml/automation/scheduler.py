@@ -580,23 +580,58 @@ class TaskScheduler(BaseScheduler):
 
         Examples:
 
-        Launch every 15 minutes
+        Launch every 15 minutes:
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', minute=15)
-        Launch every 1 hour
+
+        Launch every 1 hour:
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', hour=1)
-        Launch every 1 hour at hour:30 minutes (i.e. 1:30, 2:30 etc.)
+
+        Launch every 1 hour at hour:30 minutes (i.e. 1:30, 2:30 etc.):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', hour=1, minute=30)
-        Launch every day at 22:30 (10:30 pm)
+
+        Launch every day at 22:30 (10:30 pm):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', minute=30, hour=22, day=1)
-        Launch every other day at 7:30 (7:30 am)
+
+        Launch every other day at 7:30 (7:30 am):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', minute=30, hour=7, day=2)
-        Launch every Saturday at 8:30am (notice `day=0`)
+
+        Launch every Saturday at 8:30am (notice `day=0`):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', minute=30, hour=8, day=0, weekdays=['saturday'])
-        Launch every 2 hours on the weekends Saturday/Sunday (notice `day` is not passed)
+
+        Launch every 2 hours on the weekends Saturday/Sunday (notice `day` is not passed):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', hour=2, weekdays=['saturday', 'sunday'])
-        Launch once a month at the 5th of each month
+
+        Launch once a month at the 5th of each month:
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', month=1, day=5)
-        Launch once a year on March 4th
+
+        Launch once a year on March 4th:
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', year=1, month=3, day=4)
 
         :param schedule_task_id: ID of Task to be cloned and scheduled for execution

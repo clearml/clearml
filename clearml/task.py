@@ -448,19 +448,18 @@ class Task(_Task):
           - ``True`` - Automatically create resource monitoring plots. (default)
           - ``False`` - Do not automatically create.
           - Class Type - Create ResourceMonitor object of the specified class type.
-          - dict - Dictionary of kwargs to be passed to the ResourceMonitor instance.
-              The keys can be:
+          - dict - Dictionary of kwargs to be passed to the ResourceMonitor instance. The keys can be:
               - `report_start_sec` OR `first_report_sec` OR `seconds_from_start` - Maximum number of seconds
-                  to wait for scalar/plot reporting before defaulting
-                  to machine statistics reporting based on seconds from experiment start time
+                to wait for scalar/plot reporting before defaulting
+                to machine statistics reporting based on seconds from experiment start time
               - `wait_for_first_iteration_to_start_sec` - Set the initial time (seconds) to wait for iteration
-                   reporting to be used as x-axis for the resource monitoring,
-                   if timeout exceeds then reverts to `seconds_from_start`
+                reporting to be used as x-axis for the resource monitoring,
+                if timeout exceeds then reverts to `seconds_from_start`
               - `max_wait_for_first_iteration_to_start_sec` - Set the maximum time (seconds) to allow the resource
-                  monitoring to revert back to iteration reporting x-axis after starting to report `seconds_from_start`
+                monitoring to revert back to iteration reporting x-axis after starting to report `seconds_from_start`
               - `report_mem_used_per_process` OR `report_global_mem_used` - Compatibility feature,
-                  report memory usage for the entire machine
-                  default (false), report only on the running process and its sub-processes
+                report memory usage for the entire machine.
+                Default (false), report only on the running process and its sub-processes
 
         :param auto_connect_streams: Control the automatic logging of stdout and stderr.
             The values are:
@@ -468,16 +467,16 @@ class Task(_Task):
           - ``True`` - Automatically connect (default)
           -  ``False`` - Do not automatically connect
           - A dictionary - In addition to a boolean, you can use a dictionary for fined grained control of stdout and
-              stderr. The dictionary keys are 'stdout' , 'stderr' and 'logging', the values are booleans.
-              Keys missing from the dictionary default to ``False``, and an empty dictionary defaults to ``False``.
-              Notice, the default behaviour is logging stdout/stderr. The `logging` module is logged as a by product
-              of the stderr logging
+            stderr. The dictionary keys are 'stdout' , 'stderr' and 'logging', the values are booleans.
+            Keys missing from the dictionary default to ``False``, and an empty dictionary defaults to ``False``.
+            Notice, the default behaviour is logging stdout/stderr. The `logging` module is logged as a by product
+            of the stderr logging
 
-              For example:
+            For example:
 
-              .. code-block:: py
+            .. code-block:: py
 
-                 auto_connect_streams={'stdout': True, 'stderr': True, 'logging': False}
+               auto_connect_streams={'stdout': True, 'stderr': True, 'logging': False}
 
         :param deferred_init: (default: False) Wait for Task to be fully initialized (regular behaviour).
             ** BETA feature! use with care **.
@@ -488,8 +487,8 @@ class Task(_Task):
             Default behaviour can be controlled with: ``CLEARML_DEFERRED_TASK_INIT=1``. Notes:
 
           - Any access to the returned proxy `Task` object will essentially wait for the `Task.init` to be completed.
-              For example: `print(task.name)` will wait for `Task.init` to complete in the
-              background and then return the `name` property of the task original object
+            For example: `print(task.name)` will wait for `Task.init` to complete in the
+            background and then return the `name` property of the task original object
           - Before `Task.init` completes in the background, auto-magic logging (console/metric) might be missed
           - If running via an agent, this argument is ignored, and Task init is called synchronously (default)
 
@@ -954,10 +953,10 @@ class Task(_Task):
         :return: If wait is False, this method will return None.
             If no endpoint could be found while waiting, this method returns None.
             Otherwise, it returns a dictionary containing the following values:
-            - endpoint - raw endpoint. One might need to authenticate in order to use this endpoint
-            - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
-            - port - the port exposed by the application
-            - protocol - the protocol used by the endpoint
+          - endpoint - raw endpoint. One might need to authenticate in order to use this endpoint
+          - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
+          - port - the port exposed by the application
+          - protocol - the protocol used by the endpoint
         """
         Session.verify_feature_set("advanced")
         if protocol not in self._external_endpoint_port_map.keys():
@@ -1059,10 +1058,10 @@ class Task(_Task):
 
         :return: If no endpoint could be found while waiting, this method returns None.
             If a protocol has been specified, it returns a dictionary containing the following values:
-            - endpoint - raw endpoint. One might need to authenticate in order to use this endpoint
-            - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
-            - port - the port exposed by the application
-            - protocol - the protocol used by the endpoint
+          - endpoint - raw endpoint. One might need to authenticate in order to use this endpoint
+          - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
+          - port - the port exposed by the application
+          - protocol - the protocol used by the endpoint
             If not protocol is specified, it returns a list of dictionaries containing the values above,
             for each protocol requested and waited
         """
