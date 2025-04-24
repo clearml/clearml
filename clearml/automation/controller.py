@@ -1998,7 +1998,7 @@ class PipelineController(object):
         if self._thread:
             return True
 
-        self._prepare_pipeline(step_task_completed_callback, step_task_created_callback)
+        self._prepare_pipeline(step_task_created_callback, step_task_completed_callback)
         self._thread = Thread(target=self._daemon)
         self._thread.daemon = True
         self._thread.start()
