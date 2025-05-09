@@ -154,10 +154,14 @@ class Session(TokenManager):
         self.__class__._sessions_weakrefs.append(weakref.ref(self))
 
         self._verbose = verbose if verbose is not None else ENV_VERBOSE.get()
-        self._logger = logger
-        if self._verbose and not self._logger:
-            level = resolve_logging_level(ENV_VERBOSE.get(converter=str))
-            self._logger = get_logger(level=level, stream=sys.stderr if level is logging.DEBUG else None)
+        level = (
+            resolve_logging_level(ENV_VERBOSE.get(converter=str))
+            if self._verbose
+            else logging.WARNING
+        )
+        self._logger = logger or get_logger(
+            level=level, stream=sys.stderr if level is logging.DEBUG else None
+        )
         self.__worker = worker or self.get_worker_host_name()
         self.client = ", ".join("{}-{}".format(*x) for x in self._client)
 
