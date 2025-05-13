@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI Commands Verification Test
+CLI Commands Verification Test (Parameterized version)
 
 This test verifies that all CLI commands work correctly when the package is 
 built and installed using pyproject.toml. It's part of the migration strategy 
@@ -11,6 +11,8 @@ The test:
 2. Builds the package with pyproject.toml
 3. Installs the built wheel in the virtual environment
 4. Runs each CLI command with --help to verify they're properly installed and working
+
+This version uses pytest's parametrize to run each command as a separate test.
 """
 
 import pytest
@@ -41,7 +43,7 @@ def run_command(cmd, cwd=None, exit_on_error=False):
         raise
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def cli_environment():
     """Create a temporary environment for testing CLI commands."""
     # CLI commands to verify
@@ -79,6 +81,20 @@ def cli_environment():
     subprocess.check_call([str(python_exe), '-m', 'pip', 'install', '--upgrade', 'pip'])
     subprocess.check_call([str(python_exe), '-m', 'pip', 'install', 'build'])
     
+    # Build with pyproject.toml
+    print("\n=== Building with pyproject.toml ===")
+    run_command([str(python_exe), "-m", "build"], 
+                cwd=project_root, exit_on_error=True)
+    
+    # Find the wheel
+    wheel_file = next(Path('dist').glob('*.whl'))
+    print(f"Found wheel: {wheel_file}")
+    
+    # Install the wheel
+    print("\n=== Installing wheel in isolated environment ===")
+    run_command([str(python_exe), "-m", "pip", "install", str(wheel_file)],
+                exit_on_error=True)
+    
     # Create a structure to return the environment variables
     env = {
         'temp_dir': temp_dir,
@@ -105,41 +121,30 @@ def cli_environment():
                 path.unlink()
 
 
-def test_cli_commands(cli_environment):
-    """Test that all CLI commands work correctly with pyproject.toml build."""
+@pytest.mark.parametrize("cmd_name", [
+    "clearml-init",
+    "clearml-data",
+    "clearml-task",
+    "clearml-param-search",
+    "clearml-debug"
+])
+def test_cli_command(cli_environment, cmd_name):
+    """Test each CLI command individually."""
     env = cli_environment
     
-    # Build with pyproject.toml
-    print("\n=== Building with pyproject.toml ===")
-    run_command([str(env['python_exe']), "-m", "build"], 
-                cwd=env['project_root'], exit_on_error=True)
+    # Get the path to the command in the virtual environment
+    if sys.platform == 'win32':
+        cmd_path = env['venv_path'] / 'Scripts' / f"{cmd_name}.exe"
+    else:
+        cmd_path = env['venv_path'] / 'bin' / cmd_name
     
-    # Find the wheel
-    wheel_file = next(Path('dist').glob('*.whl'))
-    print(f"Found wheel: {wheel_file}")
+    # Check if the command exists
+    assert cmd_path.exists(), f"Command not found: {cmd_name}"
+            
+    print(f"Verifying command: {cmd_name}")
+    # Run the command with --help and verify it succeeds
+    output = run_command([str(cmd_path), "--help"], exit_on_error=True)
+    print(f"✅ Command {cmd_name} verified successfully")
     
-    # Install the wheel
-    print("\n=== Installing wheel in isolated environment ===")
-    run_command([str(env['python_exe']), "-m", "pip", "install", str(wheel_file)],
-                exit_on_error=True)
-    
-    # Verify CLI commands
-    print("\n=== Verifying CLI commands ===")
-    
-    for cmd in env['cli_commands']:
-        # Get the path to the command in the virtual environment
-        if sys.platform == 'win32':
-            cmd_path = env['venv_path'] / 'Scripts' / f"{cmd}.exe"
-        else:
-            cmd_path = env['venv_path'] / 'bin' / cmd
-        
-        # Check if the command exists
-        assert cmd_path.exists(), f"Command not found: {cmd}"
-                
-        print(f"Verifying command: {cmd}")
-        # Run the command with --help and verify it succeeds
-        output = run_command([str(cmd_path), "--help"], exit_on_error=True)
-        print(f"✅ Command {cmd} verified successfully")
-        
-        # Optionally, you could add assertions about the output
-        assert "usage:" in output, f"Command {cmd} help output doesn't look right"
+    # Assertions about the output
+    assert "usage:" in output, f"Command {cmd_name} help output doesn't look right"
