@@ -2094,7 +2094,7 @@ class Dataset(object):
             exact_match_regex_flag=False,
             _allow_extra_fields_=True,
         )
-        project_ids = {d.project for d in datasets}
+        project_ids = {d.project for d in datasets if d.project is not None}
         # noinspection PyProtectedMember
         project_id_lookup = Task._get_project_names(list(project_ids))
         return [
@@ -2106,7 +2106,7 @@ class Dataset(object):
                 "tags": d.tags,
                 "version": d.runtime.get("version"),
             }
-            for d in datasets
+            for d in datasets if d.project is not None
         ]
 
     def _add_files(
