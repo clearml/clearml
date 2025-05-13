@@ -79,7 +79,7 @@ clearml-param-search = "clearml.cli.hpo.__main__:main"
 clearml-task = "clearml.cli.task.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/clearml/clearml"
+Homepage = "https://clear.ml/"
 Repository = "https://github.com/clearml/clearml.git"
 Issues = "https://github.com/clearml/clearml/issues"
 
