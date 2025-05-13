@@ -1,0 +1,101 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clearml"
+dynamic = ["version"]
+requires-python = ">=3.6,<4.0"
+description = "ClearML - Auto-Magical Experiment Manager, Version Control, and MLOps for AI"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+authors = [
+    { name = "ClearML", email = "support@clear.ml" },
+]
+keywords = [
+    "clearml",
+    "experiment-manager",
+    "machine-learning",
+    "deep-learning",
+    "version-control",
+    "monitoring",
+    "logging",
+    "development",
+    "mlops",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Version Control",
+    "Topic :: System :: Logging",
+    "Topic :: System :: Monitoring",
+]
+dependencies = [
+    "attrs>=18.0",
+    "furl>=2.0.0",
+    "jsonschema>=2.6.0",
+    "numpy>=1.10",
+    "pathlib2>=2.3.0",
+    "Pillow>=10.3.0 ; python_version >= '3.8'",
+    "Pillow>=7.0.0 ; python_version < '3.8'",
+    "psutil>=3.4.2",
+    "pyjwt>=2.4.0,<2.11.0",
+    "pyparsing>=2.0.3",
+    "python-dateutil>=2.6.1",
+    "PyYAML>=3.12",
+    "referencing<0.40 ; python_version >= '3.8'",
+    "requests>=2.20.0 ; python_version < '3.8'",
+    "requests>=2.32.0 ; python_version >= '3.8'",
+    "six>=1.16.0",
+    "urllib3>=1.21.1",
+]
+
+[project.optional-dependencies]
+azure = ["azure-storage-blob>=12.0.0"]
+gs = ["google-cloud-storage>=1.13.2"]
+router = ["fastapi>=0.115.2", "httpx>=0.27.2", "uvicorn>=0.31.1"]
+s3 = ["boto3>=1.9"]
+
+[project.scripts]
+clearml-data = "clearml.cli.data.__main__:main"
+clearml-debug = "clearml.cli.debug.__main__:main"
+clearml-init = "clearml.cli.config.__main__:main"
+clearml-param-search = "clearml.cli.hpo.__main__:main"
+clearml-task = "clearml.cli.task.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/clearml/clearml"
+Repository = "https://github.com/clearml/clearml.git"
+Issues = "https://github.com/clearml/clearml/issues"
+
+[tool.hatch.version]
+path = "clearml/version.py"
+
+[tool.hatch.build]
+packages = ["clearml"]
+exclude = ["contrib", "docs", "./data", "examples", "tests"]
+
+[tool.hatch.build.targets.wheel]
+universal = true
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "README.md",
+    "LICENSE",
+]
+
