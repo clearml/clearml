@@ -89,7 +89,7 @@ class Config(object):
             print("Config env:%s" % str(self._env))
 
         if not self._env:
-            raise ValueError("Missing environment in either init of environment variable")
+            raise ValueError("Missing environment in either init or environment variable")
         if self._env not in get_options(Environment):
             raise ValueError("Invalid environment %s" % env)
         if relative_to is not None:
