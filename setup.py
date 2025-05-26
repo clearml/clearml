@@ -92,7 +92,11 @@ setup(
         ]
     },
     package_data={
-        'clearml': ['config/default/*.conf', 'backend_api/config/default/*.conf']
+        "clearml": [
+            "config/default/*.conf",
+            "backend_api/config/default/*.conf",
+            "py.typed",
+        ]
     },
     include_package_data=True,
     # To provide executable scripts, use entry points in preference to the
