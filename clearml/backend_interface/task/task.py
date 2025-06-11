@@ -2539,6 +2539,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :param requirements_file: (Optional) Pass a requirements.txt file to specify the required packages (instead of
             ``pip freeze`` or automatic analysis). This will overwrite any existing requirement listing.
         """
+        if not running_remotely() and hasattr(cls, "current_task") and cls.current_task():
+            get_logger("task").warning(
+                "force_requirements_env_freeze ignored, Task.force_requirements_env_freeze() must be called before Task.init()"
+            )
         cls._force_use_pip_freeze = requirements_file if requirements_file else bool(force)
 
     @classmethod
@@ -2551,6 +2555,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         :param force: Set force storing the main python file as a single standalone script
         """
+        if not running_remotely() and hasattr(cls, "current_task") and cls.current_task():
+            get_logger("task").warning(
+                "force_store_standalone_script ignored, Task.force_store_standalone_script() must be called before Task.init()"
+            )
         cls._force_store_standalone_script = bool(force)
 
     def _set_random_seed_used(self, random_seed: Optional[int]) -> ():
