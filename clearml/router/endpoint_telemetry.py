@@ -2,6 +2,7 @@ import copy
 import time
 import uuid
 from threading import Thread
+from typing import Optional, Dict, Union, List
 
 from ..task import Task
 from ..utilities.resource_monitor import ResourceMonitor
@@ -26,24 +27,24 @@ class EndpointTelemetry:
 
     def __init__(
         self,
-        endpoint_name="endpoint",
-        model_name="model",
-        model=None,
-        model_url=None,
-        model_source=None,
-        model_version=None,
-        app_id=None,
-        app_instance=None,
-        tags=None,
-        system_tags=None,
-        container_id=None,
-        input_size=None,
-        input_type="str",
-        report_statistics=True,
-        endpoint_url=None,
-        preprocess_artifact=None,
-        force_register=False,
-    ):
+        endpoint_name: str = "endpoint",
+        model_name: str = "model",
+        model: Optional[str] = None,
+        model_url: Optional[str] = None,
+        model_source: Optional[str] = None,
+        model_version: Optional[str] = None,
+        app_id: Optional[str] = None,
+        app_instance: Optional[str] = None,
+        tags: Optional[dict] = None,
+        system_tags: Optional[dict] = None,
+        container_id: Optional[str] = None,
+        input_size: Optional[str] = None,
+        input_type: str = "str",
+        report_statistics: bool = True,
+        endpoint_url: Optional[str] = None,
+        preprocess_artifact: Optional[str] = None,
+        force_register: bool = False,
+    ) -> None:
         self.report_window = 30
         self._previous_readouts = {}
         self._previous_readouts_ts = time.time()
@@ -87,24 +88,24 @@ class EndpointTelemetry:
         if report_statistics:
             Thread(target=self.container_status_report_daemon, daemon=True).start()
 
-    def stop(self):
+    def stop(self) -> None:
         self._stop_container_status_report_daemon = True
 
     def update(
         self,
-        endpoint_name=None,
-        model_name=None,
-        model=None,
-        model_url=None,
-        model_source=None,
-        model_version=None,
-        tags=None,
-        system_tags=None,
-        input_size=None,
-        input_type=None,
-        endpoint_url=None,
-        preprocess_artifact=None,
-    ):
+        endpoint_name: str = None,
+        model_name: str = None,
+        model: str = None,
+        model_url: str = None,
+        model_source: str = None,
+        model_version: str = None,
+        tags: dict = None,
+        system_tags: dict = None,
+        input_size: str = None,
+        input_type: str = None,
+        endpoint_url: str = None,
+        preprocess_artifact: str = None,
+    ) -> None:
         update_dict = {}
         if endpoint_name is not None:
             update_dict["endpoint_name"] = endpoint_name
@@ -138,12 +139,12 @@ class EndpointTelemetry:
                 references_to_add.pop(reference["type"], None)
         self.container_info["reference"].extend(list(references_to_add.values()))
 
-    def register_container(self):
+    def register_container(self) -> None:
         result = self.session.send_request("serving", "register_container", json=self.container_info)
         if result.status_code != 200:
             print("Failed registering container: {}".format(result.json()))
 
-    def wait_for_endpoint_url(self):
+    def wait_for_endpoint_url(self) -> None:
         while not self.container_info.get("endpoint_url"):
             Task.current_task().reload()
             endpoint = Task.current_task()._get_runtime_properties().get("endpoint")
@@ -153,8 +154,8 @@ class EndpointTelemetry:
             else:
                 time.sleep(1)
 
-    def get_machine_stats(self):
-        def create_general_key(old_key):
+    def get_machine_stats(self) -> Dict[str, Union[float, List[float]]]:
+        def create_general_key(old_key: str) -> str:
             return "{}_*".format(old_key)
 
         stats = self.resource_monitor._machine_stats()
@@ -197,12 +198,12 @@ class EndpointTelemetry:
                     preprocessed_stats.setdefault(general_key, []).append(v)
         return preprocessed_stats
 
-    def container_status_report_daemon(self):
+    def container_status_report_daemon(self) -> None:
         while not self._stop_container_status_report_daemon:
             self.container_status_report()
             time.sleep(self.report_window)
 
-    def container_status_report(self):
+    def container_status_report(self) -> None:
         self.wait_for_endpoint_url()
         status_report = {**self.container_info}
         status_report["uptime_sec"] = int(time.time() - self.uptime_timestamp)
@@ -211,7 +212,10 @@ class EndpointTelemetry:
         status_report["latency_ms"] = (
             0 if (self.requests_num_window == 0) else (self.latency_sum_window / self.requests_num_window)
         )
-        status_report["machine_stats"] = self.get_machine_stats()
+        try:
+            status_report["machine_stats"] = self.get_machine_stats()
+        except Exception:
+            pass
         self.requests_num_prev_window = self.requests_num_window
         self.requests_num_window = 0
         self.latency_sum_window = 0
@@ -220,17 +224,17 @@ class EndpointTelemetry:
         if result.status_code != 200:
             print("Failed sending status report: {}".format(result.json()))
 
-    def update_last_request_time(self):
+    def update_last_request_time(self) -> None:
         self.last_request_time = time.time()
 
-    def update_statistics(self):
+    def update_statistics(self) -> None:
         self.requests_num += 1
         self.requests_num_window += 1
         latency = (time.time() - self.last_request_time) * 1000
         self.latency_sum_window += latency
 
-    def on_request(self):
+    def on_request(self) -> None:
         self.update_last_request_time()
 
-    def on_response(self):
+    def on_response(self) -> None:
         self.update_statistics()

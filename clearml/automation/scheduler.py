@@ -3,14 +3,18 @@ import logging
 from datetime import datetime
 from threading import Thread, enumerate as enumerate_threads
 from time import sleep, time
-from typing import List, Union, Optional, Callable, Sequence, Dict
+from typing import List, Union, Optional, Callable, Sequence, Dict, Any
 
 from attr import attrs, attrib
 from dateutil.relativedelta import relativedelta
 
 from .controller import PipelineController
 from .job import ClearmlJob
-from ..backend_interface.util import datetime_from_isoformat, datetime_to_isoformat, mutually_exclusive
+from ..backend_interface.util import (
+    datetime_from_isoformat,
+    datetime_to_isoformat,
+    mutually_exclusive,
+)
 from ..task import Task
 
 
@@ -27,19 +31,17 @@ class BaseScheduleJob(object):
     clone_task = attrib(type=bool, default=True)
     _executed_instances = attrib(type=list, default=None)
 
-    def to_dict(self, full=False):
+    def to_dict(self, full: bool = False) -> Dict[str, Any]:
         return {k: v for k, v in self.__dict__.items() if not callable(v) and (full or not str(k).startswith("_"))}
 
-    def update(self, a_job):
-        # type: (Union[Dict, BaseScheduleJob]) -> BaseScheduleJob
+    def update(self, a_job: Union[Dict, "BaseScheduleJob"]) -> "BaseScheduleJob":
         converters = {a.name: a.converter for a in getattr(self, "__attrs_attrs__", [])}
         for k, v in (a_job.to_dict(full=True) if not isinstance(a_job, dict) else a_job).items():
             if v is not None and not callable(getattr(self, k, v)):
                 setattr(self, k, converters[k](v) if converters.get(k) else v)
         return self
 
-    def verify(self):
-        # type: () -> None
+    def verify(self) -> None:
         if self.base_function and not self.name:
             raise ValueError("Entry 'name' must be supplied for function scheduling")
         if self.base_task_id and not self.queue:
@@ -47,19 +49,17 @@ class BaseScheduleJob(object):
         if not self.base_function and not self.base_task_id:
             raise ValueError("Either schedule function or task-id must be provided")
 
-    def get_last_executed_task_id(self):
-        # type: () -> Optional[str]
+    def get_last_executed_task_id(self) -> Optional[str]:
         return self._executed_instances[-1] if self._executed_instances else None
 
-    def run(self, task_id):
-        # type: (Optional[str]) -> None
+    def run(self, task_id: Optional[str]) -> None:
         if task_id:
             # make sure we have a new instance
             if not self._executed_instances:
                 self._executed_instances = []
             self._executed_instances.append(str(task_id))
 
-    def get_resolved_target_project(self):
+    def get_resolved_target_project(self) -> Optional[str]:
         if not self.base_task_id or not self.target_project:
             return self.target_project
         # noinspection PyBroadException
@@ -79,7 +79,15 @@ class BaseScheduleJob(object):
 
 @attrs
 class ScheduleJob(BaseScheduleJob):
-    _weekdays_ind = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+    _weekdays_ind = (
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    )
 
     execution_limit_hours = attrib(type=float, default=None)
     recurring = attrib(type=bool, default=True)
@@ -95,9 +103,8 @@ class ScheduleJob(BaseScheduleJob):
     _last_executed = attrib(type=datetime, converter=datetime_from_isoformat, default=None)
     _schedule_counter = attrib(type=int, default=0)
 
-    def verify(self):
-        # type: () -> None
-        def check_integer(value):
+    def verify(self) -> None:
+        def check_integer(value: Union[int, float, str, None]) -> bool:
             try:
                 return False if not isinstance(value, (int, float)) or int(value) != float(value) else True
             except (TypeError, ValueError):
@@ -121,16 +128,13 @@ class ScheduleJob(BaseScheduleJob):
         if self.year and not check_integer(self.year):
             raise ValueError("Schedule `year` must be an integer")
 
-    def next_run(self):
-        # type: () -> Optional[datetime]
+    def next_run(self) -> Optional[datetime]:
         return self._next_run
 
-    def get_execution_timeout(self):
-        # type: () -> Optional[datetime]
+    def get_execution_timeout(self) -> Optional[datetime]:
         return self._execution_timeout
 
-    def next(self):
-        # type: () -> Optional[datetime]
+    def next(self) -> Optional[datetime]:
         """
         :return: Return the next run datetime, None if no scheduling needed
         """
@@ -192,7 +196,7 @@ class ScheduleJob(BaseScheduleJob):
         self._next_run = self._calc_next_run(prev_timestamp, weekday)
         return self._next_run
 
-    def _calc_next_run(self, prev_timestamp, weekday):
+    def _calc_next_run(self, prev_timestamp: datetime, weekday: Optional[int]) -> datetime:
         # make sure that if we have a specific day we zero the minutes/hours/seconds
         if self.year:
             prev_timestamp = datetime(
@@ -271,8 +275,7 @@ class ScheduleJob(BaseScheduleJob):
             weekday=weekday,
         )
 
-    def run(self, task_id):
-        # type: (Optional[str]) -> datetime
+    def run(self, task_id: Optional[str]) -> datetime:
         super(ScheduleJob, self).run(task_id)
         if self._last_executed or self.starting_time != datetime.fromtimestamp(0):
             self._schedule_counter += 1
@@ -288,8 +291,7 @@ class ScheduleJob(BaseScheduleJob):
         return self._last_executed
 
     @classmethod
-    def get_weekday_ord(cls, weekday):
-        # type: (Union[int, str]) -> int
+    def get_weekday_ord(cls, weekday: Union[int, str]) -> int:
         if isinstance(weekday, int):
             return min(6, max(weekday, 0))
         return cls._weekdays_ind.index(weekday)
@@ -303,19 +305,18 @@ class ExecutedJob(object):
     task_id = attrib(type=str, default=None)
     thread_id = attrib(type=str, default=None)
 
-    def to_dict(self, full=False):
+    def to_dict(self, full: bool = False) -> Dict[str, Any]:
         return {k: v for k, v in self.__dict__.items() if full or not str(k).startswith("_")}
 
 
 class BaseScheduler(object):
     def __init__(
         self,
-        sync_frequency_minutes=15,
-        force_create_task_name=None,
-        force_create_task_project=None,
-        pooling_frequency_minutes=None
-    ):
-        # type: (float, Optional[str], Optional[str], Optional[float]) -> None
+        sync_frequency_minutes: float = 15,
+        force_create_task_name: Optional[str] = None,
+        force_create_task_project: Optional[str] = None,
+        pooling_frequency_minutes: Optional[float] = None,
+    ) -> None:
         """
         Create a Task scheduler service
 
@@ -339,8 +340,7 @@ class BaseScheduler(object):
         else:
             self._task = Task.current_task()
 
-    def start(self):
-        # type: () -> None
+    def start(self) -> None:
         """
         Start the Task TaskScheduler loop (notice this function does not return)
         """
@@ -376,8 +376,7 @@ class BaseScheduler(object):
                 self._log("Sleeping until the next pool in {} minutes".format(self._pooling_frequency_minutes))
                 sleep(self._pooling_frequency_minutes * 60.0)
 
-    def start_remotely(self, queue="services"):
-        # type: (str) -> None
+    def start_remotely(self, queue: str = "services") -> None:
         """
         Start the Task TaskScheduler loop (notice this function does not return)
 
@@ -392,61 +391,58 @@ class BaseScheduler(object):
         # we will be deserializing the state inside `start`
         self.start()
 
-    def _update_execution_plots(self):
-        # type: () -> None
+    def _update_execution_plots(self) -> None:
         """
         Update the configuration and execution table plots
         """
         pass
 
-    def _serialize(self):
-        # type: () -> None
+    def _serialize(self) -> None:
         """
         Serialize Task scheduling configuration only (no internal state)
         """
         pass
 
-    def _serialize_state(self):
-        # type: () -> None
+    def _serialize_state(self) -> None:
         """
         Serialize internal state only
         """
         pass
 
-    def _deserialize_state(self):
-        # type: () -> None
+    def _deserialize_state(self) -> None:
         """
         Deserialize internal state only
         """
         pass
 
-    def _deserialize(self):
-        # type: () -> None
+    def _deserialize(self) -> None:
         """
         Deserialize Task scheduling configuration only
         """
         pass
 
-    def _step(self):
-        # type: () -> bool
+    def _step(self) -> bool:
         """
         scheduling processing step. Return True if a new Task was scheduled.
         """
         pass
 
-    def _log(self, message, level=logging.INFO):
+    def _log(self, message: str, level: int = logging.INFO) -> None:
         if self._task:
             self._task.get_logger().report_text(message, level=level)
         else:
             print(message)
 
-    def _launch_job(self, job):
-        # type: (ScheduleJob) -> None
+    def _launch_job(self, job: ScheduleJob) -> None:
         self._launch_job_task(job)
         self._launch_job_function(job)
 
-    def _launch_job_task(self, job, task_parameters=None, add_tags=None):
-        # type: (BaseScheduleJob, Optional[dict], Optional[List[str]]) -> Optional[ClearmlJob]
+    def _launch_job_task(
+        self,
+        job: BaseScheduleJob,
+        task_parameters: Optional[dict] = None,
+        add_tags: Optional[List[str]] = None,
+    ) -> Optional[ClearmlJob]:
         # make sure this is not a function job
         if job.base_function:
             return None
@@ -475,8 +471,7 @@ class BaseScheduler(object):
             job.run(task_job.task_id())
         return task_job
 
-    def _launch_job_function(self, job, func_args=None):
-        # type: (BaseScheduleJob, Optional[Sequence]) -> Optional[Thread]
+    def _launch_job_function(self, job: BaseScheduleJob, func_args: Optional[Sequence] = None) -> Optional[Thread]:
         # make sure this IS a function job
         if not job.base_function:
             return None
@@ -508,8 +503,7 @@ class BaseScheduler(object):
         return t
 
     @staticmethod
-    def _cancel_task(task_id):
-        # type: (str) -> ()
+    def _cancel_task(task_id: str) -> ():
         if not task_id:
             return
         t = Task.get_task(task_id=task_id)
@@ -528,8 +522,12 @@ class TaskScheduler(BaseScheduler):
 
     _configuration_section = "schedule"
 
-    def __init__(self, sync_frequency_minutes=15, force_create_task_name=None, force_create_task_project=None):
-        # type: (float, Optional[str], Optional[str]) -> None
+    def __init__(
+        self,
+        sync_frequency_minutes: float = 15,
+        force_create_task_name: Optional[str] = None,
+        force_create_task_project: Optional[str] = None,
+    ) -> None:
         """
         Create a Task scheduler service
 
@@ -551,26 +549,25 @@ class TaskScheduler(BaseScheduler):
 
     def add_task(
         self,
-        schedule_task_id=None,  # type: Union[str, Task]
-        schedule_function=None,  # type: Callable
-        queue=None,  # type: str
-        name=None,  # type: Optional[str]
-        target_project=None,  # type: Optional[str]
-        minute=None,  # type: Optional[int]
-        hour=None,  # type: Optional[int]
-        day=None,  # type: Optional[int]
-        weekdays=None,  # type: Optional[List[str]]
-        month=None,  # type: Optional[int]
-        year=None,  # type: Optional[int]
-        limit_execution_time=None,  # type: Optional[float]
-        single_instance=False,  # type: bool
-        recurring=True,  # type: bool
-        execute_immediately=False,  # type: bool
-        reuse_task=False,  # type: bool
-        task_parameters=None,  # type: Optional[dict]
-        task_overrides=None,  # type: Optional[dict]
-    ):
-        # type: (...) -> bool
+        schedule_task_id: Union[str, Task] = None,
+        schedule_function: Callable = None,
+        queue: str = None,
+        name: Optional[str] = None,
+        target_project: Optional[str] = None,
+        minute: Optional[int] = None,
+        hour: Optional[int] = None,
+        day: Optional[int] = None,
+        weekdays: Optional[List[str]] = None,
+        month: Optional[int] = None,
+        year: Optional[int] = None,
+        limit_execution_time: Optional[float] = None,
+        single_instance: bool = False,
+        recurring: bool = True,
+        execute_immediately: bool = False,
+        reuse_task: bool = False,
+        task_parameters: Optional[dict] = None,
+        task_overrides: Optional[dict] = None,
+    ) -> bool:
         """
         Create a cron job-like scheduling for a pre-existing Task.
         Notice, it is recommended to give the schedule entry a descriptive unique name,
@@ -583,23 +580,58 @@ class TaskScheduler(BaseScheduler):
 
         Examples:
 
-        Launch every 15 minutes
+        Launch every 15 minutes:
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', minute=15)
-        Launch every 1 hour
+
+        Launch every 1 hour:
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', hour=1)
-        Launch every 1 hour at hour:30 minutes (i.e. 1:30, 2:30 etc.)
+
+        Launch every 1 hour at hour:30 minutes (i.e. 1:30, 2:30 etc.):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', hour=1, minute=30)
-        Launch every day at 22:30 (10:30 pm)
+
+        Launch every day at 22:30 (10:30 pm):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', minute=30, hour=22, day=1)
-        Launch every other day at 7:30 (7:30 am)
+
+        Launch every other day at 7:30 (7:30 am):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', minute=30, hour=7, day=2)
-        Launch every Saturday at 8:30am (notice `day=0`)
+
+        Launch every Saturday at 8:30am (notice `day=0`):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', minute=30, hour=8, day=0, weekdays=['saturday'])
-        Launch every 2 hours on the weekends Saturday/Sunday (notice `day` is not passed)
+
+        Launch every 2 hours on the weekends Saturday/Sunday (notice `day` is not passed):
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', hour=2, weekdays=['saturday', 'sunday'])
-        Launch once a month at the 5th of each month
+
+        Launch once a month at the 5th of each month:
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', month=1, day=5)
-        Launch once a year on March 4th
+
+        Launch once a year on March 4th:
+
+        .. code-block:: py
+
             add_task(schedule_task_id='1235', queue='default', year=1, month=3, day=4)
 
         :param schedule_task_id: ID of Task to be cloned and scheduled for execution
@@ -664,8 +696,7 @@ class TaskScheduler(BaseScheduler):
         self._schedule_jobs.append(job)
         return True
 
-    def get_scheduled_tasks(self):
-        # type: () -> List[ScheduleJob]
+    def get_scheduled_tasks(self) -> List[ScheduleJob]:
         """
         Return the current set of scheduled jobs
 
@@ -673,8 +704,7 @@ class TaskScheduler(BaseScheduler):
         """
         return self._schedule_jobs
 
-    def remove_task(self, task_id):
-        # type: (Union[str, Task, Callable]) -> bool
+    def remove_task(self, task_id: Union[str, Task, Callable]) -> bool:
         """
         Remove a Task ID from the scheduled task list.
 
@@ -692,15 +722,13 @@ class TaskScheduler(BaseScheduler):
             self._schedule_jobs = [t for t in self._schedule_jobs if t.base_function != task_id]
         return True
 
-    def start(self):
-        # type: () -> None
+    def start(self) -> None:
         """
         Start the Task TaskScheduler loop (notice this function does not return)
         """
         super(TaskScheduler, self).start()
 
-    def _step(self):
-        # type: () -> bool
+    def _step(self) -> bool:
         """
         scheduling processing step
         """
@@ -710,7 +738,8 @@ class TaskScheduler(BaseScheduler):
 
         # get idle timeout (aka sleeping)
         scheduled_jobs = sorted(
-            [j for j in self._schedule_jobs if j.next_run() is not None], key=lambda x: x.next_run()
+            [j for j in self._schedule_jobs if j.next_run() is not None],
+            key=lambda x: x.next_run(),
         )
         # sort by key
         timeout_job_datetime = min(self._timeout_jobs, key=self._timeout_jobs.get) if self._timeout_jobs else None
@@ -749,8 +778,7 @@ class TaskScheduler(BaseScheduler):
 
         return True
 
-    def start_remotely(self, queue="services"):
-        # type: (str) -> None
+    def start_remotely(self, queue: str = "services") -> None:
         """
         Start the Task TaskScheduler loop (notice this function does not return)
 
@@ -758,8 +786,7 @@ class TaskScheduler(BaseScheduler):
         """
         super(TaskScheduler, self).start_remotely(queue=queue)
 
-    def _serialize(self):
-        # type: () -> None
+    def _serialize(self) -> None:
         """
         Serialize Task scheduling configuration only (no internal state)
         """
@@ -771,8 +798,7 @@ class TaskScheduler(BaseScheduler):
             name=self._configuration_section,
         )
 
-    def _serialize_state(self):
-        # type: () -> None
+    def _serialize_state(self) -> None:
         """
         Serialize internal state only
         """
@@ -786,8 +812,7 @@ class TaskScheduler(BaseScheduler):
         )
         self._task.upload_artifact(name="state", artifact_object=json_str, preview="scheduler internal state")
 
-    def _deserialize_state(self):
-        # type: () -> None
+    def _deserialize_state(self) -> None:
         """
         Deserialize internal state only
         """
@@ -799,13 +824,13 @@ class TaskScheduler(BaseScheduler):
             if state_json_str is not None:
                 state_dict = json.loads(state_json_str)
                 self._schedule_jobs = self.__deserialize_scheduled_jobs(
-                    serialized_jobs_dicts=state_dict.get("scheduled_jobs", []), current_jobs=self._schedule_jobs
+                    serialized_jobs_dicts=state_dict.get("scheduled_jobs", []),
+                    current_jobs=self._schedule_jobs,
                 )
                 self._timeout_jobs = {datetime_from_isoformat(k): v for k, v in (state_dict.get("timeout_jobs") or {})}
                 self._executed_jobs = [ExecutedJob(**j) for j in state_dict.get("executed_jobs", [])]
 
-    def _deserialize(self):
-        # type: () -> None
+    def _deserialize(self) -> None:
         """
         Deserialize Task scheduling configuration only
         """
@@ -815,15 +840,17 @@ class TaskScheduler(BaseScheduler):
         json_str = self._task._get_configuration_text(name=self._configuration_section)
         try:
             self._schedule_jobs = self.__deserialize_scheduled_jobs(
-                serialized_jobs_dicts=json.loads(json_str), current_jobs=self._schedule_jobs
+                serialized_jobs_dicts=json.loads(json_str),
+                current_jobs=self._schedule_jobs,
             )
         except Exception as ex:
             self._log("Failed deserializing configuration: {}".format(ex), level=logging.WARN)
             return
 
     @staticmethod
-    def __deserialize_scheduled_jobs(serialized_jobs_dicts, current_jobs):
-        # type: (List[Dict], List[ScheduleJob]) -> List[ScheduleJob]
+    def __deserialize_scheduled_jobs(
+        serialized_jobs_dicts: List[Dict], current_jobs: List[ScheduleJob]
+    ) -> List[ScheduleJob]:
         scheduled_jobs = [ScheduleJob().update(j) for j in serialized_jobs_dicts]
         scheduled_jobs = {j.name: j for j in scheduled_jobs}
         current_scheduled_jobs = {j.name: j for j in current_jobs}
@@ -839,12 +866,10 @@ class TaskScheduler(BaseScheduler):
 
         return new_scheduled_jobs
 
-    def _serialize_schedule_into_string(self):
-        # type: () -> str
+    def _serialize_schedule_into_string(self) -> str:
         return json.dumps([j.to_dict() for j in self._schedule_jobs], default=datetime_to_isoformat)
 
-    def _update_execution_plots(self):
-        # type: () -> None
+    def _update_execution_plots(self) -> None:
         """
         Update the configuration and execution table plots
         """
@@ -883,7 +908,10 @@ class TaskScheduler(BaseScheduler):
             j_dict = j.to_dict()
             j_dict["next_run"] = j.next()
             j_dict["base_function"] = (
-                "{}.{}".format(getattr(j.base_function, "__module__", ""), getattr(j.base_function, "__name__", ""))
+                "{}.{}".format(
+                    getattr(j.base_function, "__module__", ""),
+                    getattr(j.base_function, "__name__", ""),
+                )
                 if j.base_function
                 else ""
             )
@@ -920,7 +948,8 @@ class TaskScheduler(BaseScheduler):
                 [
                     executed_job.name,
                     '<a href="{}">{}</a>'.format(
-                        task_link_template.format(project="*", task=executed_job.task_id), executed_job.task_id
+                        task_link_template.format(project="*", task=executed_job.task_id),
+                        executed_job.task_id,
                     )
                     if executed_job.task_id
                     else "function",
@@ -934,8 +963,12 @@ class TaskScheduler(BaseScheduler):
         )
         self._task.get_logger().report_table(title="Executed Tasks", series=" ", iteration=0, table_plot=executed_table)
 
-    def _launch_job_task(self, job, task_parameters=None, add_tags=None):
-        # type: (ScheduleJob, Optional[dict], Optional[List[str]]) -> Optional[ClearmlJob]
+    def _launch_job_task(
+        self,
+        job: ScheduleJob,
+        task_parameters: Optional[dict] = None,
+        add_tags: Optional[List[str]] = None,
+    ) -> Optional[ClearmlJob]:
         task_job = super(TaskScheduler, self)._launch_job_task(job, task_parameters=task_parameters, add_tags=add_tags)
         # make sure this is not a function job
         if task_job:
@@ -948,13 +981,16 @@ class TaskScheduler(BaseScheduler):
                 self._timeout_jobs[job.get_execution_timeout()] = task_job.task_id()
         return task_job
 
-    def _launch_job_function(self, job, func_args=None):
-        # type: (ScheduleJob, Optional[Sequence]) -> Optional[Thread]
+    def _launch_job_function(self, job: ScheduleJob, func_args: Optional[Sequence] = None) -> Optional[Thread]:
         thread_job = super(TaskScheduler, self)._launch_job_function(job, func_args=func_args)
         # make sure this is not a function job
         if thread_job:
             self._executed_jobs.append(
-                ExecutedJob(name=job.name, thread_id=str(thread_job.ident), started=datetime.utcnow())
+                ExecutedJob(
+                    name=job.name,
+                    thread_id=str(thread_job.ident),
+                    started=datetime.utcnow(),
+                )
             )
             # execution timeout is not supported with function callbacks.
 

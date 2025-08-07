@@ -3,12 +3,11 @@ workers service
 
 Provides an API for worker machines, allowing workers to report status and get tasks for execution
 """
+from typing import List, Optional, Any
 import six
 from datetime import datetime
 import enum
-
 from dateutil.parser import parse as parse_datetime
-
 from clearml.backend_api.session import (
     Request,
     Response,
@@ -41,36 +40,33 @@ class MetricsCategory(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, name=None, metric_keys=None, **kwargs):
+    def __init__(self, name: Optional[str] = None, metric_keys: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(MetricsCategory, self).__init__(**kwargs)
         self.name = name
         self.metric_keys = metric_keys
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("metric_keys")
-    def metric_keys(self):
+    def metric_keys(self) -> Optional[List[str]]:
         return self._property_metric_keys
 
     @metric_keys.setter
-    def metric_keys(self, value):
+    def metric_keys(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_metric_keys = None
             return
-
         self.assert_isinstance(value, "metric_keys", (list, tuple))
-
         self.assert_isinstance(value, "metric_keys", six.string_types, is_array=True)
         self._property_metric_keys = value
 
@@ -97,30 +93,29 @@ class StatItem(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, key=None, category=None, **kwargs):
+    def __init__(self, key: Optional[str] = None, category: Any = None, **kwargs: Any) -> None:
         super(StatItem, self).__init__(**kwargs)
         self.key = key
         self.category = category
 
     @schema_property("key")
-    def key(self):
+    def key(self) -> Optional[str]:
         return self._property_key
 
     @key.setter
-    def key(self, value):
+    def key(self, value: Optional[str]) -> None:
         if value is None:
             self._property_key = None
             return
-
         self.assert_isinstance(value, "key", six.string_types)
         self._property_key = value
 
     @schema_property("category")
-    def category(self):
+    def category(self) -> Any:
         return self._property_category
 
     @category.setter
-    def category(self, value):
+    def category(self, value: Any) -> None:
         if value is None:
             self._property_category = None
             return
@@ -154,17 +149,17 @@ class AggregationStats(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, aggregation=None, values=None, **kwargs):
+    def __init__(self, aggregation: Any = None, values: Optional[List[float]] = None, **kwargs: Any) -> None:
         super(AggregationStats, self).__init__(**kwargs)
         self.aggregation = aggregation
         self.values = values
 
     @schema_property("aggregation")
-    def aggregation(self):
+    def aggregation(self) -> Any:
         return self._property_aggregation
 
     @aggregation.setter
-    def aggregation(self, value):
+    def aggregation(self, value: Any) -> None:
         if value is None:
             self._property_aggregation = None
             return
@@ -178,17 +173,15 @@ class AggregationStats(NonStrictDataModel):
         self._property_aggregation = value
 
     @schema_property("values")
-    def values(self):
+    def values(self) -> Optional[List[float]]:
         return self._property_values
 
     @values.setter
-    def values(self, value):
+    def values(self, value: Optional[List[float]]) -> None:
         if value is None:
             self._property_values = None
             return
-
         self.assert_isinstance(value, "values", (list, tuple))
-
         self.assert_isinstance(value, "values", six.integer_types + (float,), is_array=True)
         self._property_values = value
 
@@ -211,10 +204,7 @@ class MetricStats(NonStrictDataModel):
     _schema = {
         "properties": {
             "dates": {
-                "description": (
-                    "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by"
-                    " the requested interval. Timestamps where no workers activity was recorded are omitted."
-                ),
+                "description": "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by the requested interval. Timestamps where no workers activity was recorded are omitted.",
                 "items": {"type": "integer"},
                 "type": ["array", "null"],
             },
@@ -235,7 +225,14 @@ class MetricStats(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, metric=None, variant=None, dates=None, stats=None, **kwargs):
+    def __init__(
+        self,
+        metric: Optional[str] = None,
+        variant: Optional[str] = None,
+        dates: Optional[List[int]] = None,
+        stats: Optional[List[Any]] = None,
+        **kwargs: Any
+    ) -> None:
         super(MetricStats, self).__init__(**kwargs)
         self.metric = metric
         self.variant = variant
@@ -243,59 +240,54 @@ class MetricStats(NonStrictDataModel):
         self.stats = stats
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> Optional[str]:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: Optional[str]) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
     @schema_property("dates")
-    def dates(self):
+    def dates(self) -> Optional[List[int]]:
         return self._property_dates
 
     @dates.setter
-    def dates(self, value):
+    def dates(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_dates = None
             return
-
         self.assert_isinstance(value, "dates", (list, tuple))
         value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
-
         self.assert_isinstance(value, "dates", six.integer_types, is_array=True)
         self._property_dates = value
 
     @schema_property("stats")
-    def stats(self):
+    def stats(self) -> Optional[List[Any]]:
         return self._property_stats
 
     @stats.setter
-    def stats(self, value):
+    def stats(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_stats = None
             return
-
         self.assert_isinstance(value, "stats", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [AggregationStats.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "stats", AggregationStats, is_array=True)
@@ -322,36 +314,34 @@ class WorkerStats(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, worker=None, metrics=None, **kwargs):
+    def __init__(self, worker: Optional[str] = None, metrics: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(WorkerStats, self).__init__(**kwargs)
         self.worker = worker
         self.metrics = metrics
 
     @schema_property("worker")
-    def worker(self):
+    def worker(self) -> Optional[str]:
         return self._property_worker
 
     @worker.setter
-    def worker(self, value):
+    def worker(self, value: Optional[str]) -> None:
         if value is None:
             self._property_worker = None
             return
-
         self.assert_isinstance(value, "worker", six.string_types)
         self._property_worker = value
 
     @schema_property("metrics")
-    def metrics(self):
+    def metrics(self) -> Optional[List[Any]]:
         return self._property_metrics
 
     @metrics.setter
-    def metrics(self, value):
+    def metrics(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_metrics = None
             return
-
         self.assert_isinstance(value, "metrics", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [MetricStats.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "metrics", MetricStats, is_array=True)
@@ -371,18 +361,12 @@ class ActivitySeries(NonStrictDataModel):
     _schema = {
         "properties": {
             "counts": {
-                "description": (
-                    "List of worker counts corresponding to the timestamps in the dates list. None values are returned"
-                    " for the dates with no workers."
-                ),
+                "description": "List of worker counts corresponding to the timestamps in the dates list. None values are returned for the dates with no workers.",
                 "items": {"type": "integer"},
                 "type": ["array", "null"],
             },
             "dates": {
-                "description": (
-                    "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by"
-                    " the requested interval."
-                ),
+                "description": "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by the requested interval.",
                 "items": {"type": "integer"},
                 "type": ["array", "null"],
             },
@@ -390,40 +374,36 @@ class ActivitySeries(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, dates=None, counts=None, **kwargs):
+    def __init__(self, dates: Optional[List[int]] = None, counts: Optional[List[int]] = None, **kwargs: Any) -> None:
         super(ActivitySeries, self).__init__(**kwargs)
         self.dates = dates
         self.counts = counts
 
     @schema_property("dates")
-    def dates(self):
+    def dates(self) -> Optional[List[int]]:
         return self._property_dates
 
     @dates.setter
-    def dates(self, value):
+    def dates(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_dates = None
             return
-
         self.assert_isinstance(value, "dates", (list, tuple))
         value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
-
         self.assert_isinstance(value, "dates", six.integer_types, is_array=True)
         self._property_dates = value
 
     @schema_property("counts")
-    def counts(self):
+    def counts(self) -> Optional[List[int]]:
         return self._property_counts
 
     @counts.setter
-    def counts(self, value):
+    def counts(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_counts = None
             return
-
         self.assert_isinstance(value, "counts", (list, tuple))
         value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
-
         self.assert_isinstance(value, "counts", six.integer_types, is_array=True)
         self._property_counts = value
 
@@ -525,22 +505,22 @@ class Worker(NonStrictDataModel):
 
     def __init__(
         self,
-        id=None,
-        user=None,
-        company=None,
-        ip=None,
-        register_time=None,
-        last_activity_time=None,
-        last_report_time=None,
-        task=None,
-        project=None,
-        queue=None,
-        queues=None,
-        tags=None,
-        system_tags=None,
-        key=None,
-        **kwargs
-    ):
+        id: Optional[str] = None,
+        user: Any = None,
+        company: Any = None,
+        ip: Optional[str] = None,
+        register_time: Optional[str] = None,
+        last_activity_time: Optional[str] = None,
+        last_report_time: Optional[str] = None,
+        task: Any = None,
+        project: Any = None,
+        queue: Any = None,
+        queues: Optional[List[Any]] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        key: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(Worker, self).__init__(**kwargs)
         self.id = id
         self.user = user
@@ -558,24 +538,23 @@ class Worker(NonStrictDataModel):
         self.key = key
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("user")
-    def user(self):
+    def user(self) -> Any:
         return self._property_user
 
     @user.setter
-    def user(self, value):
+    def user(self, value: Any) -> None:
         if value is None:
             self._property_user = None
             return
@@ -586,11 +565,11 @@ class Worker(NonStrictDataModel):
         self._property_user = value
 
     @schema_property("company")
-    def company(self):
+    def company(self) -> Any:
         return self._property_company
 
     @company.setter
-    def company(self, value):
+    def company(self, value: Any) -> None:
         if value is None:
             self._property_company = None
             return
@@ -601,69 +580,65 @@ class Worker(NonStrictDataModel):
         self._property_company = value
 
     @schema_property("ip")
-    def ip(self):
+    def ip(self) -> Optional[str]:
         return self._property_ip
 
     @ip.setter
-    def ip(self, value):
+    def ip(self, value: Optional[str]) -> None:
         if value is None:
             self._property_ip = None
             return
-
         self.assert_isinstance(value, "ip", six.string_types)
         self._property_ip = value
 
     @schema_property("register_time")
-    def register_time(self):
+    def register_time(self) -> Optional[str]:
         return self._property_register_time
 
     @register_time.setter
-    def register_time(self, value):
+    def register_time(self, value: Optional[str]) -> None:
         if value is None:
             self._property_register_time = None
             return
-
         self.assert_isinstance(value, "register_time", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_register_time = value
 
     @schema_property("last_activity_time")
-    def last_activity_time(self):
+    def last_activity_time(self) -> Optional[str]:
         return self._property_last_activity_time
 
     @last_activity_time.setter
-    def last_activity_time(self, value):
+    def last_activity_time(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_activity_time = None
             return
-
         self.assert_isinstance(value, "last_activity_time", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_last_activity_time = value
 
     @schema_property("last_report_time")
-    def last_report_time(self):
+    def last_report_time(self) -> Optional[str]:
         return self._property_last_report_time
 
     @last_report_time.setter
-    def last_report_time(self, value):
+    def last_report_time(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_report_time = None
             return
-
         self.assert_isinstance(value, "last_report_time", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_last_report_time = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> Any:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: Any) -> None:
         if value is None:
             self._property_task = None
             return
@@ -674,11 +649,11 @@ class Worker(NonStrictDataModel):
         self._property_task = value
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Any:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Any) -> None:
         if value is None:
             self._property_project = None
             return
@@ -689,11 +664,11 @@ class Worker(NonStrictDataModel):
         self._property_project = value
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> Any:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Any) -> None:
         if value is None:
             self._property_queue = None
             return
@@ -704,62 +679,56 @@ class Worker(NonStrictDataModel):
         self._property_queue = value
 
     @schema_property("queues")
-    def queues(self):
+    def queues(self) -> Optional[List[Any]]:
         return self._property_queues
 
     @queues.setter
-    def queues(self, value):
+    def queues(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_queues = None
             return
-
         self.assert_isinstance(value, "queues", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [QueueEntry.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "queues", QueueEntry, is_array=True)
         self._property_queues = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("key")
-    def key(self):
+    def key(self) -> Optional[str]:
         return self._property_key
 
     @key.setter
-    def key(self, value):
+    def key(self, value: Optional[str]) -> None:
         if value is None:
             self._property_key = None
             return
-
         self.assert_isinstance(value, "key", six.string_types)
         self._property_key = value
 
@@ -780,34 +749,32 @@ class IdNameEntry(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, id=None, name=None, **kwargs):
+    def __init__(self, id: Optional[str] = None, name: Optional[str] = None, **kwargs: Any) -> None:
         super(IdNameEntry, self).__init__(**kwargs)
         self.id = id
         self.name = name
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
@@ -840,7 +807,14 @@ class CurrentTaskEntry(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, id=None, name=None, running_time=None, last_iteration=None, **kwargs):
+    def __init__(
+        self,
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        running_time: Optional[int] = None,
+        last_iteration: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         super(CurrentTaskEntry, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -848,58 +822,54 @@ class CurrentTaskEntry(NonStrictDataModel):
         self.last_iteration = last_iteration
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("running_time")
-    def running_time(self):
+    def running_time(self) -> Optional[int]:
         return self._property_running_time
 
     @running_time.setter
-    def running_time(self, value):
+    def running_time(self, value: Optional[int]) -> None:
         if value is None:
             self._property_running_time = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "running_time", six.integer_types)
         self._property_running_time = value
 
     @schema_property("last_iteration")
-    def last_iteration(self):
+    def last_iteration(self) -> Optional[int]:
         return self._property_last_iteration
 
     @last_iteration.setter
-    def last_iteration(self, value):
+    def last_iteration(self, value: Optional[int]) -> None:
         if value is None:
             self._property_last_iteration = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "last_iteration", six.integer_types)
         self._property_last_iteration = value
 
@@ -932,7 +902,14 @@ class QueueEntry(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, id=None, name=None, next_task=None, num_tasks=None, **kwargs):
+    def __init__(
+        self,
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        next_task: Any = None,
+        num_tasks: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         super(QueueEntry, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -940,37 +917,35 @@ class QueueEntry(NonStrictDataModel):
         self.num_tasks = num_tasks
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("next_task")
-    def next_task(self):
+    def next_task(self) -> Any:
         return self._property_next_task
 
     @next_task.setter
-    def next_task(self, value):
+    def next_task(self, value: Any) -> None:
         if value is None:
             self._property_next_task = None
             return
@@ -981,17 +956,16 @@ class QueueEntry(NonStrictDataModel):
         self._property_next_task = value
 
     @schema_property("num_tasks")
-    def num_tasks(self):
+    def num_tasks(self) -> Optional[int]:
         return self._property_num_tasks
 
     @num_tasks.setter
-    def num_tasks(self, value):
+    def num_tasks(self, value: Optional[int]) -> None:
         if value is None:
             self._property_num_tasks = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "num_tasks", six.integer_types)
         self._property_num_tasks = value
 
@@ -1098,22 +1072,22 @@ class MachineStats(NonStrictDataModel):
 
     def __init__(
         self,
-        cpu_usage=None,
-        gpu_usage=None,
-        memory_used=None,
-        memory_free=None,
-        gpu_memory_free=None,
-        gpu_memory_used=None,
-        network_tx=None,
-        network_rx=None,
-        disk_free_home=None,
-        disk_free_temp=None,
-        disk_read=None,
-        disk_write=None,
-        cpu_temperature=None,
-        gpu_temperature=None,
-        **kwargs
-    ):
+        cpu_usage: Optional[List[float]] = None,
+        gpu_usage: Optional[List[float]] = None,
+        memory_used: Optional[int] = None,
+        memory_free: Optional[int] = None,
+        gpu_memory_free: Optional[List[int]] = None,
+        gpu_memory_used: Optional[List[int]] = None,
+        network_tx: Optional[int] = None,
+        network_rx: Optional[int] = None,
+        disk_free_home: Optional[int] = None,
+        disk_free_temp: Optional[int] = None,
+        disk_read: Optional[int] = None,
+        disk_write: Optional[int] = None,
+        cpu_temperature: Optional[List[float]] = None,
+        gpu_temperature: Optional[List[float]] = None,
+        **kwargs: Any
+    ) -> None:
         super(MachineStats, self).__init__(**kwargs)
         self.cpu_usage = cpu_usage
         self.gpu_usage = gpu_usage
@@ -1131,214 +1105,194 @@ class MachineStats(NonStrictDataModel):
         self.gpu_temperature = gpu_temperature
 
     @schema_property("cpu_usage")
-    def cpu_usage(self):
+    def cpu_usage(self) -> Optional[List[float]]:
         return self._property_cpu_usage
 
     @cpu_usage.setter
-    def cpu_usage(self, value):
+    def cpu_usage(self, value: Optional[List[float]]) -> None:
         if value is None:
             self._property_cpu_usage = None
             return
-
         self.assert_isinstance(value, "cpu_usage", (list, tuple))
-
         self.assert_isinstance(value, "cpu_usage", six.integer_types + (float,), is_array=True)
         self._property_cpu_usage = value
 
     @schema_property("gpu_usage")
-    def gpu_usage(self):
+    def gpu_usage(self) -> Optional[List[float]]:
         return self._property_gpu_usage
 
     @gpu_usage.setter
-    def gpu_usage(self, value):
+    def gpu_usage(self, value: Optional[List[float]]) -> None:
         if value is None:
             self._property_gpu_usage = None
             return
-
         self.assert_isinstance(value, "gpu_usage", (list, tuple))
-
         self.assert_isinstance(value, "gpu_usage", six.integer_types + (float,), is_array=True)
         self._property_gpu_usage = value
 
     @schema_property("memory_used")
-    def memory_used(self):
+    def memory_used(self) -> Optional[int]:
         return self._property_memory_used
 
     @memory_used.setter
-    def memory_used(self, value):
+    def memory_used(self, value: Optional[int]) -> None:
         if value is None:
             self._property_memory_used = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "memory_used", six.integer_types)
         self._property_memory_used = value
 
     @schema_property("memory_free")
-    def memory_free(self):
+    def memory_free(self) -> Optional[int]:
         return self._property_memory_free
 
     @memory_free.setter
-    def memory_free(self, value):
+    def memory_free(self, value: Optional[int]) -> None:
         if value is None:
             self._property_memory_free = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "memory_free", six.integer_types)
         self._property_memory_free = value
 
     @schema_property("gpu_memory_free")
-    def gpu_memory_free(self):
+    def gpu_memory_free(self) -> Optional[List[int]]:
         return self._property_gpu_memory_free
 
     @gpu_memory_free.setter
-    def gpu_memory_free(self, value):
+    def gpu_memory_free(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_gpu_memory_free = None
             return
-
         self.assert_isinstance(value, "gpu_memory_free", (list, tuple))
         value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
-
         self.assert_isinstance(value, "gpu_memory_free", six.integer_types, is_array=True)
         self._property_gpu_memory_free = value
 
     @schema_property("gpu_memory_used")
-    def gpu_memory_used(self):
+    def gpu_memory_used(self) -> Optional[List[int]]:
         return self._property_gpu_memory_used
 
     @gpu_memory_used.setter
-    def gpu_memory_used(self, value):
+    def gpu_memory_used(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_gpu_memory_used = None
             return
-
         self.assert_isinstance(value, "gpu_memory_used", (list, tuple))
         value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
-
         self.assert_isinstance(value, "gpu_memory_used", six.integer_types, is_array=True)
         self._property_gpu_memory_used = value
 
     @schema_property("network_tx")
-    def network_tx(self):
+    def network_tx(self) -> Optional[int]:
         return self._property_network_tx
 
     @network_tx.setter
-    def network_tx(self, value):
+    def network_tx(self, value: Optional[int]) -> None:
         if value is None:
             self._property_network_tx = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "network_tx", six.integer_types)
         self._property_network_tx = value
 
     @schema_property("network_rx")
-    def network_rx(self):
+    def network_rx(self) -> Optional[int]:
         return self._property_network_rx
 
     @network_rx.setter
-    def network_rx(self, value):
+    def network_rx(self, value: Optional[int]) -> None:
         if value is None:
             self._property_network_rx = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "network_rx", six.integer_types)
         self._property_network_rx = value
 
     @schema_property("disk_free_home")
-    def disk_free_home(self):
+    def disk_free_home(self) -> Optional[int]:
         return self._property_disk_free_home
 
     @disk_free_home.setter
-    def disk_free_home(self, value):
+    def disk_free_home(self, value: Optional[int]) -> None:
         if value is None:
             self._property_disk_free_home = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "disk_free_home", six.integer_types)
         self._property_disk_free_home = value
 
     @schema_property("disk_free_temp")
-    def disk_free_temp(self):
+    def disk_free_temp(self) -> Optional[int]:
         return self._property_disk_free_temp
 
     @disk_free_temp.setter
-    def disk_free_temp(self, value):
+    def disk_free_temp(self, value: Optional[int]) -> None:
         if value is None:
             self._property_disk_free_temp = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "disk_free_temp", six.integer_types)
         self._property_disk_free_temp = value
 
     @schema_property("disk_read")
-    def disk_read(self):
+    def disk_read(self) -> Optional[int]:
         return self._property_disk_read
 
     @disk_read.setter
-    def disk_read(self, value):
+    def disk_read(self, value: Optional[int]) -> None:
         if value is None:
             self._property_disk_read = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "disk_read", six.integer_types)
         self._property_disk_read = value
 
     @schema_property("disk_write")
-    def disk_write(self):
+    def disk_write(self) -> Optional[int]:
         return self._property_disk_write
 
     @disk_write.setter
-    def disk_write(self, value):
+    def disk_write(self, value: Optional[int]) -> None:
         if value is None:
             self._property_disk_write = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "disk_write", six.integer_types)
         self._property_disk_write = value
 
     @schema_property("cpu_temperature")
-    def cpu_temperature(self):
+    def cpu_temperature(self) -> Optional[List[float]]:
         return self._property_cpu_temperature
 
     @cpu_temperature.setter
-    def cpu_temperature(self, value):
+    def cpu_temperature(self, value: Optional[List[float]]) -> None:
         if value is None:
             self._property_cpu_temperature = None
             return
-
         self.assert_isinstance(value, "cpu_temperature", (list, tuple))
-
         self.assert_isinstance(value, "cpu_temperature", six.integer_types + (float,), is_array=True)
         self._property_cpu_temperature = value
 
     @schema_property("gpu_temperature")
-    def gpu_temperature(self):
+    def gpu_temperature(self) -> Optional[List[float]]:
         return self._property_gpu_temperature
 
     @gpu_temperature.setter
-    def gpu_temperature(self, value):
+    def gpu_temperature(self, value: Optional[List[float]]) -> None:
         if value is None:
             self._property_gpu_temperature = None
             return
-
         self.assert_isinstance(value, "gpu_temperature", (list, tuple))
-
         self.assert_isinstance(value, "gpu_temperature", six.integer_types + (float,), is_array=True)
         self._property_gpu_temperature = value
 
@@ -1380,50 +1334,47 @@ class GetActivityReportRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, from_date, to_date, interval, **kwargs):
+    def __init__(self, from_date: float, to_date: float, interval: int, **kwargs: Any) -> None:
         super(GetActivityReportRequest, self).__init__(**kwargs)
         self.from_date = from_date
         self.to_date = to_date
         self.interval = interval
 
     @schema_property("from_date")
-    def from_date(self):
+    def from_date(self) -> float:
         return self._property_from_date
 
     @from_date.setter
-    def from_date(self, value):
+    def from_date(self, value: float) -> None:
         if value is None:
             self._property_from_date = None
             return
-
         self.assert_isinstance(value, "from_date", six.integer_types + (float,))
         self._property_from_date = value
 
     @schema_property("to_date")
-    def to_date(self):
+    def to_date(self) -> float:
         return self._property_to_date
 
     @to_date.setter
-    def to_date(self, value):
+    def to_date(self, value: float) -> None:
         if value is None:
             self._property_to_date = None
             return
-
         self.assert_isinstance(value, "to_date", six.integer_types + (float,))
         self._property_to_date = value
 
     @schema_property("interval")
-    def interval(self):
+    def interval(self) -> int:
         return self._property_interval
 
     @interval.setter
-    def interval(self, value):
+    def interval(self, value: int) -> None:
         if value is None:
             self._property_interval = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "interval", six.integer_types)
         self._property_interval = value
 
@@ -1443,24 +1394,17 @@ class GetActivityReportResponse(Response):
     _service = "workers"
     _action = "get_activity_report"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "activity_series": {
                 "properties": {
                     "counts": {
-                        "description": (
-                            "List of worker counts corresponding to the timestamps in the dates list. None values are"
-                            " returned for the dates with no workers."
-                        ),
+                        "description": "List of worker counts corresponding to the timestamps in the dates list. None values are returned for the dates with no workers.",
                         "items": {"type": "integer"},
                         "type": ["array", "null"],
                     },
                     "dates": {
-                        "description": (
-                            "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are"
-                            " separated by the requested interval."
-                        ),
+                        "description": "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by the requested interval.",
                         "items": {"type": "integer"},
                         "type": ["array", "null"],
                     },
@@ -1470,32 +1414,28 @@ class GetActivityReportResponse(Response):
         },
         "properties": {
             "active": {
-                "description": (
-                    "Activity series that include only workers that worked on a task in the given time interval."
-                ),
+                "description": "Activity series that include only workers that worked on a task in the given time interval.",
                 "oneOf": [{"$ref": "#/definitions/activity_series"}, {"type": "null"}],
             },
             "total": {
-                "description": (
-                    "Activity series that include all the workers that sent reports in the given time interval."
-                ),
+                "description": "Activity series that include all the workers that sent reports in the given time interval.",
                 "oneOf": [{"$ref": "#/definitions/activity_series"}, {"type": "null"}],
             },
         },
         "type": "object",
     }
 
-    def __init__(self, total=None, active=None, **kwargs):
+    def __init__(self, total: Any = None, active: Any = None, **kwargs: Any) -> None:
         super(GetActivityReportResponse, self).__init__(**kwargs)
         self.total = total
         self.active = active
 
     @schema_property("total")
-    def total(self):
+    def total(self) -> Any:
         return self._property_total
 
     @total.setter
-    def total(self, value):
+    def total(self, value: Any) -> None:
         if value is None:
             self._property_total = None
             return
@@ -1506,11 +1446,11 @@ class GetActivityReportResponse(Response):
         self._property_total = value
 
     @schema_property("active")
-    def active(self):
+    def active(self) -> Any:
         return self._property_active
 
     @active.setter
-    def active(self, value):
+    def active(self, value: Any) -> None:
         if value is None:
             self._property_active = None
             return
@@ -1544,10 +1484,7 @@ class GetAllRequest(Request):
         "properties": {
             "last_seen": {
                 "default": 3600,
-                "description": (
-                    "Filter out workers not active for more than last_seen seconds.\n                        A value or"
-                    " 0 or 'none' will disable the filter."
-                ),
+                "description": "Filter out workers not active for more than last_seen seconds.\n                        A value or 0 or 'none' will disable the filter.",
                 "type": ["integer", "null"],
             },
             "system_tags": {
@@ -1564,54 +1501,55 @@ class GetAllRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, last_seen=3600, tags=None, system_tags=None, **kwargs):
+    def __init__(
+        self,
+        last_seen: Optional[int] = 3600,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetAllRequest, self).__init__(**kwargs)
         self.last_seen = last_seen
         self.tags = tags
         self.system_tags = system_tags
 
     @schema_property("last_seen")
-    def last_seen(self):
+    def last_seen(self) -> Optional[int]:
         return self._property_last_seen
 
     @last_seen.setter
-    def last_seen(self, value):
+    def last_seen(self, value: Optional[int]) -> None:
         if value is None:
             self._property_last_seen = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "last_seen", six.integer_types)
         self._property_last_seen = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -1627,7 +1565,6 @@ class GetAllResponse(Response):
     _service = "workers"
     _action = "get_all"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "current_task_entry": {
@@ -1637,10 +1574,7 @@ class GetAllResponse(Response):
                         "description": "Last task iteration",
                         "type": ["integer", "null"],
                     },
-                    "name": {
-                        "description": "Worker name",
-                        "type": ["string", "null"],
-                    },
+                    "name": {"description": "Worker name", "type": ["string", "null"]},
                     "running_time": {
                         "description": "Task running time",
                         "type": ["integer", "null"],
@@ -1651,20 +1585,14 @@ class GetAllResponse(Response):
             "id_name_entry": {
                 "properties": {
                     "id": {"description": "Worker ID", "type": ["string", "null"]},
-                    "name": {
-                        "description": "Worker name",
-                        "type": ["string", "null"],
-                    },
+                    "name": {"description": "Worker name", "type": ["string", "null"]},
                 },
                 "type": "object",
             },
             "queue_entry": {
                 "properties": {
                     "id": {"description": "Worker ID", "type": ["string", "null"]},
-                    "name": {
-                        "description": "Worker name",
-                        "type": ["string", "null"],
-                    },
+                    "name": {"description": "Worker name", "type": ["string", "null"]},
                     "next_task": {
                         "description": "Next task in the queue",
                         "oneOf": [
@@ -1768,22 +1696,21 @@ class GetAllResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, workers=None, **kwargs):
+    def __init__(self, workers: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetAllResponse, self).__init__(**kwargs)
         self.workers = workers
 
     @schema_property("workers")
-    def workers(self):
+    def workers(self) -> Optional[List[Any]]:
         return self._property_workers
 
     @workers.setter
-    def workers(self, value):
+    def workers(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_workers = None
             return
-
         self.assert_isinstance(value, "workers", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [Worker.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "workers", Worker, is_array=True)
@@ -1806,10 +1733,7 @@ class GetMetricKeysRequest(Request):
         "definitions": {},
         "properties": {
             "worker_ids": {
-                "description": (
-                    "List of worker ids to collect metrics for. If not provided or empty then all the company "
-                    "workers metrics are analyzed."
-                ),
+                "description": "List of worker ids to collect metrics for. If not provided or empty then all the company workers metrics are analyzed.",
                 "items": {"type": "string"},
                 "type": ["array", "null"],
             }
@@ -1817,22 +1741,20 @@ class GetMetricKeysRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, worker_ids=None, **kwargs):
+    def __init__(self, worker_ids: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(GetMetricKeysRequest, self).__init__(**kwargs)
         self.worker_ids = worker_ids
 
     @schema_property("worker_ids")
-    def worker_ids(self):
+    def worker_ids(self) -> Optional[List[str]]:
         return self._property_worker_ids
 
     @worker_ids.setter
-    def worker_ids(self, value):
+    def worker_ids(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_worker_ids = None
             return
-
         self.assert_isinstance(value, "worker_ids", (list, tuple))
-
         self.assert_isinstance(value, "worker_ids", six.string_types, is_array=True)
         self._property_worker_ids = value
 
@@ -1849,7 +1771,6 @@ class GetMetricKeysResponse(Response):
     _service = "workers"
     _action = "get_metric_keys"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "metrics_category": {
@@ -1877,22 +1798,21 @@ class GetMetricKeysResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, categories=None, **kwargs):
+    def __init__(self, categories: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetMetricKeysResponse, self).__init__(**kwargs)
         self.categories = categories
 
     @schema_property("categories")
-    def categories(self):
+    def categories(self) -> Optional[List[Any]]:
         return self._property_categories
 
     @categories.setter
-    def categories(self, value):
+    def categories(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_categories = None
             return
-
         self.assert_isinstance(value, "categories", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [MetricsCategory.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "categories", MetricsCategory, is_array=True)
@@ -1970,10 +1890,7 @@ class GetStatsRequest(Request):
                 "type": "number",
             },
             "worker_ids": {
-                "description": (
-                    "List of worker ids to collect metrics for. If not provided or empty then all the company "
-                    "workers metrics are analyzed."
-                ),
+                "description": "List of worker ids to collect metrics for. If not provided or empty then all the company workers metrics are analyzed.",
                 "items": {"type": "string"},
                 "type": ["array", "null"],
             },
@@ -1982,7 +1899,16 @@ class GetStatsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, from_date, to_date, interval, items, worker_ids=None, split_by_variant=False, **kwargs):
+    def __init__(
+        self,
+        from_date: float,
+        to_date: float,
+        interval: int,
+        items: List[Any],
+        worker_ids: Optional[List[str]] = None,
+        split_by_variant: Optional[bool] = False,
+        **kwargs: Any
+    ) -> None:
         super(GetStatsRequest, self).__init__(**kwargs)
         self.worker_ids = worker_ids
         self.from_date = from_date
@@ -1992,88 +1918,81 @@ class GetStatsRequest(Request):
         self.split_by_variant = split_by_variant
 
     @schema_property("worker_ids")
-    def worker_ids(self):
+    def worker_ids(self) -> Optional[List[str]]:
         return self._property_worker_ids
 
     @worker_ids.setter
-    def worker_ids(self, value):
+    def worker_ids(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_worker_ids = None
             return
-
         self.assert_isinstance(value, "worker_ids", (list, tuple))
-
         self.assert_isinstance(value, "worker_ids", six.string_types, is_array=True)
         self._property_worker_ids = value
 
     @schema_property("from_date")
-    def from_date(self):
+    def from_date(self) -> float:
         return self._property_from_date
 
     @from_date.setter
-    def from_date(self, value):
+    def from_date(self, value: float) -> None:
         if value is None:
             self._property_from_date = None
             return
-
         self.assert_isinstance(value, "from_date", six.integer_types + (float,))
         self._property_from_date = value
 
     @schema_property("to_date")
-    def to_date(self):
+    def to_date(self) -> float:
         return self._property_to_date
 
     @to_date.setter
-    def to_date(self, value):
+    def to_date(self, value: float) -> None:
         if value is None:
             self._property_to_date = None
             return
-
         self.assert_isinstance(value, "to_date", six.integer_types + (float,))
         self._property_to_date = value
 
     @schema_property("interval")
-    def interval(self):
+    def interval(self) -> int:
         return self._property_interval
 
     @interval.setter
-    def interval(self, value):
+    def interval(self, value: int) -> None:
         if value is None:
             self._property_interval = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "interval", six.integer_types)
         self._property_interval = value
 
     @schema_property("items")
-    def items(self):
+    def items(self) -> List[Any]:
         return self._property_items
 
     @items.setter
-    def items(self, value):
+    def items(self, value: List[Any]) -> None:
         if value is None:
             self._property_items = None
             return
-
         self.assert_isinstance(value, "items", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [StatItem.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "items", StatItem, is_array=True)
         self._property_items = value
 
     @schema_property("split_by_variant")
-    def split_by_variant(self):
+    def split_by_variant(self) -> Optional[bool]:
         return self._property_split_by_variant
 
     @split_by_variant.setter
-    def split_by_variant(self, value):
+    def split_by_variant(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_split_by_variant = None
             return
-
         self.assert_isinstance(value, "split_by_variant", (bool,))
         self._property_split_by_variant = value
 
@@ -2089,7 +2008,6 @@ class GetStatsResponse(Response):
     _service = "workers"
     _action = "get_stats"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "aggregation_stats": {
@@ -2116,11 +2034,7 @@ class GetStatsResponse(Response):
             "metric_stats": {
                 "properties": {
                     "dates": {
-                        "description": (
-                            "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are"
-                            " separated by the requested interval. Timestamps where no workers activity was recorded"
-                            " are omitted."
-                        ),
+                        "description": "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by the requested interval. Timestamps where no workers activity was recorded are omitted.",
                         "items": {"type": "integer"},
                         "type": ["array", "null"],
                     },
@@ -2134,9 +2048,7 @@ class GetStatsResponse(Response):
                         "type": ["array", "null"],
                     },
                     "variant": {
-                        "description": (
-                            "Name of the metric component. Set only if 'split_by_variant' was set in the request"
-                        ),
+                        "description": "Name of the metric component. Set only if 'split_by_variant' was set in the request",
                         "type": ["string", "null"],
                     },
                 },
@@ -2167,22 +2079,21 @@ class GetStatsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, workers=None, **kwargs):
+    def __init__(self, workers: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetStatsResponse, self).__init__(**kwargs)
         self.workers = workers
 
     @schema_property("workers")
-    def workers(self):
+    def workers(self) -> Optional[List[Any]]:
         return self._property_workers
 
     @workers.setter
-    def workers(self, value):
+    def workers(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_workers = None
             return
-
         self.assert_isinstance(value, "workers", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [WorkerStats.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "workers", WorkerStats, is_array=True)
@@ -2230,11 +2141,7 @@ class RegisterRequest(Request):
             },
             "timeout": {
                 "default": 600,
-                "description": (
-                    "Registration timeout in seconds. If timeout seconds have passed since the worker's last call to"
-                    " register or status_report, the worker is automatically removed from the list of registered"
-                    " workers."
-                ),
+                "description": "Registration timeout in seconds. If timeout seconds have passed since the worker's last call to register or status_report, the worker is automatically removed from the list of registered workers.",
                 "type": "integer",
             },
             "worker": {
@@ -2246,7 +2153,15 @@ class RegisterRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, worker, timeout=600, queues=None, tags=None, system_tags=None, **kwargs):
+    def __init__(
+        self,
+        worker: str,
+        timeout: Optional[int] = 600,
+        queues: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(RegisterRequest, self).__init__(**kwargs)
         self.worker = worker
         self.timeout = timeout
@@ -2255,75 +2170,67 @@ class RegisterRequest(Request):
         self.system_tags = system_tags
 
     @schema_property("worker")
-    def worker(self):
+    def worker(self) -> str:
         return self._property_worker
 
     @worker.setter
-    def worker(self, value):
+    def worker(self, value: str) -> None:
         if value is None:
             self._property_worker = None
             return
-
         self.assert_isinstance(value, "worker", six.string_types)
         self._property_worker = value
 
     @schema_property("timeout")
-    def timeout(self):
+    def timeout(self) -> Optional[int]:
         return self._property_timeout
 
     @timeout.setter
-    def timeout(self, value):
+    def timeout(self, value: Optional[int]) -> None:
         if value is None:
             self._property_timeout = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "timeout", six.integer_types)
         self._property_timeout = value
 
     @schema_property("queues")
-    def queues(self):
+    def queues(self) -> Optional[List[str]]:
         return self._property_queues
 
     @queues.setter
-    def queues(self, value):
+    def queues(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_queues = None
             return
-
         self.assert_isinstance(value, "queues", (list, tuple))
-
         self.assert_isinstance(value, "queues", six.string_types, is_array=True)
         self._property_queues = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -2337,7 +2244,6 @@ class RegisterResponse(Response):
     _service = "workers"
     _action = "register"
     _version = "2.23"
-
     _schema = {"definitions": {}, "properties": {}, "type": "object"}
 
 
@@ -2445,17 +2351,11 @@ class StatusReportRequest(Request):
                 "description": "The machine statistics.",
             },
             "queue": {
-                "description": (
-                    "ID of the queue from which task was received. If no queue is sent, the worker's queue field will"
-                    " be cleared."
-                ),
+                "description": "ID of the queue from which task was received. If no queue is sent, the worker's queue field will be cleared.",
                 "type": "string",
             },
             "queues": {
-                "description": (
-                    "List of queue IDs on which the worker is listening. If null, the worker's queues list will not be "
-                    "updated."
-                ),
+                "description": "List of queue IDs on which the worker is listening. If null, the worker's queues list will not be updated.",
                 "items": {"type": "string"},
                 "type": "array",
             },
@@ -2470,10 +2370,7 @@ class StatusReportRequest(Request):
                 "type": "array",
             },
             "task": {
-                "description": (
-                    "ID of a task currently being run by the worker. If no task is sent, the "
-                    "worker's task field will be cleared."
-                ),
+                "description": "ID of a task currently being run by the worker. If no task is sent, the worker's task field will be cleared.",
                 "type": "string",
             },
             "timestamp": {
@@ -2488,16 +2385,16 @@ class StatusReportRequest(Request):
 
     def __init__(
         self,
-        worker,
-        timestamp,
-        task=None,
-        queue=None,
-        queues=None,
-        machine_stats=None,
-        tags=None,
-        system_tags=None,
-        **kwargs
-    ):
+        worker: str,
+        timestamp: int,
+        task: Optional[str] = None,
+        queue: Optional[str] = None,
+        queues: Optional[List[str]] = None,
+        machine_stats: Any = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(StatusReportRequest, self).__init__(**kwargs)
         self.worker = worker
         self.task = task
@@ -2509,80 +2406,74 @@ class StatusReportRequest(Request):
         self.system_tags = system_tags
 
     @schema_property("worker")
-    def worker(self):
+    def worker(self) -> str:
         return self._property_worker
 
     @worker.setter
-    def worker(self, value):
+    def worker(self, value: str) -> None:
         if value is None:
             self._property_worker = None
             return
-
         self.assert_isinstance(value, "worker", six.string_types)
         self._property_worker = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> Optional[str]:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: Optional[str]) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> Optional[str]:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("queues")
-    def queues(self):
+    def queues(self) -> Optional[List[str]]:
         return self._property_queues
 
     @queues.setter
-    def queues(self, value):
+    def queues(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_queues = None
             return
-
         self.assert_isinstance(value, "queues", (list, tuple))
-
         self.assert_isinstance(value, "queues", six.string_types, is_array=True)
         self._property_queues = value
 
     @schema_property("timestamp")
-    def timestamp(self):
+    def timestamp(self) -> int:
         return self._property_timestamp
 
     @timestamp.setter
-    def timestamp(self, value):
+    def timestamp(self, value: int) -> None:
         if value is None:
             self._property_timestamp = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "timestamp", six.integer_types)
         self._property_timestamp = value
 
     @schema_property("machine_stats")
-    def machine_stats(self):
+    def machine_stats(self) -> Any:
         return self._property_machine_stats
 
     @machine_stats.setter
-    def machine_stats(self, value):
+    def machine_stats(self, value: Any) -> None:
         if value is None:
             self._property_machine_stats = None
             return
@@ -2593,32 +2484,28 @@ class StatusReportRequest(Request):
         self._property_machine_stats = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -2632,7 +2519,6 @@ class StatusReportResponse(Response):
     _service = "workers"
     _action = "status_report"
     _version = "2.23"
-
     _schema = {"definitions": {}, "properties": {}, "type": "object"}
 
 
@@ -2659,20 +2545,19 @@ class UnregisterRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, worker, **kwargs):
+    def __init__(self, worker: str, **kwargs: Any) -> None:
         super(UnregisterRequest, self).__init__(**kwargs)
         self.worker = worker
 
     @schema_property("worker")
-    def worker(self):
+    def worker(self) -> str:
         return self._property_worker
 
     @worker.setter
-    def worker(self, value):
+    def worker(self, value: str) -> None:
         if value is None:
             self._property_worker = None
             return
-
         self.assert_isinstance(value, "worker", six.string_types)
         self._property_worker = value
 
@@ -2686,7 +2571,6 @@ class UnregisterResponse(Response):
     _service = "workers"
     _action = "unregister"
     _version = "2.23"
-
     _schema = {"definitions": {}, "properties": {}, "type": "object"}
 
 

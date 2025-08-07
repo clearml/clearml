@@ -1,11 +1,11 @@
-import requests
 import socket
 import subprocess
 from typing import Optional
 
+import requests
 
-def get_private_ip():
-    # type: () -> str
+
+def get_private_ip() -> str:
     """
     Get the private IP of this machine
 
@@ -26,8 +26,7 @@ def get_private_ip():
     raise Exception("error getting private IP")
 
 
-def get_public_ip():
-    # type: () -> Optional[str]
+def get_public_ip() -> Optional[str]:
     """
     Get the public IP of this machine. External services such as `https://api.ipify.org` or `https://ident.me`
     are used to get the IP
@@ -35,11 +34,12 @@ def get_public_ip():
     :return: A string representing the IP of this machine or `None` if getting the IP failed
     """
     from ..config import config_obj
+
     # todo: add documentation in api section in conf file
-    public_ip_service_urls = (
-            config_obj.get("api.public_ip_service_urls", None)
-            or ["https://api.ipify.org", "https://ident.me"]
-    )
+    public_ip_service_urls = config_obj.get("api.public_ip_service_urls", None) or [
+        "https://api.ipify.org",
+        "https://ident.me",
+    ]
     for external_service in public_ip_service_urls:
         ip = get_public_ip_from_external_service(external_service)
         if ip:
@@ -47,8 +47,7 @@ def get_public_ip():
     return None
 
 
-def get_public_ip_from_external_service(external_service, timeout=5):
-    # type: (str, Optional[int]) -> Optional[str]
+def get_public_ip_from_external_service(external_service: str, timeout: Optional[int] = 5) -> Optional[str]:
     """
     Get the public IP of this machine from an external service.
     Fetching the IP is done via a GET request. The whole content of the request
@@ -77,8 +76,9 @@ def get_public_ip_from_external_service(external_service, timeout=5):
         return None
 
 
-def _get_private_ip_from_socket():
+def _get_private_ip_from_socket() -> str:
     from ..config import config_obj
+
     # todo: add documentation in api section in conf file
     public_ip_ping = config_obj.get("api.public_ip_ping", None) or "8.8.8.8"
 
@@ -94,5 +94,5 @@ def _get_private_ip_from_socket():
     return ip
 
 
-def _get_private_ip_from_subprocess():
+def _get_private_ip_from_subprocess() -> str:
     return subprocess.check_output("hostname -I", shell=True).split()[0].decode("utf-8")

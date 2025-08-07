@@ -1,4 +1,5 @@
 import base64
+from typing import Dict, Optional
 
 import attr
 from attr.validators import instance_of
@@ -16,7 +17,7 @@ try:
     Task.add_requirements("boto3")
 except ImportError as err:
     raise ImportError(
-        "AwsAutoScaler requires 'boto3' package, it was not found\n" "install with: pip install boto3"
+        "AwsAutoScaler requires 'boto3' package, it was not found\ninstall with: pip install boto3"
     ) from err
 
 
@@ -34,7 +35,7 @@ class AWSDriver(CloudDriver):
     iam_name = attr.ib(validator=instance_of(str), default="")
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config: ConfigTree) -> "AWSDriver":
         obj = super().from_config(config)
         obj.aws_access_key_id = config["hyper_params"].get("cloud_credentials_key")
         obj.aws_secret_access_key = config["hyper_params"].get("cloud_credentials_secret")
@@ -46,11 +47,17 @@ class AWSDriver(CloudDriver):
         obj.iam_name = config["hyper_params"].get("iam_name")
         return obj
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
         self.tags = parse_tags(self.tags)
 
-    def spin_up_worker(self, resource_conf, worker_prefix, queue_name, task_id):
+    def spin_up_worker(
+        self,
+        resource_conf: dict,
+        worker_prefix: str,
+        queue_name: str,
+        task_id: str,
+    ) -> str:
         # user_data script will automatically run when the instance is started. it will install the required packages
         # for clearml-agent, configure it using environment variables and run clearml-agent on the required queue
         # Config reference: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/run_instances.html
@@ -143,11 +150,11 @@ class AWSDriver(CloudDriver):
         instance.wait_until_running()
         return instance_id
 
-    def spin_down_worker(self, instance_id):
+    def spin_down_worker(self, instance_id: str) -> None:
         instance = boto3.resource("ec2", **self.creds()).Instance(instance_id)
         instance.terminate()
 
-    def creds(self):
+    def creds(self) -> Dict[str, Optional[str]]:
         creds = {
             "region_name": self.aws_region or None,
         }
@@ -162,16 +169,16 @@ class AWSDriver(CloudDriver):
             )
         return creds
 
-    def instance_id_command(self):
+    def instance_id_command(self) -> str:
         return "curl http://169.254.169.254/latest/meta-data/instance-id"
 
-    def instance_type_key(self):
+    def instance_type_key(self) -> str:
         return "instance_type"
 
-    def kind(self):
+    def kind(self) -> str:
         return "AWS"
 
-    def console_log(self, instance_id):
+    def console_log(self, instance_id: str) -> str:
         ec2 = boto3.client("ec2", **self.creds())
         try:
             out = ec2.get_console_output(InstanceId=instance_id)

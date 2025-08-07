@@ -1,9 +1,11 @@
+import inspect
 import os
 import sys
 import threading
-import inspect
 import time
+import types
 import zipfile
+from typing import Callable, Union, Optional, List, TextIO, Any
 
 __stream_write = None
 __stream_flush = None
@@ -14,17 +16,17 @@ __thread_id = None
 __thread_so = None
 
 
-def _thread_linux_id():
+def _thread_linux_id() -> int:
     # System dependent, see e.g. /usr/include/x86_64-linux-gnu/asm/unistd_64.h (system call 186)
     return __thread_so.syscall(186)
 
 
-def _thread_py_id():
+def _thread_py_id() -> int:
     # return threading.get_ident()
     return zipfile.crc32(int(threading.get_ident()).to_bytes(8, "little"))
 
 
-def _log_stderr(name, fnc, args, kwargs, is_return):
+def _log_stderr(name: str, fnc: callable, args: tuple, kwargs: dict, is_return: bool) -> None:
     global __stream_write, __stream_flush, __trace_level, __trace_start, __thread_id
     # noinspection PyBroadException
     try:
@@ -45,7 +47,12 @@ def _log_stderr(name, fnc, args, kwargs, is_return):
         ts = time.time() - __trace_start
         __stream_write(
             "{}{:<9.3f}:{:5}:{:8x}: [{}] {}\n".format(
-                "-" if is_return else "", ts, os.getpid(), h, threading.current_thread().name, t
+                "-" if is_return else "",
+                ts,
+                os.getpid(),
+                h,
+                threading.current_thread().name,
+                t,
             )
         )
         if __stream_flush:
@@ -54,8 +61,8 @@ def _log_stderr(name, fnc, args, kwargs, is_return):
         pass
 
 
-def _traced_call_method(name, fnc):
-    def _traced_call_int(self, *args, **kwargs):
+def _traced_call_method(name: str, fnc: Callable) -> Callable:
+    def _traced_call_int(self, *args: Any, **kwargs: Any) -> Any:
         _log_stderr(name, fnc, args, kwargs, False)
         r = None
         try:
@@ -70,10 +77,10 @@ def _traced_call_method(name, fnc):
     return _traced_call_int
 
 
-def _traced_call_cls(name, fnc):
+def _traced_call_cls(name: str, fnc: Callable) -> Callable:
     class WrapperClass(object):
         @classmethod
-        def _traced_call_int(cls, *args, **kwargs):
+        def _traced_call_int(cls, *args: Any, **kwargs: Any) -> Any:
             _log_stderr(name, fnc, args, kwargs, False)
             r = None
             try:
@@ -88,10 +95,10 @@ def _traced_call_cls(name, fnc):
     return WrapperClass.__dict__["_traced_call_int"]
 
 
-def _traced_call_static(name, fnc):
+def _traced_call_static(name: str, fnc: Callable) -> Callable:
     class WrapperStatic(object):
         @staticmethod
-        def _traced_call_int(*args, **kwargs):
+        def _traced_call_int(*args: Any, **kwargs: Any) -> Any:
             _log_stderr(name, fnc, args, kwargs, False)
             r = None
             try:
@@ -106,8 +113,8 @@ def _traced_call_static(name, fnc):
     return WrapperStatic.__dict__["_traced_call_int"]
 
 
-def _traced_call_func(name, fnc):
-    def _traced_call_int(*args, **kwargs):
+def _traced_call_func(name: str, fnc: Callable) -> Callable:
+    def _traced_call_int(*args: Any, **kwargs: Any) -> Any:
         _log_stderr(name, fnc, args, kwargs, False)
         r = None
         try:
@@ -122,7 +129,14 @@ def _traced_call_func(name, fnc):
     return _traced_call_int
 
 
-def _patch_module(module, prefix="", basepath=None, basemodule=None, exclude_prefixes=[], only_prefix=[]):
+def _patch_module(
+    module: Union[str, types.ModuleType],
+    prefix: str = "",
+    basepath: Optional[str] = None,
+    basemodule: Optional[str] = None,
+    exclude_prefixes: List[str] = [],
+    only_prefix: List[str] = [],
+) -> None:
     if isinstance(module, str):
         if basemodule is None:
             basemodule = module + "."
@@ -189,7 +203,6 @@ def _patch_module(module, prefix="", basepath=None, basemodule=None, exclude_pre
                 only_prefix=only_prefix,
             )
         elif inspect.isroutine(fnc):
-
             if only_prefix and all(p not in (prefix + str(fn)) for p in only_prefix):
                 continue
 
@@ -224,7 +237,12 @@ def _patch_module(module, prefix="", basepath=None, basemodule=None, exclude_pre
                 setattr(module, fn, _traced_call_func(prefix + fn, fnc))
 
 
-def trace_trains(stream=None, level=1, exclude_prefixes=[], only_prefix=[]):
+def trace_trains(
+    stream: Union[str, TextIO, None] = None,
+    level: int = 1,
+    exclude_prefixes: List[str] = [],
+    only_prefix: List[str] = [],
+) -> None:
     """
     DEBUG ONLY - Add full ClearML package code trace
     Output trace to filename or stream, default is sys.stderr
@@ -272,10 +290,14 @@ def trace_trains(stream=None, level=1, exclude_prefixes=[], only_prefix=[]):
     __stream_write("{:9}:{:5}:{:8}: {:14}\n".format("seconds", "pid", "tid", "self"))
     __stream_write("{:9}:{:5}:{:8}:{:15}\n".format("-" * 9, "-" * 5, "-" * 8, "-" * 15))
     __trace_start = time.time()
-    _patch_module("clearml", exclude_prefixes=exclude_prefixes or [], only_prefix=only_prefix or [])
+    _patch_module(
+        "clearml",
+        exclude_prefixes=exclude_prefixes or [],
+        only_prefix=only_prefix or [],
+    )
 
 
-def trace_level(level=1):
+def trace_level(level: int = 1) -> bool:
     """
     Set trace level
         -2: Trace function and arguments and returned call
@@ -294,7 +316,12 @@ def trace_level(level=1):
     return True
 
 
-def print_traced_files(glob_mask, lines_per_tid=5, stream=sys.stdout, specify_pids=None):
+def print_traced_files(
+    glob_mask: str,
+    lines_per_tid: int = 5,
+    stream: Union[str, TextIO] = sys.stdout,
+    specify_pids: Optional[List[int]] = None,
+) -> None:
     """
     Collect trace lines from files (glob mask), sort by pid/tid and print ordered by time
 
@@ -305,7 +332,7 @@ def print_traced_files(glob_mask, lines_per_tid=5, stream=sys.stdout, specify_pi
     """
     from glob import glob
 
-    def hash_line(a_line):
+    def hash_line(a_line: str) -> int:
         return hash(":".join(a_line.split(":")[1:]))
 
     pids = {}
@@ -357,12 +384,12 @@ def print_traced_files(glob_mask, lines_per_tid=5, stream=sys.stdout, specify_pi
         out_stream.close()
 
 
-def end_of_program():
+def end_of_program() -> None:
     # stub
     pass
 
 
-def stdout_print(*args, **kwargs):
+def stdout_print(*args: Any, **kwargs: Any) -> None:
     if len(args) == 1 and not kwargs:
         line = str(args[0])
         if not line.endswith("\n"):
@@ -375,7 +402,7 @@ def stdout_print(*args, **kwargs):
         sys.stdout.write(line)
 
 
-def debug_print(*args, **kwargs):
+def debug_print(*args: Any, **kwargs: Any) -> None:
     """
     Print directly to stdout, with process and timestamp from last print call
     Example: [pid=123, t=0.003] message here

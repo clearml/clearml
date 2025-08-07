@@ -1,20 +1,24 @@
 import os
 from functools import partial
-from time import sleep
 from multiprocessing import pool
+from time import sleep
+from typing import Callable, TYPE_CHECKING, Any
+
 import six
 
+if TYPE_CHECKING:
+    from .. import Task
 from ..config import TASK_LOG_ENVIRONMENT, running_remotely, config
 from ..utilities.process.mp import BackgroundMonitor
 
 
 class EnvironmentBind(object):
     _current_task = None
-    _environment_section = 'Environment'
+    _environment_section = "Environment"
     __patched = False
 
     @classmethod
-    def update_current_task(cls, task):
+    def update_current_task(cls, task: Any) -> None:
         cls._current_task = task
         # noinspection PyBroadException
         try:
@@ -25,7 +29,7 @@ class EnvironmentBind(object):
             pass
 
     @classmethod
-    def _bind_environment(cls):
+    def _bind_environment(cls) -> None:
         if not cls._current_task:
             return
 
@@ -37,10 +41,9 @@ class EnvironmentBind(object):
                 os.environ.update(params[cls._environment_section])
             return
 
-        environ_log = \
-            str(TASK_LOG_ENVIRONMENT.get() or '').strip() or config.get('development.log_os_environments', [])
+        environ_log = str(TASK_LOG_ENVIRONMENT.get() or "").strip() or config.get("development.log_os_environments", [])
         if environ_log and isinstance(environ_log, str):
-            environ_log = [e.strip() for e in environ_log.split(',')]
+            environ_log = [e.strip() for e in environ_log.split(",")]
 
         if not environ_log:
             return
@@ -48,14 +51,19 @@ class EnvironmentBind(object):
         env_param = dict()
         for match in environ_log:
             match = match.strip()
-            if match == '*':
-                env_param.update({k: os.environ.get(k) for k in os.environ
-                                  if not k.startswith('TRAINS_') and not k.startswith('CLEARML_')})
-            elif match.endswith('*'):
-                match = match.rstrip('*')
+            if match == "*":
+                env_param.update(
+                    {
+                        k: os.environ.get(k)
+                        for k in os.environ
+                        if not k.startswith("TRAINS_") and not k.startswith("CLEARML_")
+                    }
+                )
+            elif match.endswith("*"):
+                match = match.rstrip("*")
                 env_param.update({k: os.environ.get(k) for k in os.environ if k.startswith(match)})
-            elif match.startswith('*'):
-                match = match.lstrip('*')
+            elif match.startswith("*"):
+                match = match.lstrip("*")
                 env_param.update({k: os.environ.get(k) for k in os.environ if k.endswith(match)})
             elif match in os.environ:
                 env_param.update({match: os.environ.get(match)})
@@ -64,16 +72,17 @@ class EnvironmentBind(object):
 
 
 class SimpleQueueWrapper(object):
-    def __init__(self, task, simple_queue):
+    def __init__(self, task: Any, simple_queue: Any) -> None:
         self.__current_task = task
         self.__simple_queue = simple_queue
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Any:
         if attr in ["__simple_queue", "__current_task"]:
             return self.__dict__.get(attr)
 
         if attr == "put":
-            def _patched_put(*a_args, **a_kwargs):
+
+            def _patched_put(*a_args: Any, **a_kwargs: Any) -> Any:
                 # make sure we flush everything, because after we push the result we will get terminated
                 try:
                     if self.__current_task and self.__current_task.is_main_task():
@@ -94,7 +103,7 @@ class PatchOsFork(object):
     _original_process_run = None
 
     @classmethod
-    def patch_fork(cls, task):
+    def patch_fork(cls, task: "Task") -> None:
         cls._current_task = task
         if not task:
             return
@@ -108,8 +117,10 @@ class PatchOsFork(object):
             if cls._registered_fork_callbacks or cls._original_fork:
                 return
             try:
-                os.register_at_fork(before=PatchOsFork._fork_callback_before,
-                                    after_in_child=PatchOsFork._fork_callback_after_child)
+                os.register_at_fork(
+                    before=PatchOsFork._fork_callback_before,
+                    after_in_child=PatchOsFork._fork_callback_after_child,
+                )
                 cls._registered_fork_callbacks = True
             except Exception:
                 # python <3.6
@@ -126,13 +137,14 @@ class PatchOsFork(object):
         # shuts everything down before calling os._exit that we patched above
         try:
             from multiprocessing.process import BaseProcess
+
             PatchOsFork._original_process_run = BaseProcess.run
             BaseProcess.run = PatchOsFork._patched_process_run
         except:  # noqa
             pass
 
     @staticmethod
-    def _patched_pool_worker(original_worker, *args, **kwargs):
+    def _patched_pool_worker(original_worker: Callable, *args: Any, **kwargs: Any) -> Any:
         if not PatchOsFork._current_task:
             return original_worker(*args, **kwargs)
 
@@ -149,12 +161,13 @@ class PatchOsFork(object):
         return original_worker(*args, **kwargs)
 
     @staticmethod
-    def _patched_process_run(self, *args, **kwargs):
+    def _patched_process_run(self, *args: Any, **kwargs: Any) -> None:
         if not PatchOsFork._current_task:
             return PatchOsFork._original_process_run(self, *args, **kwargs)
 
         try:
             from ..task import Task
+
             task = Task.current_task()
         except:  # noqa
             task = None
@@ -191,7 +204,7 @@ class PatchOsFork(object):
                     pass
 
     @staticmethod
-    def _fork_callback_before():
+    def _fork_callback_before() -> None:
         if not PatchOsFork._current_task:
             return
         from ..task import Task
@@ -204,7 +217,7 @@ class PatchOsFork(object):
         Task._wait_for_deferred(task)
 
     @staticmethod
-    def _fork_callback_after_child():
+    def _fork_callback_after_child() -> None:
         if not PatchOsFork._current_task:
             return
 
@@ -242,7 +255,7 @@ class PatchOsFork(object):
         # The signal handler method is Not enough, for the time being, we have both
         # even though it makes little sense
         # # if we got here patch the os._exit of our instance to call us
-        def _at_exit_callback(*a_args, **a_kwargs):
+        def _at_exit_callback(*a_args: Any, **a_kwargs: Any) -> None:
             # just make sure we flush the internal state (the at exist caught by the external signal does the rest
             # in theory we should not have to do any of that, but for some reason if we do not
             # the signal is never caught by the signal call backs, not sure why....
@@ -259,7 +272,7 @@ class PatchOsFork(object):
             # noinspection PyProtectedMember, PyUnresolvedReferences
             return os._org_exit(*a_args, **a_kwargs)
 
-        if not hasattr(os, '_org_exit'):
+        if not hasattr(os, "_org_exit"):
             # noinspection PyProtectedMember, PyUnresolvedReferences
             os._org_exit = os._exit
 
@@ -270,7 +283,7 @@ class PatchOsFork(object):
         os._exit = _at_exit_callback
 
     @staticmethod
-    def _patched_fork(*args, **kwargs):
+    def _patched_fork(*args: Any, **kwargs: Any) -> int:
         if not PatchOsFork._current_task:
             return PatchOsFork._original_fork(*args, **kwargs)
 
@@ -286,7 +299,7 @@ class PatchOsFork(object):
         return ret
 
     @staticmethod
-    def unpatch_fork():
+    def unpatch_fork() -> None:
         try:
             if PatchOsFork._original_fork and os._exit != PatchOsFork._original_fork:
                 os._exit = PatchOsFork._original_fork
@@ -295,7 +308,7 @@ class PatchOsFork(object):
             pass
 
     @staticmethod
-    def unpatch_process_run():
+    def unpatch_process_run() -> None:
         try:
             from multiprocessing.process import BaseProcess
 

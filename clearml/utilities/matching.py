@@ -1,10 +1,10 @@
-from pathlib2 import Path
 from fnmatch import fnmatch
 from typing import Union
 
+from pathlib2 import Path
 
-def matches_any_wildcard(path, wildcards, recursive=True):
-    # type: (str, Union[str, list], bool) -> bool
+
+def matches_any_wildcard(path: str, wildcards: Union[str, list], recursive: bool = True) -> bool:
     """
     Checks if given pattern matches any supplied wildcard
 

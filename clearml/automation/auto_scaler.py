@@ -1,15 +1,17 @@
+import logging
 import re
 from collections import defaultdict, deque
 from enum import Enum
 from itertools import chain
 from threading import Event, Thread
 from time import sleep, time
+from typing import Tuple, Dict, Optional, List, Generator, Any
 
 import attr
 from attr.validators import instance_of
 
 from .cloud_driver import CloudDriver
-from .. import Task
+from .. import Task, Logger
 from ..backend_api import Session
 from ..backend_api.session import defs
 from ..backend_api.session.client import APIClient
@@ -34,7 +36,7 @@ MINUTE = 60.0
 
 
 class WorkerId:
-    def __init__(self, worker_id):
+    def __init__(self, worker_id: str) -> None:
         self.prefix = self.name = self.instance_type = self.cloud_id = ""
         match = _workers_pattern.match(worker_id)
         if not match:
@@ -63,7 +65,7 @@ class ScalerConfig:
     queues = attr.ib(default=None)
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config: dict) -> "ScalerConfig":
         return cls(
             max_idle_time_min=config["hyper_params"]["max_idle_time_min"],
             polling_interval_time_min=config["hyper_params"]["polling_interval_time_min"],
@@ -75,7 +77,12 @@ class ScalerConfig:
 
 
 class AutoScaler(object):
-    def __init__(self, config, driver: CloudDriver, logger=None):
+    def __init__(
+        self,
+        config: "ScalerConfig",
+        driver: CloudDriver,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
         self.logger = logger or get_logger("auto_scaler")
         # Should be after we create logger
         self.state = State.STARTING
@@ -115,7 +122,7 @@ class AutoScaler(object):
         self._stop_event = Event()
         self.state = State.READY
 
-    def set_auth(self, session):
+    def set_auth(self, session: Session) -> None:
         if session.access_key and session.secret_key:
             self.access_key = session.access_key
             self.secret_key = session.secret_key
@@ -125,7 +132,7 @@ class AutoScaler(object):
         self.access_key = self.secret_key = None
         self.auth_token = defs.ENV_AUTH_TOKEN.get(default=None)
 
-    def sanity_check(self):
+    def sanity_check(self) -> bool:
         if has_duplicate_resource(self.queues):
             self.logger.error(
                 "Error: at least one resource name is used in multiple queues. "
@@ -134,7 +141,7 @@ class AutoScaler(object):
             return False
         return True
 
-    def start(self):
+    def start(self) -> None:
         self.state = State.RUNNING
         # Loop until stopped, it is okay we are stateless
         while self._running():
@@ -144,12 +151,12 @@ class AutoScaler(object):
                 self.logger.exception("Error: %r, retrying in 15 seconds", ex)
                 sleep(15)
 
-    def stop(self):
+    def stop(self) -> None:
         self.logger.info("stopping")
         self._stop_event.set()
         self.state = State.STOPPED
 
-    def ensure_queues(self):
+    def ensure_queues(self) -> None:
         # Verify the requested queues exist and create those that doesn't exist
         all_queues = {q.name for q in list(self.api_client.queues.get_all(only_fields=["name"]))}
         missing_queues = set(self.queues) - all_queues
@@ -157,7 +164,7 @@ class AutoScaler(object):
             self.logger.info("Creating queue %r", q)
             self.api_client.queues.create(q)
 
-    def queue_mapping(self):
+    def queue_mapping(self) -> Tuple[Dict[str, str], Dict[str, str]]:
         id_to_name = {}
         name_to_id = {}
         for queue in self.api_client.queues.get_all(only_fields=["id", "name"]):
@@ -166,7 +173,7 @@ class AutoScaler(object):
 
         return id_to_name, name_to_id
 
-    def get_workers(self):
+    def get_workers(self) -> List[Any]:
         workers = []
         for worker in self.api_client.workers.get_all():
             try:
@@ -177,32 +184,32 @@ class AutoScaler(object):
                 self.logger.info("ignoring unknown worker: %r", worker.id)
         return workers
 
-    def stale_workers(self, spun_workers):
+    def stale_workers(self, spun_workers: Dict[str, Tuple[str, float]]) -> Generator[str, None, None]:
         now = time()
         for worker_id, (resource, spin_time) in list(spun_workers.items()):
             if now - spin_time > self.max_spin_up_time_min * MINUTE:
                 self.logger.info("Stuck spun instance %s of type %s", worker_id, resource)
                 yield worker_id
 
-    def extra_allocations(self):
+    def extra_allocations(self) -> List[Any]:
         """Hook for subclass to use"""
         return []
 
-    def gen_worker_prefix(self, resource, resource_conf):
+    def gen_worker_prefix(self, resource: str, resource_conf: dict) -> str:
         return "{workers_prefix}:{worker_type}:{instance_type}".format(
             workers_prefix=self.workers_prefix,
             worker_type=resource,
             instance_type=resource_conf["instance_type"],
         )
 
-    def is_worker_still_idle(self, worker_id):
+    def is_worker_still_idle(self, worker_id: str) -> bool:
         self.logger.info("Checking if worker %r is still idle", worker_id)
         for worker in self.api_client.workers.get_all():
             if worker.id == worker_id:
                 return getattr(worker, "task", None) is None
         return True
 
-    def supervisor(self):
+    def supervisor(self) -> None:
         """
         Spin up or down resources as necessary.
         - For every queue in self.queues do the following:
@@ -234,7 +241,10 @@ class AutoScaler(object):
                 if worker.id not in previous_workers:
                     if not spun_workers.pop(worker.id, None):
                         if worker.id not in unknown_workers:
-                            self.logger.info("Removed unknown worker from spun_workers: %s", worker.id)
+                            self.logger.info(
+                                "Removed unknown worker from spun_workers: %s",
+                                worker.id,
+                            )
                             unknown_workers.append(worker.id)
                     else:
                         previous_workers.add(worker.id)
@@ -320,7 +330,11 @@ class AutoScaler(object):
                     spun_workers[worker_id] = (resource, time())
                     up_machines[resource] += 1
                 except Exception as ex:
-                    self.logger.exception("Failed to start new instance (resource %r), Error: %s", resource, ex)
+                    self.logger.exception(
+                        "Failed to start new instance (resource %r), Error: %s",
+                        resource,
+                        ex,
+                    )
 
             # Go over the idle workers list, and spin down idle workers
             for worker_id in list(idle_workers):
@@ -347,7 +361,11 @@ class AutoScaler(object):
             self.logger.info("Idle for %.2f seconds", self.polling_interval_time_min * MINUTE)
             sleep(self.polling_interval_time_min * MINUTE)
 
-    def update_idle_workers(self, all_workers, idle_workers):
+    def update_idle_workers(
+        self,
+        all_workers: List[Any],
+        idle_workers: Dict[str, Tuple[float, str, Any]],
+    ) -> None:
         if not all_workers:
             idle_workers.clear()
             return
@@ -362,21 +380,27 @@ class AutoScaler(object):
             elif worker.id in idle_workers:
                 idle_workers.pop(worker.id, None)
 
-    def _running(self):
+    def _running(self) -> bool:
         return not self._stop_event.is_set()
 
-    def report_app_stats(self, logger, queue_id_to_name, up_machines, idle_workers):
+    def report_app_stats(
+        self,
+        logger: logging.Logger,
+        queue_id_to_name: Dict[str, str],
+        up_machines: Dict[str, int],
+        idle_workers: Dict[str, Tuple[float, str, Any]],
+    ) -> None:
         self.logger.info("resources: %r", self.resource_to_queue)
         self.logger.info("idle worker: %r", idle_workers)
         self.logger.info("up machines: %r", up_machines)
 
     # Using property for state to log state change
     @property
-    def state(self):
+    def state(self) -> State:
         return self._state
 
     @state.setter
-    def state(self, value):
+    def state(self, value: State) -> None:
         prev = getattr(self, "_state", None)
         if prev:
             self.logger.info("state change: %s -> %s", prev, value)
@@ -384,12 +408,12 @@ class AutoScaler(object):
             self.logger.info("initial state: %s", value)
         self._state = value
 
-    def monitor_startup(self, instance_id):
+    def monitor_startup(self, instance_id: str) -> None:
         thr = Thread(target=self.instance_log_thread, args=(instance_id,))
         thr.daemon = True
         thr.start()
 
-    def instance_log_thread(self, instance_id):
+    def instance_log_thread(self, instance_id: str) -> None:
         start = time()
         # The driver will return the log content from the start on every call,
         # we keep record to avoid logging the same line twice
@@ -408,23 +432,23 @@ class AutoScaler(object):
             sleep(MINUTE)
 
 
-def latest_lines(lines, last):
+def latest_lines(lines: List[str], last: int) -> Tuple[int, List[str]]:
     """Return lines after last and not empty
 
     >>> latest_lines(['a', 'b', '', 'c', '', 'd'], 1)
     6, ['c', 'd']
     """
     last_lnum = len(lines)
-    latest = [l for n, l in enumerate(lines, 1) if n > last and l.strip()]
+    latest = [line for n, line in enumerate(lines, 1) if n > last and line.strip()]
     return last_lnum, latest
 
 
-def get_task_logger():
+def get_task_logger() -> Optional[Logger]:
     task = Task.current_task()
     return task and task.get_logger()
 
 
-def has_duplicate_resource(queues: dict):
+def has_duplicate_resource(queues: dict) -> bool:
     """queues: dict[name] -> [(resource, count), (resource, count) ...]"""
     seen = set()
     for name, _ in chain.from_iterable(queues.values()):
@@ -434,7 +458,7 @@ def has_duplicate_resource(queues: dict):
     return False
 
 
-def worker_last_time(worker):
+def worker_last_time(worker: Any) -> float:
     """Last time we heard from a worker. Current time if we can't find"""
     time_attrs = [
         "register_time",

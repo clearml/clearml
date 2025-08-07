@@ -1,4 +1,9 @@
+from typing import Optional, TYPE_CHECKING
+
 from ....config import deferred_config
+
+if TYPE_CHECKING:
+    from ....backend_interface import Task
 
 
 class TaskStopReason(object):
@@ -8,24 +13,25 @@ class TaskStopReason(object):
 
 
 class TaskStopSignal(object):
-    enabled = deferred_config('development.support_stopping', False, transform=bool)
+    enabled = deferred_config("development.support_stopping", False, transform=bool)
 
     _number_of_consecutive_reset_tests = 4
 
-    def __init__(self, task):
+    def __init__(self, task: "Task") -> None:
         from ....backend_interface import Task
+
         assert isinstance(task, Task)
         self.task = task
         self._task_reset_state_counter = 0
         self._status_in_progress = str(Task.TaskStatusEnum.in_progress)
         self._status_created = str(Task.TaskStatusEnum.created)
         self._status_expected_statuses = (
-                str(Task.TaskStatusEnum.created),
-                str(Task.TaskStatusEnum.queued),
-                str(Task.TaskStatusEnum.in_progress),
-            )
+            str(Task.TaskStatusEnum.created),
+            str(Task.TaskStatusEnum.queued),
+            str(Task.TaskStatusEnum.in_progress),
+        )
 
-    def test(self):
+    def test(self) -> Optional[TaskStopReason]:
         # noinspection PyBroadException
         try:
             # we use internal status read, so we do not need to constantly pull the entire task object,

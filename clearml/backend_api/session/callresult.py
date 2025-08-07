@@ -1,5 +1,9 @@
+import logging
 import sys
 import time
+from typing import Optional, Dict, Type, Any
+
+import requests
 
 from ...backend_api.utils import get_response_cls
 
@@ -9,31 +13,38 @@ from .errors import ResultNotReadyError, TimeoutExpiredError
 
 class CallResult(object):
     @property
-    def meta(self):
+    def meta(self) -> ResponseMeta:
         return self.__meta
 
     @property
-    def response(self):
+    def response(self) -> Response:
         return self.__response
 
     @property
-    def response_data(self):
+    def response_data(self) -> Optional[Dict[str, Any]]:
         return self.__response_data
 
     @property
-    def async_accepted(self):
+    def async_accepted(self) -> bool:
         return self.meta.result_code == 202
 
     @property
-    def request_cls(self):
+    def request_cls(self) -> Optional[Type[Any]]:
         return self.__request_cls
 
-    def __init__(self, meta, response=None, response_data=None, request_cls=None, session=None):
+    def __init__(
+        self,
+        meta: ResponseMeta,
+        response: Response = None,
+        response_data: dict = None,
+        request_cls: type = None,
+        session: Any = None,
+    ) -> None:
         assert isinstance(meta, ResponseMeta)
         if response and not isinstance(response, Response):
-            raise ValueError('response should be an instance of %s' % Response.__name__)
+            raise ValueError("response should be an instance of %s" % Response.__name__)
         elif response_data and not isinstance(response_data, dict):
-            raise TypeError('data should be an instance of {}'.format(dict.__name__))
+            raise TypeError("data should be an instance of {}".format(dict.__name__))
 
         self.__meta = meta
         self.__response = response
@@ -47,28 +58,45 @@ class CallResult(object):
             try:
                 self.__response_data = response.to_dict()
             except AttributeError:
-                raise TypeError('response should be an instance of {}'.format(Response.__name__))
+                raise TypeError("response should be an instance of {}".format(Response.__name__))
         else:
             self.__response_data = None
 
     @classmethod
-    def _make_raw_response(cls, request_cls=None, service=None, action=None, status_code=200, text=None):
-        service = service or (request_cls._service if request_cls else 'unknown')
-        action = action or (request_cls._action if request_cls else 'unknown')
-        return cls(request_cls=request_cls, meta=ResponseMeta.from_raw_data(
-            status_code=status_code, text=text, endpoint='%(service)s.%(action)s' % locals()))
+    def _make_raw_response(
+        cls,
+        request_cls: Optional[Type] = None,
+        service: Optional[str] = None,
+        action: Optional[str] = None,
+        status_code: int = 200,
+        text: Optional[str] = None,
+    ) -> "CallResult":
+        service = service or (request_cls._service if request_cls else "unknown")
+        action = action or (request_cls._action if request_cls else "unknown")
+        return cls(
+            request_cls=request_cls,
+            meta=ResponseMeta.from_raw_data(
+                status_code=status_code,
+                text=text,
+                endpoint="%(service)s.%(action)s" % locals(),
+            ),
+        )
 
     @classmethod
-    def from_result(cls, res, request_cls=None, logger=None, service=None, action=None, session=None):
-        """ From requests result """
+    def from_result(
+        cls,
+        res: requests.Response,
+        request_cls: Optional[Type] = None,
+        logger: Optional[logging.Logger] = None,
+        service: Optional[str] = None,
+        action: Optional[str] = None,
+        session: Optional[Any] = None,
+    ) -> "CallResult":
+        """From requests result"""
         response_cls = get_response_cls(request_cls)
 
         if res is None:
-            return cls._make_raw_response(
-                request_cls=request_cls,
-                service=service,
-                action=action
-            )
+            return cls._make_raw_response(request_cls=request_cls, service=service, action=action)
 
         try:
             data = res.json()
@@ -78,50 +106,66 @@ class CallResult(object):
                 service=service,
                 action=action,
                 status_code=res.status_code,
-                text=res.text
+                text=res.text,
             )
-        if 'meta' not in data:
-            raise ValueError('Missing meta section in response payload')
+        if "meta" not in data:
+            raise ValueError("Missing meta section in response payload")
         try:
-            meta = ResponseMeta(**data['meta'])
+            meta = ResponseMeta(**data["meta"])
             # TODO: validate meta?
             # meta.validate()
         except Exception as ex:
-            raise ValueError('Failed parsing meta section in response payload (data=%s, error=%s)' % (data, ex))
+            raise ValueError("Failed parsing meta section in response payload (data=%s, error=%s)" % (data, ex))
 
         response = None
         response_data = None
         try:
-            response_data = data.get('data', {})
+            response_data = data.get("data", {})
             if response_cls:
                 response = response_cls(**response_data)
                 # TODO: validate response?
                 # response.validate()
         except Exception as e:
             if logger:
-                logger.warning('Failed parsing response: %s' % str(e))
-        return cls(meta=meta, response=response, response_data=response_data, request_cls=request_cls, session=session)
+                logger.warning("Failed parsing response: %s" % str(e))
+        return cls(
+            meta=meta,
+            response=response,
+            response_data=response_data,
+            request_cls=request_cls,
+            session=session,
+        )
 
-    def ok(self):
+    def ok(self) -> bool:
         return self.meta.result_code == 200
 
-    def ready(self):
+    def ready(self) -> bool:
         if not self.async_accepted:
             return True
         session = self.__session
-        res = session.send_request(service='async', action='result', json=dict(id=self.meta.id), async_enable=False)
+        res = session.send_request(
+            service="async",
+            action="result",
+            json=dict(id=self.meta.id),
+            async_enable=False,
+        )
         if res.status_code != session._async_status_code:
             self.__async_result = CallResult.from_result(res=res, request_cls=self.request_cls, logger=session._logger)
             return True
 
-    def result(self):
+    def result(self) -> "CallResult":
         if not self.async_accepted:
             return self
         if self.__async_result is None:
-            raise ResultNotReadyError(self._format_msg('Timeout expired'), call_id=self.meta.id)
+            raise ResultNotReadyError(self._format_msg("Timeout expired"), call_id=self.meta.id)
         return self.__async_result
 
-    def wait(self, timeout=None, poll_interval=5, verbose=False):
+    def wait(
+        self,
+        timeout: Optional[int] = None,
+        poll_interval: int = 5,
+        verbose: bool = False,
+    ) -> "CallResult":
         if not self.async_accepted:
             return self
         session = self.__session
@@ -131,11 +175,14 @@ class CallResult(object):
             if not self.ready():
                 # Still pending, log and continue
                 if verbose and session._logger:
-                    progress = ('waiting forever'
-                                if timeout is False
-                                else '%.1f/%.1f seconds remaining' % (remaining, float(timeout or 0)))
-                    session._logger.info('Waiting for asynchronous call %s (%s)'
-                                         % (self.request_cls.__name__, progress))
+                    progress = (
+                        "waiting forever"
+                        if timeout is False
+                        else "%.1f/%.1f seconds remaining" % (remaining, float(timeout or 0))
+                    )
+                    session._logger.info(
+                        "Waiting for asynchronous call %s (%s)" % (self.request_cls.__name__, progress)
+                    )
                 time.sleep(poll_interval)
                 remaining -= poll_interval
                 continue
@@ -143,7 +190,7 @@ class CallResult(object):
             return self.result()
 
         # Timeout expired, return the asynchronous call's result (we've got nothing better to report)
-        raise TimeoutExpiredError(self._format_msg('Timeout expired'), call_id=self.meta.id)
+        raise TimeoutExpiredError(self._format_msg("Timeout expired"), call_id=self.meta.id)
 
-    def _format_msg(self, msg):
-        return msg + ' for call %s (%s)' % (self.request_cls.__name__, self.meta.id)
+    def _format_msg(self, msg: str) -> str:
+        return msg + " for call %s (%s)" % (self.request_cls.__name__, self.meta.id)

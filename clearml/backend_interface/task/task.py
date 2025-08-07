@@ -12,7 +12,7 @@ from multiprocessing import RLock
 from operator import itemgetter
 from tempfile import gettempdir
 from threading import Thread
-from typing import Optional, Any, Sequence, Callable, Mapping, Union, List, Set, Dict
+from typing import Optional, Sequence, Callable, Mapping, Union, List, Set, Dict, Any
 from uuid import uuid4
 
 from pathlib2 import Path
@@ -33,6 +33,7 @@ from ...backend_interface.task.development.worker import DevWorker
 from ...backend_interface.session import SendError
 from ...backend_api import Session
 from ...backend_api.services import tasks, models, events, projects
+
 # from ...backend_api.session.defs import ENV_OFFLINE_MODE
 from ...utilities.pyhocon import ConfigTree, ConfigFactory
 from ...utilities.config import config_dict_to_text, text_to_config_dict
@@ -43,61 +44,83 @@ from ..metrics import Metrics, Reporter
 from ..model import Model
 from ..setupuploadmixin import SetupUploadMixin
 from ..util import (
-    make_message, get_or_create_project, get_single_result,
-    exact_match_regex, mutually_exclusive, )
+    make_message,
+    get_or_create_project,
+    get_single_result,
+    exact_match_regex,
+    mutually_exclusive,
+)
 from ...config import (
-    get_config_for_bucket, get_remote_task_id, TASK_ID_ENV_VAR,
-    running_remotely, get_cache_dir, DOCKER_IMAGE_ENV_VAR, get_offline_dir, get_log_to_backend, deferred_config, )
+    get_config_for_bucket,
+    get_remote_task_id,
+    TASK_ID_ENV_VAR,
+    running_remotely,
+    get_cache_dir,
+    DOCKER_IMAGE_ENV_VAR,
+    get_offline_dir,
+    get_log_to_backend,
+    deferred_config,
+)
 from ...debugging import get_logger
 from ...storage.helper import StorageHelper, StorageError
 from .access import AccessMixin
 from .repo import ScriptInfo, pip_freeze
 from .hyperparams import HyperParams
-from ...config import config, PROC_MASTER_ID_ENV_VAR, SUPPRESS_UPDATE_MESSAGE_ENV_VAR, DOCKER_BASH_SETUP_ENV_VAR
+from ...config import (
+    config,
+    PROC_MASTER_ID_ENV_VAR,
+    SUPPRESS_UPDATE_MESSAGE_ENV_VAR,
+    DOCKER_BASH_SETUP_ENV_VAR,
+)
 from ...utilities.process.mp import SingletonLock
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from ...model import BaseModel
 
 
 class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
-    """ Task manager providing task object access and management. Includes read/write access to task-associated
-        frames and models.
+    """Task manager providing task object access and management. Includes read/write access to task-associated
+    frames and models.
     """
 
-    _anonymous_dataview_id = '__anonymous__'
-    _development_tag = 'development'
-    archived_tag = 'archived'
-    _default_configuration_section_name = 'General'
-    _legacy_parameters_section_name = 'Args'
+    _anonymous_dataview_id = "__anonymous__"
+    _development_tag = "development"
+    archived_tag = "archived"
+    _default_configuration_section_name = "General"
+    _legacy_parameters_section_name = "Args"
     _force_requirements = {}
     _ignore_requirements = set()
 
-    _store_diff = deferred_config('development.store_uncommitted_code_diff', False)
-    _store_remote_diff = deferred_config('development.store_code_diff_from_remote', False)
-    _report_subprocess_enabled = deferred_config('development.report_use_subprocess', sys.platform == 'linux')
-    _force_use_pip_freeze = deferred_config(multi=[('development.detect_with_pip_freeze', False),
-                                                   ('development.detect_with_conda_freeze', False)])
+    _store_diff = deferred_config("development.store_uncommitted_code_diff", False)
+    _store_remote_diff = deferred_config("development.store_code_diff_from_remote", False)
+    _report_subprocess_enabled = deferred_config("development.report_use_subprocess", sys.platform == "linux")
+    _force_use_pip_freeze = deferred_config(
+        multi=[
+            ("development.detect_with_pip_freeze", False),
+            ("development.detect_with_conda_freeze", False),
+        ]
+    )
     _force_store_standalone_script = False
-    _offline_filename = 'task.json'
+    _offline_filename = "task.json"
 
     __default_random_seed = 1337
     _random_seed = __default_random_seed
 
-    __nested_deferred_init_flag = type('_NestedDeferredInitFlag', (object,), {'content': {}})
+    __nested_deferred_init_flag = type("_NestedDeferredInitFlag", (object,), {"content": {}})
 
     class TaskTypes(Enum):
-        def __str__(self):
+        def __str__(self) -> str:
             return str(self.value)
 
-        def __eq__(self, other):
+        def __eq__(self, other: Any) -> bool:
             return str(self) == str(other)
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return "TaskTypes.{}".format(self.value)
 
-        training = 'training'
-        testing = 'testing'
+        training = "training"
+        testing = "testing"
         inference = "inference"
         data_processing = "data_processing"
         application = "application"
@@ -109,13 +132,13 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         custom = "custom"
 
     class TaskStatusEnum(Enum):
-        def __str__(self):
+        def __str__(self) -> str:
             return str(self.value)
 
-        def __eq__(self, other):
+        def __eq__(self, other: Any) -> bool:
             return str(self) == str(other)
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return "TaskTypes.{}".format(self.value)
 
         created = "created"
@@ -132,9 +155,18 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
     class DeleteError(Exception):
         pass
 
-    def __init__(self, session=None, task_id=None, log=None, project_name=None,
-                 task_name=None, task_type=TaskTypes.training, log_to_backend=True,
-                 raise_on_validation_errors=True, force_create=False):
+    def __init__(
+        self,
+        session: Optional[Session] = None,
+        task_id: Optional[str] = None,
+        log: Optional[logging.Logger] = None,
+        project_name: Optional[str] = None,
+        task_name: Optional[str] = None,
+        task_type: Union[str, TaskTypes] = TaskTypes.training,
+        log_to_backend: bool = True,
+        raise_on_validation_errors: bool = True,
+        force_create: bool = False,
+    ) -> None:
         """
         Create a new task instance.
         :param session: Optional API Session instance. If not provided, a default session based on the system's
@@ -171,9 +203,13 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self.__reporter = None
         self._curr_label_stats = {}
         self._raise_on_validation_errors = raise_on_validation_errors
-        self._parameters_allowed_types = tuple(set(
-            six.string_types + six.integer_types + (six.text_type, float, list, tuple, dict, type(None), Enum)  # noqa
-        ))
+        self._parameters_allowed_types = tuple(
+            set(
+                six.string_types
+                + six.integer_types
+                + (six.text_type, float, list, tuple, dict, type(None), Enum)  # noqa
+            )
+        )
         self._app_server = None
         self._files_server = None
         self._initial_iteration_offset = 0
@@ -192,7 +228,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self._validate(check_output_dest_credentials=False)
 
         if self.data is None:
-            raise ValueError("Task ID \"{}\" could not be found".format(self.id))
+            raise ValueError('Task ID "{}" could not be found'.format(self.id))
 
         self._project_name = (self.project, project_name)
         self._project_object = None
@@ -203,7 +239,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._artifacts_manager = Artifacts(self)
         self._hyper_params_manager = HyperParams(self)
 
-    def _validate(self, check_output_dest_credentials=False):
+    def _validate(self, check_output_dest_credentials: bool = False) -> None:
         if not self._is_remote_main_task():
             self._storage_uri = self.get_output_destination(raise_on_error=False, log_on_error=False) or None
             return
@@ -212,46 +248,50 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         output_dest = self.get_output_destination(raise_on_error=False, log_on_error=False)
         if output_dest and check_output_dest_credentials:
             try:
-                self.log.info('Validating output destination')
+                self.log.info("Validating output destination")
                 conf = get_config_for_bucket(base_url=output_dest)
                 if not conf:
-                    msg = 'Failed resolving output destination (no credentials found for %s)' % output_dest
+                    msg = "Failed resolving output destination (no credentials found for %s)" % output_dest
                     self.log.warning(msg)
                     if raise_errors:
                         raise Exception(msg)
             except StorageError:
                 raise
             except Exception as ex:
-                self.log.error('Failed trying to verify output destination: %s' % ex)
+                self.log.error("Failed trying to verify output destination: %s" % ex)
 
     @classmethod
-    def _resolve_task_id(cls, task_id, log=None):
+    def _resolve_task_id(cls, task_id: Optional[str], log: Optional[logging.Logger] = None) -> Optional[str]:
         if not task_id:
             task_id = cls.normalize_id(get_remote_task_id())
             if task_id:
-                log = log or get_logger('task')
-                log.info('Using task ID from env %s=%s' % (TASK_ID_ENV_VAR[0], task_id))
+                log = log or get_logger("task")
+                log.info("Using task ID from env %s=%s" % (TASK_ID_ENV_VAR[0], task_id))
         return task_id
 
-    def _update_repository(self):
-        def check_package_update():
+    def _update_repository(self) -> None:
+        def check_package_update() -> None:
             # noinspection PyBroadException
             try:
                 # check latest version
                 from ...utilities.check_updates import CheckPackageUpdates
+
                 latest_version = CheckPackageUpdates.check_new_package_available(only_once=True)
                 if latest_version and not SUPPRESS_UPDATE_MESSAGE_ENV_VAR.get(
-                        default=config.get('development.suppress_update_message', False)):
+                    default=config.get("development.suppress_update_message", False)
+                ):
                     if not latest_version[1]:
                         sep = os.linesep
                         self.get_logger().report_text(
-                            '{} new package available: UPGRADE to v{} is recommended!\nRelease Notes:\n{}'.format(
-                                Session.get_clients()[0][0].upper(), latest_version[0], sep.join(latest_version[2])),
+                            "{} new package available: UPGRADE to v{} is recommended!\nRelease Notes:\n{}".format(
+                                Session.get_clients()[0][0].upper(),
+                                latest_version[0],
+                                sep.join(latest_version[2]),
+                            ),
                         )
                     else:
                         self.get_logger().report_text(
-                            'ClearML new version available: upgrade to v{} is recommended!'.format(
-                                latest_version[0]),
+                            "ClearML new version available: upgrade to v{} is recommended!".format(latest_version[0]),
                         )
             except Exception:
                 pass
@@ -263,8 +303,15 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             check_package_update_thread.start()
             # do not request requirements, because it might be a long process, and we first want to update the git repo
             result, script_requirements = ScriptInfo.get(
-                filepaths=[self._calling_filename, sys.argv[0], ]
-                if ScriptInfo.is_running_from_module() else [sys.argv[0], self._calling_filename, ],
+                filepaths=[
+                    self._calling_filename,
+                    sys.argv[0],
+                ]
+                if ScriptInfo.is_running_from_module()
+                else [
+                    sys.argv[0],
+                    self._calling_filename,
+                ],
                 log=self.log,
                 create_requirements=False,
                 check_uncommitted=self._store_diff,
@@ -277,10 +324,12 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             # if the git is too large to store on the task, we must store it as artifact:
             if result.auxiliary_git_diff:
                 diff_preview = "# git diff too large to handle, storing as artifact. git diff summary:\n"
-                diff_preview += '\n'.join(
-                    line for line in result.auxiliary_git_diff.split('\n') if line.startswith('diff --git '))
+                diff_preview += "\n".join(
+                    line for line in result.auxiliary_git_diff.split("\n") if line.startswith("diff --git ")
+                )
                 self._artifacts_manager.upload_artifact(
-                    name='auxiliary_git_diff', artifact_object=result.auxiliary_git_diff,
+                    name="auxiliary_git_diff",
+                    artifact_object=result.auxiliary_git_diff,
                     preview=diff_preview,
                 )
 
@@ -293,7 +342,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                     self.log.info("Failed logging ide information: {}".format(ex))
 
             # store original entry point
-            entry_point = result.script.get('entry_point') if result.script else None
+            entry_point = result.script.get("entry_point") if result.script else None
 
             # check if we are running inside a module, then we should set our entry point
             # to the module call including all argv's
@@ -308,11 +357,14 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
             # if jupyter is present, requirements will be created in the background, when saving a snapshot
             if result.script and script_requirements:
-                entry_point_filename = None if config.get('development.force_analyze_entire_repo', False) else \
-                    os.path.join(result.script['working_dir'], entry_point)
+                entry_point_filename = (
+                    None
+                    if config.get("development.force_analyze_entire_repo", False)
+                    else os.path.join(result.script["working_dir"], entry_point)
+                )
                 if self._force_use_pip_freeze:
                     if isinstance(self._force_use_pip_freeze, (str, Path)):
-                        conda_requirements = ''
+                        conda_requirements = ""
                         try:
                             req_file = Path(self._force_use_pip_freeze)
                         except TypeError:
@@ -322,39 +374,52 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                         requirements = req_file.read_text() if req_file.is_file() else None
                     else:
                         requirements, conda_requirements = pip_freeze(
-                            combine_conda_with_pip=config.get('development.detect_with_conda_freeze', True))
-                    requirements = '# Python ' + sys.version.replace('\n', ' ').replace('\r', ' ') + '\n\n'\
-                                   + requirements
+                            combine_conda_with_pip=config.get("development.detect_with_conda_freeze", True)
+                        )
+                    requirements = (
+                        "# Python " + sys.version.replace("\n", " ").replace("\r", " ") + "\n\n" + requirements
+                    )
                 else:
-                    requirements, conda_requirements = script_requirements.get_requirements(
-                        entry_point_filename=entry_point_filename)
+                    (
+                        requirements,
+                        conda_requirements,
+                    ) = script_requirements.get_requirements(entry_point_filename=entry_point_filename)
 
                 if requirements:
-                    if not result.script['requirements']:
-                        result.script['requirements'] = {}
-                    result.script['requirements']['pip'] = requirements
-                    result.script['requirements']['conda'] = conda_requirements
+                    if not result.script["requirements"]:
+                        result.script["requirements"] = {}
+                    result.script["requirements"]["pip"] = requirements
+                    result.script["requirements"]["conda"] = conda_requirements
 
-                self._update_requirements(result.script.get('requirements') or '')
+                self._update_requirements(result.script.get("requirements") or "")
 
             # we do not want to wait for the check version thread,
             # because someone might wait for us to finish the repo detection update
         except SystemExit:
             pass
         except Exception as e:
-            get_logger('task').debug(str(e))
+            get_logger("task").debug(str(e))
 
-    def _auto_generate(self, project_name=None, task_name=None, task_type=TaskTypes.training):
-        created_msg = make_message('Auto-generated at %(time)s UTC by %(user)s@%(host)s')
+    def _auto_generate(
+        self,
+        project_name: Optional[str] = None,
+        task_name: Optional[str] = None,
+        task_type: Union[str, TaskTypes] = TaskTypes.training,
+    ) -> str:
+        created_msg = make_message("Auto-generated at %(time)s UTC by %(user)s@%(host)s")
 
         if isinstance(task_type, self.TaskTypes):
             task_type = task_type.value
 
-        if task_type not in (self.TaskTypes.training.value, self.TaskTypes.testing.value) and \
-                not Session.check_min_api_version('2.8'):
-            print('WARNING: Changing task type to "{}" : '
-                  'clearml-server does not support task type "{}", '
-                  'please upgrade clearml-server.'.format(self.TaskTypes.training, task_type))
+        if task_type not in (
+            self.TaskTypes.training.value,
+            self.TaskTypes.testing.value,
+        ) and not Session.check_min_api_version("2.8"):
+            print(
+                'WARNING: Changing task type to "{}" : '
+                'clearml-server does not support task type "{}", '
+                "please upgrade clearml-server.".format(self.TaskTypes.training, task_type)
+            )
             task_type = self.TaskTypes.training.value
 
         project_id = None
@@ -362,15 +427,15 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             project_id = get_or_create_project(self, project_name)
 
         tags = [self._development_tag] if not running_remotely() else []
-        extra_properties = {'system_tags': tags} if Session.check_min_api_version('2.3') else {'tags': tags}
+        extra_properties = {"system_tags": tags} if Session.check_min_api_version("2.3") else {"tags": tags}
         if not Session.check_min_api_version("2.20"):
             extra_properties["input"] = {"view": {}}  # noqa
         req = tasks.CreateRequest(
-            name=task_name or make_message('Anonymous task (%(user)s@%(host)s %(time)s)'),
+            name=task_name or make_message("Anonymous task (%(user)s@%(host)s %(time)s)"),
             type=tasks.TaskTypeEnum(task_type),
             comment=created_msg,
             project=project_id,
-            **extra_properties
+            **extra_properties,
         )
         res = self.send(req)
 
@@ -381,15 +446,14 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._edit(type=tasks.TaskTypeEnum(task_type))
         return id
 
-    def _set_storage_uri(self, value):
-        value = value.rstrip('/') if value else None
+    def _set_storage_uri(self, value: str) -> None:
+        value = value.rstrip("/") if value else None
         self._storage_uri = StorageHelper.conform_url(value)
         self.data.output.destination = self._storage_uri
-        self._edit(output_dest=self._storage_uri or ('' if Session.check_min_api_version('2.3') else None))
+        self._edit(output_dest=self._storage_uri or ("" if Session.check_min_api_version("2.3") else None))
 
     @property
-    def storage_uri(self):
-        # type: () -> Optional[str]
+    def storage_uri(self) -> Optional[str]:
         """
         The storage / output url for this task. This is the default location for output models and other artifacts.
 
@@ -403,8 +467,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             return None
 
     @storage_uri.setter
-    def storage_uri(self, value):
-        # type: (str) -> ()
+    def storage_uri(self, value: str) -> ():
         """
         Set the storage / output url for this task. This is the default location for output models and other artifacts.
 
@@ -413,24 +476,21 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._set_storage_uri(value)
 
     @property
-    def task_id(self):
-        # type: () -> str
+    def task_id(self) -> str:
         """
         Returns the current Task's ID.
         """
         return self.id
 
     @property
-    def name(self):
-        # type: () -> str
+    def name(self) -> str:
         """
         Returns the current Task's name.
         """
-        return self.data.name or ''
+        return self.data.name or ""
 
     @name.setter
-    def name(self, value):
-        # type: (str) -> ()
+    def name(self, value: str) -> ():
         """
         Set the current Task's name.
 
@@ -439,8 +499,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self.set_name(value)
 
     @property
-    def task_type(self):
-        # type: () -> str
+    def task_type(self) -> str:
         """
         Returns the current Task's type.
 
@@ -461,58 +520,52 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return self.data.type
 
     @property
-    def project(self):
-        # type: () -> str
+    def project(self) -> str:
         """
         Returns the current Task's project ID.
         """
         return self.data.project
 
     @property
-    def parent(self):
-        # type: () -> str
+    def parent(self) -> str:
         """
         Returns the current Task's parent task ID (str).
         """
         return self.data.parent
 
     @property
-    def input_models_id(self):
-        # type: () -> Mapping[str, str]
+    def input_models_id(self) -> Mapping[str, str]:
         """
         Returns the current Task's input model IDs as a dictionary.
         """
         if not Session.check_min_api_version("2.13"):
-            model_id = self._get_task_property('execution.model', raise_on_error=False)
-            return {'Input Model': model_id} if model_id else {}
+            model_id = self._get_task_property("execution.model", raise_on_error=False)
+            return {"Input Model": model_id} if model_id else {}
 
-        input_models = self._get_task_property('models.input', default=[]) or []
+        input_models = self._get_task_property("models.input", default=[], raise_on_error=False) or []
         return {m.name: m.model for m in input_models}
 
     @property
-    def output_models_id(self):
-        # type: () -> Mapping[str, str]
+    def output_models_id(self) -> Mapping[str, str]:
         """
         Returns the current Task's output model IDs as a dictionary.
         """
         if not Session.check_min_api_version("2.13"):
-            model_id = self._get_task_property('output.model', raise_on_error=False)
-            return {'Output Model': model_id} if model_id else {}
+            model_id = self._get_task_property("output.model", raise_on_error=False)
+            return {"Output Model": model_id} if model_id else {}
 
-        output_models = self._get_task_property('models.output', default=[]) or []
+        output_models = self._get_task_property("models.output", default=[]) or []
         return {m.name: m.model for m in output_models}
 
     @property
-    def comment(self):
-        # type: () -> str
+    def comment(self) -> str:
         """
         Returns the current Task's (user defined) comments.
         """
-        return self.data.comment or ''
+        return self.data.comment or ""
 
     @comment.setter
-    def comment(self, value):
-        # type: (str) -> ()
+    def comment(self, value: str) -> ():
         """
         Set the comment of the task. Please note that this will override any comment currently
         present. If you want to add lines to the comment field, get the comments first, add your
@@ -521,14 +574,12 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self.set_comment(value)
 
     @property
-    def cache_dir(self):
-        # type: () -> Path
-        """ The cache directory which is used to store the Task related files. """
+    def cache_dir(self) -> Path:
+        """The cache directory which is used to store the Task related files."""
         return Path(get_cache_dir()) / self.id
 
     @property
-    def status(self):
-        # type: () -> str
+    def status(self) -> str:
         """
         The Task's status. To keep the Task updated.
         ClearML reloads the Task status information only, when this value is accessed.
@@ -538,39 +589,35 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return self.get_status()
 
     @property
-    def _status(self):
-        # type: () -> str
-        """ Return the task's cached status (don't reload if we don't have to) """
+    def _status(self) -> str:
+        """Return the task's cached status (don't reload if we don't have to)"""
         return str(self.data.status)
 
-    def reload(self):
-        # type: () -> ()
+    def reload(self) -> ():
         """
         Reload current Task's state from clearml-server.
         Refresh all task's fields, including artifacts / models / parameters etc.
         """
         return super(Task, self).reload()
 
-    def _get_output_model(self, upload_required=True, model_id=None):
-        # type: (bool, Optional[str]) -> Model
+    def _get_output_model(self, upload_required: bool = True, model_id: Optional[str] = None) -> Model:
         return Model(
             session=self.session,
             model_id=model_id or None,
             cache_dir=self.cache_dir,
-            upload_storage_uri=self.storage_uri or self.get_output_destination(
-                raise_on_error=upload_required, log_on_error=upload_required),
-            upload_storage_suffix=self._get_output_destination_suffix('models'),
-            log=self.log)
+            upload_storage_uri=self.storage_uri
+            or self.get_output_destination(raise_on_error=upload_required, log_on_error=upload_required),
+            upload_storage_suffix=self._get_output_destination_suffix("models"),
+            log=self.log,
+        )
 
     @property
-    def metrics_manager(self):
-        # type: () -> Metrics
-        """ A metrics manager used to manage the metrics related to this task """
+    def metrics_manager(self) -> Metrics:
+        """A metrics manager used to manage the metrics related to this task"""
         return self._get_metrics_manager(self.get_output_destination())
 
     @property
-    def _reporter(self):
-        # type: () -> Reporter
+    def _reporter(self) -> Reporter:
         """
         Returns a simple metrics reporter instance.
         """
@@ -578,79 +625,90 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self._setup_reporter()
         return self.__reporter
 
-    def _get_metrics_manager(self, storage_uri):
-        # type: (str) -> Metrics
+    def _get_metrics_manager(self, storage_uri: str) -> Metrics:
         if self._metrics_manager is None:
             self._metrics_manager = Metrics(
                 session=self.session,
                 task=self,
                 storage_uri=storage_uri,
-                storage_uri_suffix=self._get_output_destination_suffix('metrics'),
-                iteration_offset=self.get_initial_iteration()
+                storage_uri_suffix=self._get_output_destination_suffix("metrics"),
+                iteration_offset=self.get_initial_iteration(),
             )
         return self._metrics_manager
 
-    def _setup_reporter(self):
-        # type: () -> Reporter
+    def _setup_reporter(self) -> Reporter:
         try:
             storage_uri = self.get_output_destination(log_on_error=False)
         except ValueError:
             storage_uri = None
-        self.__reporter = Reporter(
-            metrics=self._get_metrics_manager(storage_uri=storage_uri), task=self)
+        self.__reporter = Reporter(metrics=self._get_metrics_manager(storage_uri=storage_uri), task=self)
         return self.__reporter
 
-    def _get_output_destination_suffix(self, extra_path=None):
-        # type: (Optional[str]) -> str
+    def _get_output_destination_suffix(self, extra_path: Optional[str] = None) -> str:
         # limit path to support various storage infrastructure limits (such as max path pn posix or object storage)
         # project path limit to 256 (including subproject names), and task name limit to 128.
-        def limit_folder_name(a_name, uuid, max_length, always_add_uuid):
+        def limit_folder_name(a_name: str, uuid: str, max_length: int, always_add_uuid: bool) -> str:
             if always_add_uuid:
-                return '{}.{}'.format(a_name[:max(2, max_length-len(uuid)-1)], uuid)
+                return "{}.{}".format(a_name[: max(2, max_length - len(uuid) - 1)], uuid)
             if len(a_name) < max_length:
                 return a_name
-            return '{}.{}'.format(a_name[:max(2, max_length-len(uuid)-1)], uuid)
+            return "{}.{}".format(a_name[: max(2, max_length - len(uuid) - 1)], uuid)
 
-        return '/'.join(quote(x, safe="'[]{}()$^,.; -_+-=/") for x in
-                        (limit_folder_name(self.get_project_name(), str(self.project), 256, False),
-                         limit_folder_name(self.name, str(self.data.id), 128, True),
-                         extra_path) if x)
+        project_name = self.get_project_name() or "unknown"
 
-    def _reload(self):
-        # type: () -> Any
-        """ Reload the task object from the backend """
+        return "/".join(
+            quote(x, safe="'[]{}()$^,.; -_+-=/")
+            for x in (
+                limit_folder_name(project_name, str(self.project), 256, False),
+                limit_folder_name(self.name, str(self.data.id), 128, True),
+                extra_path,
+            )
+            if x
+        )
+
+    def _reload(self) -> Any:
+        """Reload the task object from the backend"""
         with self._edit_lock:
             if self._offline_mode:
                 # noinspection PyBroadException
                 try:
-                    with open((self.get_offline_mode_folder() / self._offline_filename).as_posix(), 'rt') as f:
+                    with open(
+                        (self.get_offline_mode_folder() / self._offline_filename).as_posix(),
+                        "rt",
+                    ) as f:
                         stored_dict = json.load(f)
                     stored_data = tasks.Task(**stored_dict)
                     # add missing entries
                     for k, v in stored_dict.items():
                         if not hasattr(stored_data, k):
                             setattr(stored_data, k, v)
-                    if stored_dict.get('project_name'):
-                        self._project_name = (None, stored_dict.get('project_name'))
-                    if stored_dict.get('project_object'):
-                        self._project_object = (None, stored_dict.get('project_object'))
+                    if stored_dict.get("project_name"):
+                        self._project_name = (None, stored_dict.get("project_name"))
+                    if stored_dict.get("project_object"):
+                        self._project_object = (None, stored_dict.get("project_object"))
                 except Exception:
                     stored_data = self._data
 
                 return stored_data or tasks.Task(
                     execution=tasks.Execution(
-                        parameters={}, artifacts=[], dataviews=[], model='',
-                        model_desc={}, model_labels={}, docker_cmd=''),
-                    output=tasks.Output())
+                        parameters={},
+                        artifacts=[],
+                        dataviews=[],
+                        model="",
+                        model_desc={},
+                        model_labels={},
+                        docker_cmd="",
+                    ),
+                    output=tasks.Output(),
+                )
 
             if self._reload_skip_flag and self._data:
                 return self._data
             res = self.send(tasks.GetByIdRequest(task=self.id))
             return res.response.task
 
-    def _reload_field(self, field):
-        # type: (str) -> Any
-        """ Reload the task specific field, dot seperated for nesting"""
+    def _reload_field(self, field: str) -> Any:
+        """Reload the task specific field, dot seperated for nesting"""
         with self._edit_lock:
             if self._offline_mode:
                 task_object = self._reload()
@@ -665,8 +723,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
             return task_object
 
-    def reset(self, set_started_on_success=True, force=False):
-        # type: (bool, bool) -> ()
+    def reset(self, set_started_on_success: bool = True, force: bool = False) -> ():
         """
         Reset the task. Task will be reloaded following a successful reset.
 
@@ -682,21 +739,34 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         self.reload()
 
-    def started(self, ignore_errors=True, force=False):
-        # type: (bool, bool) -> ()
-        """ The signal that this Task started. """
+    def started(self, ignore_errors: bool = True, force: bool = False) -> ():
+        """The signal that this Task started."""
         return self.send(tasks.StartedRequest(self.id, force=force), ignore_errors=ignore_errors)
 
-    def stopped(self, ignore_errors=True, force=False, status_reason=None, status_message=None):
-        # type: (bool, bool, Optional[str], Optional[str]) -> ()
-        """ The signal that this Task stopped. """
+    def stopped(
+        self,
+        ignore_errors: bool = True,
+        force: bool = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+    ) -> ():
+        """The signal that this Task stopped."""
         return self.send(
-            tasks.StoppedRequest(self.id, force=force, status_reason=status_reason, status_message=status_message),
-            ignore_errors=ignore_errors
+            tasks.StoppedRequest(
+                self.id,
+                force=force,
+                status_reason=status_reason,
+                status_message=status_message,
+            ),
+            ignore_errors=ignore_errors,
         )
 
-    def stop_request(self, ignore_errors=True, force=False, status_message=None):
-        # type: (bool, bool, Optional[str]) -> ()
+    def stop_request(
+        self,
+        ignore_errors: bool = True,
+        force: bool = False,
+        status_message: Optional[str] = None,
+    ) -> ():
         """
         Request a task to stop. this will not change the task status
         but mark a request for an agent or SDK to actually stop the Task.
@@ -713,20 +783,31 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         # request task stop
         return self.send(
-            tasks.StopRequest(self.id, force=force, status_reason="abort request", status_message=status_message),
-            ignore_errors=ignore_errors
+            tasks.StopRequest(
+                self.id,
+                force=force,
+                status_reason="abort request",
+                status_message=status_message,
+            ),
+            ignore_errors=ignore_errors,
         )
 
-    def completed(self, ignore_errors=True):
-        # type: (bool) -> ()
+    def completed(self, ignore_errors: bool = True) -> ():
         """
         .. note:: Deprecated, use mark_completed(...) instead
         """
-        warnings.warn("'completed' is deprecated; use 'mark_completed' instead.", DeprecationWarning)
+        warnings.warn(
+            "'completed' is deprecated; use 'mark_completed' instead.",
+            DeprecationWarning,
+        )
         return self.mark_completed(ignore_errors=ignore_errors)
 
-    def mark_completed(self, ignore_errors=True, status_message=None, force=False):
-        # type: (bool, Optional[str], bool) -> ()
+    def mark_completed(
+        self,
+        ignore_errors: bool = True,
+        status_message: Optional[str] = None,
+        force: bool = False,
+    ) -> ():
         """
         Use this method to close and change status of (remotely!) executed tasks.
 
@@ -757,63 +838,91 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :param str status_message: Optional, add status change message to the stop request.
             This message will be stored as status_message on the Task's info panel
         """
-        if hasattr(tasks, 'CompletedRequest') and callable(tasks.CompletedRequest):
-            if Session.check_min_api_version('2.20'):
+        if hasattr(tasks, "CompletedRequest") and callable(tasks.CompletedRequest):
+            if Session.check_min_api_version("2.20"):
                 return self.send(
                     tasks.CompletedRequest(
-                        self.id, status_reason='completed', status_message=status_message, force=force,
-                        publish=True if self._get_runtime_properties().get("_publish_on_complete") else False),
-                    ignore_errors=ignore_errors
+                        self.id,
+                        status_reason="completed",
+                        status_message=status_message,
+                        force=force,
+                        publish=True if self._get_runtime_properties().get("_publish_on_complete") else False,
+                    ),
+                    ignore_errors=ignore_errors,
                 )
             else:
                 resp = self.send(
                     tasks.CompletedRequest(
-                        self.id, status_reason='completed', status_message=status_message, force=force),
-                    ignore_errors=ignore_errors)
+                        self.id,
+                        status_reason="completed",
+                        status_message=status_message,
+                        force=force,
+                    ),
+                    ignore_errors=ignore_errors,
+                )
 
                 if self._get_runtime_properties().get("_publish_on_complete"):
                     self.send(
                         tasks.PublishRequest(
-                            self.id, status_reason='completed', status_message=status_message, force=force),
-                        ignore_errors=ignore_errors)
+                            self.id,
+                            status_reason="completed",
+                            status_message=status_message,
+                            force=force,
+                        ),
+                        ignore_errors=ignore_errors,
+                    )
 
                 return resp
         return self.send(
-            tasks.StoppedRequest(self.id, status_reason='completed', status_message=status_message, force=force),
-            ignore_errors=ignore_errors
-        )
-
-    def mark_failed(self, ignore_errors=True, status_reason=None, status_message=None, force=False):
-        # type: (bool, Optional[str], Optional[str], bool) -> ()
-        """ The signal that this Task stopped. """
-        return self.send(
-            tasks.FailedRequest(
-                task=self.id, status_reason=status_reason, status_message=status_message, force=force),
+            tasks.StoppedRequest(
+                self.id,
+                status_reason="completed",
+                status_message=status_message,
+                force=force,
+            ),
             ignore_errors=ignore_errors,
         )
 
-    def publish(self, ignore_errors=True):
-        # type: (bool) -> ()
-        """ The signal that this task will be published """
-        if self.status not in (self.TaskStatusEnum.stopped, self.TaskStatusEnum.completed):
+    def mark_failed(
+        self,
+        ignore_errors: bool = True,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        force: bool = False,
+    ) -> ():
+        """The signal that this Task stopped."""
+        return self.send(
+            tasks.FailedRequest(
+                task=self.id,
+                status_reason=status_reason,
+                status_message=status_message,
+                force=force,
+            ),
+            ignore_errors=ignore_errors,
+        )
+
+    def publish(self, ignore_errors: bool = True) -> ():
+        """The signal that this task will be published"""
+        if self.status not in (
+            self.TaskStatusEnum.stopped,
+            self.TaskStatusEnum.completed,
+        ):
             raise ValueError("Can't publish, Task is not stopped")
         resp = self.send(tasks.PublishRequest(self.id), ignore_errors=ignore_errors)
         assert isinstance(resp.response, tasks.PublishResponse)
         return resp
 
-    def publish_on_completion(self, enable=True):
-        # type: (bool) -> ()
-        """ The signal that this task will be published automatically on task completion """
+    def publish_on_completion(self, enable: bool = True) -> ():
+        """The signal that this task will be published automatically on task completion"""
         self._set_runtime_properties(runtime_properties={"_publish_on_complete": enable})
 
     def _delete(
         self,
-        delete_artifacts_and_models=True,
-        skip_models_used_by_other_tasks=True,
-        raise_on_error=False,
-        callback=None,
-    ):
-        # type: (bool, bool, bool, Callable[[str, str], bool]) -> bool
+        delete_artifacts_and_models: bool = True,
+        skip_models_used_by_other_tasks: bool = True,
+        raise_on_error: bool = False,
+        callback: Callable[[str, str], bool] = None,
+    ) -> bool:
         """
         Delete the task as well as it's output models and artifacts.
         Models and artifacts are deleted from their storage locations, each using its URI.
@@ -945,8 +1054,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return task_deleted
 
-    def _delete_uri(self, uri, silent=False):
-        # type: (str, bool) -> bool
+    def _delete_uri(self, uri: str, silent: bool = False) -> bool:
         # noinspection PyBroadException
         try:
             deleted = StorageHelper.get(uri).delete(uri, silent=silent)
@@ -958,50 +1066,50 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             return False
         return False
 
-    def _get_image_plot_uris(self):
-        # type: () -> Set[str]
-
-        def image_source_selector(d):
+    def _get_image_plot_uris(self) -> Set[str]:
+        def image_source_selector(d: Dict[str, Any]) -> Optional[str]:
             plot = d.get("plot_str")
             if plot:
                 # noinspection PyBroadException
                 try:
                     plot = json.loads(plot)
                     return next(
-                        filter(None, (image.get("source") for image in plot.get("layout", {}).get("images", []))), None
+                        filter(
+                            None,
+                            (image.get("source") for image in plot.get("layout", {}).get("images", [])),
+                        ),
+                        None,
                     )
                 except Exception:
                     pass
 
         return self._get_all_events(event_type="plot", unique_selector=image_source_selector, batch_size=10000)
 
-    def update_model_desc(self, new_model_desc_file=None):
-        # type: (Optional[str]) -> ()
-        """ Change the Task's model description. """
+    def update_model_desc(self, new_model_desc_file: Optional[str] = None) -> ():
+        """Change the Task's model description."""
         with self._edit_lock:
             self.reload()
-            execution = self._get_task_property('execution')
+            execution = self._get_task_property("execution")
             p = Path(new_model_desc_file)
             if not p.is_file():
-                raise IOError('mode_desc file %s cannot be found' % new_model_desc_file)
+                raise IOError("mode_desc file %s cannot be found" % new_model_desc_file)
             new_model_desc = p.read_text()
-            model_desc_key = list(execution.model_desc.keys())[0] if execution.model_desc else 'design'
+            model_desc_key = list(execution.model_desc.keys())[0] if execution.model_desc else "design"
             execution.model_desc[model_desc_key] = new_model_desc
 
             res = self._edit(execution=execution)
             return res.response
 
     def update_output_model(
-            self,
-            model_path,  # type: str
-            name=None,  # type: Optional[str]
-            comment=None,  # type: Optional[str]
-            tags=None,  # type: Optional[Sequence[str]]
-            model_name=None,  # type: Optional[str]
-            iteration=None,  # type: Optional[int]
-            auto_delete_file=True  # type: bool
-    ):
-        # type: (...) -> str
+        self,
+        model_path: str,
+        name: Optional[str] = None,
+        comment: Optional[str] = None,
+        tags: Optional[Sequence[str]] = None,
+        model_name: Optional[str] = None,
+        iteration: Optional[int] = None,
+        auto_delete_file: bool = True,
+    ) -> str:
         """
         Update the Task's output model weights file. First, ClearML uploads the file to the preconfigured output
         destination (see the Task's ``output.destination`` property or call the ``setup_upload`` method),
@@ -1030,29 +1138,28 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         output_uri = self.storage_uri or self._get_default_report_storage_uri()
         from ...model import OutputModel
+
         output_model = OutputModel(
             task=self,
-            name=model_name or ('{} - {}'.format(self.name, name) if name else self.name),
+            name=model_name or ("{} - {}".format(self.name, name) if name else self.name),
             tags=tags,
-            comment=comment
+            comment=comment,
         )
         output_model.connect(task=self, name=name)
         url = output_model.update_weights(
             weights_filename=model_path,
             upload_uri=output_uri,
             iteration=iteration,
-            auto_delete_file=auto_delete_file
+            auto_delete_file=auto_delete_file,
         )
         return url
 
     @property
-    def labels_stats(self):
-        # type: () -> dict
-        """ Get accumulated label stats for the current/last frames iteration """
+    def labels_stats(self) -> dict:
+        """Get accumulated label stats for the current/last frames iteration"""
         return self._curr_label_stats
 
-    def _accumulate_label_stats(self, roi_stats, reset=False):
-        # type: (dict, bool) -> ()
+    def _accumulate_label_stats(self, roi_stats: dict, reset: bool = False) -> ():
         if reset:
             self._curr_label_stats = {}
         for label in roi_stats:
@@ -1062,14 +1169,13 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 self._curr_label_stats[label] = roi_stats[label]
 
     def set_input_model(
-            self,
-            model_id=None,
-            model_name=None,
-            update_task_design=True,
-            update_task_labels=True,
-            name=None
-    ):
-        # type: (str, Optional[str], bool, bool, Optional[str]) -> ()
+        self,
+        model_id: str = None,
+        model_name: Optional[str] = None,
+        update_task_design: bool = True,
+        update_task_labels: bool = True,
+        name: Optional[str] = None,
+    ) -> ():
         """
         Set a new input model for the Task. The model must be "ready" (status is ``Published``) to be used as the
         Task's input model.
@@ -1093,7 +1199,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             Default: the model weight filename is used (excluding file extension)
         """
         if model_id is None and not model_name:
-            raise ValueError('Expected one of [model_id, model_name]')
+            raise ValueError("Expected one of [model_id, model_name]")
 
         if model_name and not model_id:
             # Try getting the model by name. Limit to 10 results.
@@ -1103,11 +1209,16 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                     ready=True,
                     page=0,
                     page_size=10,
-                    order_by=['-created'],
-                    only_fields=['id', 'created', 'uri']
+                    order_by=["-created"],
+                    only_fields=["id", "created", "uri"],
                 )
             )
-            model = get_single_result(entity='model', query=model_name, results=res.response.models, log=self.log)
+            model = get_single_result(
+                entity="model",
+                query=model_name,
+                results=res.response.models,
+                log=self.log,
+            )
             model_id = model.id
 
         if model_id:
@@ -1115,12 +1226,13 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             model = res.response.model
             if not model.ready:
                 # raise ValueError('Model %s is not published (not ready)' % model_id)
-                self.log.debug('Model %s [%s] is not published yet (not ready)' % (model_id, model.uri))
+                self.log.debug("Model %s [%s] is not published yet (not ready)" % (model_id, model.uri))
         else:
             # clear the input model
             model = None
-            model_id = ''
+            model_id = ""
         from ...model import InputModel
+
         # noinspection PyProtectedMember
         name = name or InputModel._get_connect_name(model)
 
@@ -1128,12 +1240,22 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self.reload()
             # store model id
             if Session.check_min_api_version("2.13"):
-                self.send(tasks.AddOrUpdateModelRequest(
-                    task=self.id, name=name, model=model_id, type=tasks.ModelTypeEnum.input
-                ))
+                self.send(
+                    tasks.AddOrUpdateModelRequest(
+                        task=self.id,
+                        name=name,
+                        model=model_id,
+                        type=tasks.ModelTypeEnum.input,
+                    )
+                )
             else:
                 # backwards compatibility
-                self._set_task_property("execution.model", model_id, raise_on_error=False, log_on_error=False)
+                self._set_task_property(
+                    "execution.model",
+                    model_id,
+                    raise_on_error=False,
+                    log_on_error=False,
+                )
 
             # Auto populate from model, if empty
             if update_task_labels and not self.data.execution.model_labels:
@@ -1141,8 +1263,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
             self._edit(execution=self.data.execution)
 
-    def get_parameters(self, backwards_compatibility=True, cast=False):
-        # type: (bool, bool) -> (Optional[dict])
+    def get_parameters(self, backwards_compatibility: bool = True, cast: bool = False) -> Optional[dict]:
         """
         Get the parameters for a Task. This method returns a complete group of key-value parameter pairs, but does not
         support parameter descriptions (the result is a dictionary of key-value pairs).
@@ -1158,30 +1279,30 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :return: dict of the task parameters, all flattened to key/value.
             Different sections with key prefix "section/"
         """
-        if not Session.check_min_api_version('2.9'):
-            return self._get_task_property('execution.parameters')
+        if not Session.check_min_api_version("2.9"):
+            return self._get_task_property("execution.parameters")
 
         # API will makes sure we get old parameters with type legacy on top level (instead of nested in Args)
         parameters = dict()
-        hyperparams = self._get_task_property('hyperparams') or {}
+        hyperparams = self._get_task_property("hyperparams") or {}
         if not backwards_compatibility:
             for section in hyperparams:
                 for key, section_param in hyperparams[section].items():
-                    parameters['{}/{}'.format(section, key)] = \
+                    parameters["{}/{}".format(section, key)] = (
                         cast_basic_type(section_param.value, section_param.type) if cast else section_param.value
+                    )
         else:
             for section in hyperparams:
                 for key, section_param in hyperparams[section].items():
                     v = cast_basic_type(section_param.value, section_param.type) if cast else section_param.value
-                    if section_param.type == 'legacy' and section in (self._legacy_parameters_section_name, ):
-                        parameters['{}'.format(key)] = v
+                    if section_param.type == "legacy" and section in (self._legacy_parameters_section_name,):
+                        parameters["{}".format(key)] = v
                     else:
-                        parameters['{}/{}'.format(section, key)] = v
+                        parameters["{}/{}".format(section, key)] = v
 
         return parameters
 
-    def set_parameters(self, *args, **kwargs):
-        # type: (*dict, **Any) -> ()
+    def set_parameters(self, *args: dict, **kwargs: Any) -> ():
         """
         Set the parameters for a Task. This method sets a complete group of key-value parameter pairs, but does not
         support parameter descriptions (the input is a dictionary of key-value pairs).
@@ -1194,8 +1315,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         return self._set_parameters(*args, __update=False, **kwargs)
 
-    def _set_parameters(self, *args, **kwargs):
-        # type: (*dict, **Any) -> ()
+    def _set_parameters(self, *args: dict, **kwargs: Any) -> ():
         """
         Set the parameters for a Task. This method sets a complete group of key-value parameter pairs, but does not
         support parameter descriptions (the input is a dictionary of key-value pairs).
@@ -1204,7 +1324,8 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             merged into a single key-value pair dictionary.
         :param kwargs: Key-value pairs, merged into the parameters dictionary created from ``args``.
         """
-        def stringify(value):
+
+        def stringify(value: Any) -> str:
             # return empty string if value is None
             if value is None:
                 return ""
@@ -1224,19 +1345,19 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             return str_value
 
         if not all(isinstance(x, (dict, Iterable)) for x in args):
-            raise ValueError('only dict or iterable are supported as positional arguments')
+            raise ValueError("only dict or iterable are supported as positional arguments")
 
-        prefix = kwargs.pop('__parameters_prefix', None)
-        descriptions = kwargs.pop('__parameters_descriptions', None) or dict()
-        params_types = kwargs.pop('__parameters_types', None) or dict()
-        update = kwargs.pop('__update', False)
+        prefix = kwargs.pop("__parameters_prefix", None)
+        descriptions = kwargs.pop("__parameters_descriptions", None) or dict()
+        params_types = kwargs.pop("__parameters_types", None) or dict()
+        update = kwargs.pop("__update", False)
 
         # new parameters dict
         new_parameters = dict(itertools.chain.from_iterable(x.items() if isinstance(x, dict) else x for x in args))
         new_parameters.update(kwargs)
         if prefix:
-            prefix = prefix.strip('/')
-            new_parameters = dict(('{}/{}'.format(prefix, k), v) for k, v in new_parameters.items())
+            prefix = prefix.strip("/")
+            new_parameters = dict(("{}/{}".format(prefix, k), v) for k, v in new_parameters.items())
 
         # verify parameters type:
         not_allowed = {
@@ -1252,7 +1373,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             )
             new_parameters = {k: v for k, v in new_parameters.items() if k not in not_allowed}
 
-        use_hyperparams = Session.check_min_api_version('2.9')
+        use_hyperparams = Session.check_min_api_version("2.9")
 
         with self._edit_lock:
             self.reload()
@@ -1260,7 +1381,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             # overwrite only the prefix, leave the rest as is.
             if not update and prefix:
                 parameters = copy(self.get_parameters() or {})
-                parameters = dict((k, v) for k, v in parameters.items() if not k.startswith(prefix+'/'))
+                parameters = dict((k, v) for k, v in parameters.items() if not k.startswith(prefix + "/"))
             elif update:
                 parameters = copy(self.get_parameters() or {})
             else:
@@ -1278,7 +1399,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
                 for k, v in parameters.items():
                     # legacy variable
-                    if org_legacy_section.get(k, tasks.ParamsItem()).type == 'legacy':
+                    if org_legacy_section.get(k, tasks.ParamsItem()).type == "legacy":
                         section = hyperparams.get(legacy_name, dict())
                         section[k] = copy(org_legacy_section[k])
                         section[k].value = stringify(v)
@@ -1289,19 +1410,22 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                         continue
 
                     org_k = k
-                    if '/' not in k:
-                        k = '{}/{}'.format(self._default_configuration_section_name, k)
-                    section_name, key = k.split('/', 1)
+                    if "/" not in k:
+                        k = "{}/{}".format(self._default_configuration_section_name, k)
+                    section_name, key = k.split("/", 1)
                     section = hyperparams.get(section_name, dict())
                     org_param = org_hyperparams.get(section_name, dict()).get(key, None)
                     param_type = params_types.get(org_k) or (
-                        org_param.type if org_param is not None and (org_param.type or v == "") else
-                        get_basic_type(v) if v is not None else None
+                        org_param.type
+                        if org_param is not None and (org_param.type or v == "")
+                        else get_basic_type(v)
+                        if v is not None
+                        else None
                     )
                     if param_type and not isinstance(param_type, str):
-                        param_type = param_type.__name__ if hasattr(param_type, '__name__') else str(param_type)
+                        param_type = param_type.__name__ if hasattr(param_type, "__name__") else str(param_type)
 
-                    def create_description():
+                    def create_description() -> str:
                         if org_param and org_param.description:
                             return org_param.description
                         # don't use get(org_k, "") here in case org_k in descriptions and the value is None
@@ -1333,14 +1457,25 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 execution = self.data.execution
                 if execution is None:
                     execution = tasks.Execution(
-                        parameters=parameters, artifacts=[], dataviews=[], model='',
-                        model_desc={}, model_labels={}, docker_cmd='')
+                        parameters=parameters,
+                        artifacts=[],
+                        dataviews=[],
+                        model="",
+                        model_desc={},
+                        model_labels={},
+                        docker_cmd="",
+                    )
                 else:
                     execution.parameters = parameters
                 self._edit(execution=execution)
 
-    def set_parameter(self, name, value, description=None, value_type=None):
-        # type: (str, str, Optional[str], Optional[Any]) -> ()
+    def set_parameter(
+        self,
+        name: str,
+        value: str,
+        description: Optional[str] = None,
+        value_type: Optional[Any] = None,
+    ) -> ():
         """
         Set a single Task parameter. This overrides any previous value for this parameter.
 
@@ -1349,19 +1484,19 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :param description: The parameter description.
         :param value_type: The type of the parameters (cast to string and store)
         """
-        if not Session.check_min_api_version('2.9'):
+        if not Session.check_min_api_version("2.9"):
             # not supported yet
             description = None
             value_type = None
 
         self._set_parameters(
-            {name: value}, __update=True,
+            {name: value},
+            __update=True,
             __parameters_descriptions={name: description},
-            __parameters_types={name: value_type}
+            __parameters_types={name: value_type},
         )
 
-    def get_parameter(self, name, default=None, cast=False):
-        # type: (str, Any, bool) -> Any
+    def get_parameter(self, name: str, default: Any = None, cast: bool = False) -> Any:
         """
         Get a value for a parameter.
 
@@ -1373,8 +1508,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         params = self.get_parameters(cast=cast)
         return params.get(name, default)
 
-    def delete_parameter(self, name, force=False):
-        # type: (str, bool) -> bool
+    def delete_parameter(self, name: str, force: bool = False) -> bool:
         """
         Delete a parameter by its full name Section/name.
 
@@ -1383,10 +1517,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             Otherwise only the new task ones. Default is False
         :return: True if the parameter was deleted successfully
         """
-        if not Session.check_min_api_version('2.9'):
+        if not Session.check_min_api_version("2.9"):
             raise ValueError(
-                "Delete hyper-parameter is not supported by your clearml-server, "
-                "upgrade to the latest version")
+                "Delete hyper-parameter is not supported by your clearml-server, upgrade to the latest version"
+            )
 
         force_kwargs = {}
         if Session.check_min_api_version("2.13"):
@@ -1402,8 +1536,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return res.ok() if not self._offline_mode else True
 
-    def update_parameters(self, *args, **kwargs):
-        # type: (*dict, **Any) -> ()
+    def update_parameters(self, *args: dict, **kwargs: Any) -> ():
         """
         Update the parameters for a Task. This method updates a complete group of key-value parameter pairs, but does
         not support parameter descriptions (the input is a dictionary of key-value pairs).
@@ -1416,8 +1549,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         self._set_parameters(*args, __update=True, **kwargs)
 
-    def set_model_label_enumeration(self, enumeration=None):
-        # type: (Mapping[str, int]) -> ()
+    def set_model_label_enumeration(self, enumeration: Mapping[str, int] = None) -> ():
         """
         Set a dictionary of labels (text) to ids (integers) {str(label): integer(id)}
 
@@ -1429,14 +1561,15 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             execution = self.data.execution
             if enumeration is None:
                 return
-            if not (isinstance(enumeration, dict)
-                    and all(isinstance(k, six.string_types) and isinstance(v, int) for k, v in enumeration.items())):
-                raise ValueError('Expected label to be a dict[str => int]')
+            if not (
+                isinstance(enumeration, dict)
+                and all(isinstance(k, six.string_types) and isinstance(v, int) for k, v in enumeration.items())
+            ):
+                raise ValueError("Expected label to be a dict[str => int]")
             execution.model_labels = enumeration
             self._edit(execution=execution)
 
-    def remove_input_models(self, models_to_remove):
-        # type: (Sequence[Union[str, BaseModel]]) -> ()
+    def remove_input_models(self, models_to_remove: Sequence[Union[str, "BaseModel"]]) -> ():
         """
         Remove input models from the current task. Note that the models themselves are not deleted,
         but the tasks' reference to the models is removed.
@@ -1451,16 +1584,20 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self.data.models.input = [model for model in self.data.models.input if model.model not in ids_to_remove]
             self._edit(models=self.data.models)
 
-    def _set_default_docker_image(self):
-        # type: () -> ()
+    def _set_default_docker_image(self) -> ():
         if not DOCKER_IMAGE_ENV_VAR.exists() and not DOCKER_BASH_SETUP_ENV_VAR.exists():
             return
         self.set_base_docker(
             docker_cmd=DOCKER_IMAGE_ENV_VAR.get(default=""),
-            docker_setup_bash_script=DOCKER_BASH_SETUP_ENV_VAR.get(default=""))
+            docker_setup_bash_script=DOCKER_BASH_SETUP_ENV_VAR.get(default=""),
+        )
 
-    def set_base_docker(self, docker_cmd, docker_arguments=None, docker_setup_bash_script=None):
-        # type: (str, Optional[Union[str, Sequence[str]]], Optional[Union[str, Sequence[str]]]) -> ()
+    def set_base_docker(
+        self,
+        docker_cmd: str,
+        docker_arguments: Optional[Union[str, Sequence[str]]] = None,
+        docker_setup_bash_script: Optional[Union[str, Sequence[str]]] = None,
+    ) -> ():
         """
         Set the base docker image for this experiment
         If provided, this value will be used by clearml-agent to execute this experiment
@@ -1472,57 +1609,66 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :param docker_setup_bash_script: bash script to run at the
             beginning of the docker before launching the Task itself. example: ['apt update', 'apt-get install -y gcc']
         """
-        image = docker_cmd.split(' ')[0] if docker_cmd else ''
+        image = docker_cmd.split(" ")[0] if docker_cmd else ""
         if not docker_arguments and docker_cmd:
-            docker_arguments = docker_cmd.split(' ')[1:] if len(docker_cmd.split(' ')) > 1 else ''
+            docker_arguments = docker_cmd.split(" ")[1:] if len(docker_cmd.split(" ")) > 1 else ""
 
-        arguments = (docker_arguments if isinstance(docker_arguments, str) else ' '.join(docker_arguments)) \
-            if docker_arguments else ''
+        arguments = (
+            (docker_arguments if isinstance(docker_arguments, str) else " ".join(docker_arguments))
+            if docker_arguments
+            else ""
+        )
 
         if docker_setup_bash_script:
-            setup_shell_script = docker_setup_bash_script \
-                if isinstance(docker_setup_bash_script, str) else '\n'.join(docker_setup_bash_script)
+            setup_shell_script = (
+                docker_setup_bash_script
+                if isinstance(docker_setup_bash_script, str)
+                else "\n".join(docker_setup_bash_script)
+            )
         else:
-            setup_shell_script = ''
+            setup_shell_script = ""
 
         with self._edit_lock:
             self.reload()
             if Session.check_min_api_version("2.13"):
-                self.data.container = dict(image=image, arguments=arguments, setup_shell_script=setup_shell_script)
+                self.data.container = dict(
+                    image=image,
+                    arguments=arguments,
+                    setup_shell_script=setup_shell_script,
+                )
                 self._edit(container=self.data.container)
             else:
                 if setup_shell_script:
-                    raise ValueError(
-                        "Your ClearML-server does not support docker bash script feature, please upgrade.")
+                    raise ValueError("Your ClearML-server does not support docker bash script feature, please upgrade.")
                 execution = self.data.execution
-                execution.docker_cmd = image + (' {}'.format(arguments) if arguments else '')
+                execution.docker_cmd = image + (" {}".format(arguments) if arguments else "")
                 self._edit(execution=execution)
 
-    def get_base_docker(self):
-        # type: () -> str
+    def get_base_docker(self) -> str:
         """Get the base Docker command (image) that is set for this experiment."""
         if Session.check_min_api_version("2.13"):
             # backwards compatibility
-            container = self._get_task_property(
-                "container", raise_on_error=False, log_on_error=False, default={})
-            return (container.get('image', '') +
-                    (' {}'.format(container['arguments']) if container.get('arguments', '') else '')) or None
+            container = self._get_task_property("container", raise_on_error=False, log_on_error=False, default={})
+            return (
+                container.get("image", "")
+                + (" {}".format(container["arguments"]) if container.get("arguments", "") else "")
+            ) or None
         else:
             return self._get_task_property("execution.docker_cmd", raise_on_error=False, log_on_error=False)
 
-    def set_artifacts(self, artifacts_list=None):
-        # type: (Sequence[tasks.Artifact]) -> Optional[List[tasks.Artifact]]
+    def set_artifacts(self, artifacts_list: Sequence["tasks.Artifact"] = None) -> Optional[List["tasks.Artifact"]]:
         """
         List of artifacts (tasks.Artifact) to update the task
 
         :param list artifacts_list: list of artifacts (type tasks.Artifact)
         :return: List of current Task's Artifacts or None if error.
         """
-        if not Session.check_min_api_version('2.3'):
+        if not Session.check_min_api_version("2.3"):
             return None
-        if not (isinstance(artifacts_list, (list, tuple))
-                and all(isinstance(a, tasks.Artifact) for a in artifacts_list)):
-            raise ValueError('Expected artifacts as List[tasks.Artifact]')
+        if not (
+            isinstance(artifacts_list, (list, tuple)) and all(isinstance(a, tasks.Artifact) for a in artifacts_list)
+        ):
+            raise ValueError("Expected artifacts as List[tasks.Artifact]")
         with self._edit_lock:
             self.reload()
             execution = self.data.execution
@@ -1531,8 +1677,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self._edit(execution=execution)
         return execution.artifacts or []
 
-    def _add_artifacts(self, artifacts_list):
-        # type: (Sequence[tasks.Artifact]) -> Optional[List[tasks.Artifact]]
+    def _add_artifacts(self, artifacts_list: Sequence["tasks.Artifact"]) -> Optional[List["tasks.Artifact"]]:
         """
         List of artifacts (tasks.Artifact) to add to the task
         If an artifact by the same name already exists it will overwrite the existing artifact.
@@ -1540,11 +1685,12 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :param list artifacts_list: list of artifacts (type tasks.Artifact)
         :return: List of current Task's Artifacts
         """
-        if not Session.check_min_api_version('2.3'):
+        if not Session.check_min_api_version("2.3"):
             return None
-        if not (isinstance(artifacts_list, (list, tuple))
-                and all(isinstance(a, tasks.Artifact) for a in artifacts_list)):
-            raise ValueError('Expected artifacts as List[tasks.Artifact]')
+        if not (
+            isinstance(artifacts_list, (list, tuple)) and all(isinstance(a, tasks.Artifact) for a in artifacts_list)
+        ):
+            raise ValueError("Expected artifacts as List[tasks.Artifact]")
 
         with self._edit_lock:
             if Session.check_min_api_version("2.13") and not self._offline_mode:
@@ -1561,8 +1707,13 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 self._edit(execution=execution)
         return self.data.execution.artifacts or []
 
-    def delete_artifacts(self, artifact_names, raise_on_errors=True, delete_from_storage=True, silent_on_errors=False):
-        # type: (Sequence[str], bool, bool, bool) -> bool
+    def delete_artifacts(
+        self,
+        artifact_names: Sequence[str],
+        raise_on_errors: bool = True,
+        delete_from_storage: bool = True,
+        silent_on_errors: bool = False,
+    ) -> bool:
         """
         Delete a list of artifacts, by artifact name, from the Task.
 
@@ -1578,13 +1729,16 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             artifact_names=artifact_names,
             raise_on_errors=raise_on_errors,
             delete_from_storage=delete_from_storage,
-            silent_on_errors=silent_on_errors
+            silent_on_errors=silent_on_errors,
         )
 
     def _delete_artifacts(
-        self, artifact_names, raise_on_errors=False, delete_from_storage=True, silent_on_errors=False
-    ):
-        # type: (Sequence[str], bool, bool, bool) -> bool
+        self,
+        artifact_names: Sequence[str],
+        raise_on_errors: bool = False,
+        delete_from_storage: bool = True,
+        silent_on_errors: bool = False,
+    ) -> bool:
         """
         Delete a list of artifacts, by artifact name, from the Task.
 
@@ -1596,12 +1750,12 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         :return: True if successful
         """
-        if not Session.check_min_api_version('2.3'):
+        if not Session.check_min_api_version("2.3"):
             return False
         if not artifact_names:
             return True
         if not isinstance(artifact_names, (list, tuple)):
-            raise ValueError('Expected artifact names as List[str]')
+            raise ValueError("Expected artifact names as List[str]")
 
         uris = []
         with self._edit_lock:
@@ -1621,7 +1775,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
             if Session.check_min_api_version("2.13") and not self._offline_mode:
                 req = tasks.DeleteArtifactsRequest(
-                    task=self.task_id, artifacts=[{"key": n, "mode": "output"} for n in artifact_names], force=True)
+                    task=self.task_id,
+                    artifacts=[{"key": n, "mode": "output"} for n in artifact_names],
+                    force=True,
+                )
                 res = self.send(req, raise_on_errors=raise_on_errors)
                 if not res or not res.response or not res.response.deleted:
                     return False
@@ -1637,20 +1794,27 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             for i, (artifact, uri) in enumerate(zip(artifact_names, uris)):
                 # delete the actual file from storage, and raise if error and needed
                 if uri and not self._delete_uri(uri, silent=silent_on_errors) and raise_on_errors:
-                    remaining_uris = {name: uri for name, uri in zip(artifact_names[i + 1:], uris[i + 1:])}
+                    remaining_uris = {name: uri for name, uri in zip(artifact_names[i + 1 :], uris[i + 1 :])}
                     raise ArtifactUriDeleteError(artifact=artifact, uri=uri, remaining_uris=remaining_uris)
 
         return True
 
-    def _set_model_design(self, design=None):
-        # type: (str) -> ()
+    def _set_model_design(self, design: str = None) -> ():
         with self._edit_lock:
             self.reload()
-            if Session.check_min_api_version('2.9'):
-                configuration = self._get_task_property(
-                    "configuration", default={}, raise_on_error=False, log_on_error=False) or {}
+            if Session.check_min_api_version("2.9"):
+                configuration = (
+                    self._get_task_property(
+                        "configuration",
+                        default={},
+                        raise_on_error=False,
+                        log_on_error=False,
+                    )
+                    or {}
+                )
                 configuration[self._default_configuration_section_name] = tasks.ConfigurationItem(
-                    name=self._default_configuration_section_name, value=str(design))
+                    name=self._default_configuration_section_name, value=str(design)
+                )
                 self._edit(configuration=configuration)
             else:
                 execution = self.data.execution
@@ -1660,8 +1824,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
                 self._edit(execution=execution)
 
-    def get_labels_enumeration(self):
-        # type: () -> Mapping[str, int]
+    def get_labels_enumeration(self) -> Mapping[str, int]:
         """
         Get the label enumeration dictionary label enumeration dictionary of string (label) to integer (value) pairs.
 
@@ -1671,33 +1834,41 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             return {}
         return self.data.execution.model_labels
 
-    def get_model_design(self):
-        # type: () -> str
+    def get_model_design(self) -> str:
         """
         Get the model configuration as blob of text.
 
         :return: The model configuration as blob of text.
         """
-        if Session.check_min_api_version('2.9'):
-            design = self._get_task_property(
-                "configuration", default={}, raise_on_error=False, log_on_error=False) or {}
+        if Session.check_min_api_version("2.9"):
+            design = (
+                self._get_task_property(
+                    "configuration",
+                    default={},
+                    raise_on_error=False,
+                    log_on_error=False,
+                )
+                or {}
+            )
             if design:
-                design = design.get(sorted(design.keys())[0]).value or ''
+                design = design.get(sorted(design.keys())[0]).value or ""
         else:
             design = self._get_task_property(
-                "execution.model_desc", default={}, raise_on_error=False, log_on_error=False)
+                "execution.model_desc",
+                default={},
+                raise_on_error=False,
+                log_on_error=False,
+            )
 
         # noinspection PyProtectedMember
         return Model._unwrap_design(design)
 
-    def get_random_seed(self):
-        # type: () -> Optional[int]
+    def get_random_seed(self) -> Optional[int]:
         # fixed seed for the time being
         return self._random_seed
 
     @classmethod
-    def set_random_seed(cls, random_seed):
-        # type: (Optional[int]) -> ()
+    def set_random_seed(cls, random_seed: Optional[int]) -> ():
         """
         Set the default random seed for any new initialized tasks
 
@@ -1711,8 +1882,11 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 random_seed = int(random_seed)
         cls._random_seed = random_seed
 
-    def set_project(self, project_id=None, project_name=None):
-        # type: (Optional[str], Optional[str]) -> ()
+    def set_project(
+        self,
+        project_id: Optional[str] = None,
+        project_name: Optional[str] = None,
+    ) -> ():
         """
         Set the project of the current task by either specifying a project name or ID
         """
@@ -1723,7 +1897,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         if not project_id:
             assert isinstance(project_name, six.string_types)
-            res = self.send(projects.GetAllRequest(name=exact_match_regex(project_name)), raise_on_errors=False)
+            res = self.send(
+                projects.GetAllRequest(name=exact_match_regex(project_name)),
+                raise_on_errors=False,
+            )
             if not res or not res.response or not res.response.projects or len(res.response.projects) != 1:
                 return False
             project_id = res.response.projects[0].id
@@ -1732,8 +1909,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._set_task_property("project", project_id)
         self._edit(project=project_id)
 
-    def get_project_name(self):
-        # type: () -> Optional[str]
+    def get_project_name(self) -> Optional[str]:
         """
         Get the current Task's project name.
         """
@@ -1749,9 +1925,8 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._project_name = (self.project, res.response.project.name)
         return self._project_name[1]
 
-    def get_project_object(self):
-        # type: () -> dict
-        """ Get the current Task's project as a python object. """
+    def get_project_object(self) -> "projects.Project":
+        """Get the current Task's project as a python object."""
         if self.project is None:
             return self._project_object[1] if self._project_object and len(self._project_object) > 1 else None
 
@@ -1760,46 +1935,42 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         res = self.send(projects.GetByIdRequest(project=self.project), raise_on_errors=False)
         if not res or not res.response or not res.response.project:
-            return {}
+            self.log.warning("Project {} not found or no read access available".format(self.project))
+            return None
         self._project_object = (self.project, res.response.project)
         return self._project_object[1]
 
-    def get_tags(self):
-        # type: () -> Sequence[str]
-        """ Get all current Task's tags."""
+    def get_tags(self) -> Sequence[str]:
+        """Get all current Task's tags."""
         return self._get_task_property("tags")
 
-    def set_system_tags(self, tags):
-        # type: (Sequence[str]) -> ()
+    def set_system_tags(self, tags: Sequence[str]) -> ():
         assert isinstance(tags, (list, tuple))
         tags = list(set(tags))
-        if Session.check_min_api_version('2.3'):
+        if Session.check_min_api_version("2.3"):
             self._set_task_property("system_tags", tags)
             self._edit(system_tags=self.data.system_tags)
         else:
             self._set_task_property("tags", tags)
             self._edit(tags=self.data.tags)
 
-    def get_system_tags(self):
-        # type: () -> Sequence[str]
-        return self._get_task_property("system_tags" if Session.check_min_api_version('2.3') else "tags")
+    def get_system_tags(self) -> Sequence[str]:
+        return self._get_task_property("system_tags" if Session.check_min_api_version("2.3") else "tags")
 
-    def set_tags(self, tags):
-        # type: (Sequence[str]) -> ()
+    def set_tags(self, tags: Sequence[str]) -> ():
         """
         Set the current Task's tags. Please note this will overwrite anything that is there already.
 
         :param Sequence(str) tags: Any sequence of tags to set.
         """
         assert isinstance(tags, (list, tuple))
-        if not Session.check_min_api_version('2.3'):
+        if not Session.check_min_api_version("2.3"):
             # not supported
             return
         self._set_task_property("tags", tags)
         self._edit(tags=self.data.tags)
 
-    def set_name(self, name):
-        # type: (str) -> ()
+    def set_name(self, name: str) -> ():
         """
         Set the Task name.
 
@@ -1811,8 +1982,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._edit(name=name)
         self.data.name = name
 
-    def set_parent(self, parent):
-        # type: (Optional[Union[str, Task]]) -> ()
+    def set_parent(self, parent: Optional[Union[str, "Task"]]) -> ():
         """
         Set the parent task for the Task.
 
@@ -1827,20 +1997,18 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._set_task_property("parent", str(parent) if parent else None)
         self._edit(parent=self.data.parent)
 
-    def set_comment(self, comment):
-        # type: (str) -> ()
+    def set_comment(self, comment: str) -> ():
         """
         Set a comment / description for the Task.
 
         :param comment: The comment / description for the Task.
         :type comment: str
         """
-        comment = comment or ''
+        comment = comment or ""
         self._set_task_property("comment", str(comment))
         self._edit(comment=str(comment))
 
-    def set_task_type(self, task_type):
-        # type: (Union[str, Task.TaskTypes]) -> ()
+    def set_task_type(self, task_type: Union[str, "Task.TaskTypes"]) -> ():
         """
         Set the task_type for the Task.
 
@@ -1869,20 +2037,21 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._set_task_property("task_type", str(task_type))
         self._edit(type=task_type)
 
-    def set_archived(self, archive):
-        # type: (bool) -> ()
+    def set_archived(self, archive: bool) -> ():
         """
         Archive the Task or remove it from the archived folder.
 
         :param archive: If True, archive the Task. If False, make sure it is removed from the archived folder
         """
         with self._edit_lock:
-            system_tags = list(set(self.get_system_tags()) | {self.archived_tag}) \
-                if archive else list(set(self.get_system_tags()) - {self.archived_tag})
+            system_tags = (
+                list(set(self.get_system_tags()) | {self.archived_tag})
+                if archive
+                else list(set(self.get_system_tags()) - {self.archived_tag})
+            )
             self.set_system_tags(system_tags)
 
-    def get_archived(self):
-        # type: () -> bool
+    def get_archived(self) -> bool:
         """
         Return the Archive state of the Task
 
@@ -1890,8 +2059,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         return self.archived_tag in self.get_system_tags()
 
-    def set_initial_iteration(self, offset=0):
-        # type: (int) -> int
+    def set_initial_iteration(self, offset: int = 0) -> int:
         """
         Set the initial iteration offset. The default value is ``0``. This method is useful when continuing training
         from previous checkpoints.
@@ -1915,8 +2083,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self._metrics_manager.set_iteration_offset(self._initial_iteration_offset)
         return self._initial_iteration_offset
 
-    def get_initial_iteration(self):
-        # type: () -> int
+    def get_initial_iteration(self) -> int:
         """
         Get the initial iteration offset. The default value is ``0``. This method is useful when continuing training
         from previous checkpoints.
@@ -1925,8 +2092,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         return self._initial_iteration_offset
 
-    def get_status(self):
-        # type: () -> str
+    def get_status(self) -> str:
         """
         Return The task status without refreshing the entire Task object (only the status property)
 
@@ -1939,8 +2105,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return str(status)
 
-    def get_output_log_web_page(self):
-        # type: () -> str
+    def get_output_log_web_page(self) -> str:
         """
         Return the Task results & outputs web page address.
         For example: https://demoapp.demo.clear.ml/projects/216431/experiments/60763e04/output/log
@@ -1950,15 +2115,12 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return self.get_task_output_log_web_page(
             task_id=self.id,
             project_id=self.project,
-            app_server_host=self._get_app_server()
+            app_server_host=self._get_app_server(),
         )
 
     def get_reported_scalars(
-            self,
-            max_samples=0,  # type: int
-            x_axis='iter'  # type: str
-    ):
-        # type: (...) -> Mapping[str, Mapping[str, Mapping[str, Sequence[float]]]]
+        self, max_samples: int = 0, x_axis: str = "iter"
+    ) -> Mapping[str, Mapping[str, Mapping[str, Sequence[float]]]]:
         """
         Return a nested dictionary for the scalar graphs,
         where the first key is the graph title and the second is the series name.
@@ -1989,13 +2151,16 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :return: dict: Nested scalar graphs: dict[title(str), dict[series(str), dict[axis(str), list(float)]]]
         """
 
-        if x_axis not in ('iter', 'timestamp', 'iso_time'):
+        if x_axis not in ("iter", "timestamp", "iso_time"):
             raise ValueError("Scalar x-axis supported values are: 'iter', 'timestamp', 'iso_time'")
 
         # send request
         res = self.send(
             events.ScalarMetricsIterHistogramRequest(
-                task=self.id, key=x_axis, samples=max(1, max_samples) if max_samples else None),
+                task=self.id,
+                key=x_axis,
+                samples=max(1, max_samples) if max_samples else None,
+            ),
             raise_on_errors=False,
             ignore_errors=True,
         )
@@ -2007,8 +2172,9 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return response.response_data
 
-    def get_all_reported_scalars(self, x_axis='iter'):
-        # type: (str) -> Mapping[str, Mapping[str, Mapping[str, Sequence[float]]]]
+    def get_all_reported_scalars(
+        self, x_axis: str = "iter"
+    ) -> Mapping[str, Mapping[str, Mapping[str, Sequence[float]]]]:
         """
         Return a nested dictionary for the all scalar graphs, containing all the registered samples,
         where the first key is the graph title and the second is the series name.
@@ -2029,7 +2195,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         while True:
             response = self.send(
                 events.GetTaskEventsRequest(
-                    task=self.id, event_type="training_stats_scalar", scroll_id=scroll_id, batch_size=batch_size
+                    task=self.id,
+                    event_type="training_stats_scalar",
+                    scroll_id=scroll_id,
+                    batch_size=batch_size,
                 )
             )
             if not response:
@@ -2044,11 +2213,16 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 if x_axis in ["timestamp", "iter"]:
                     x_val = event[x_axis]
                 else:
-                    x_val = datetime.utcfromtimestamp(event["timestamp"] / 1000).isoformat(timespec="milliseconds") + "Z"
+                    x_val = (
+                        datetime.utcfromtimestamp(event["timestamp"] / 1000).isoformat(timespec="milliseconds") + "Z"
+                    )
                 y_val = event["value"]
                 reported_scalars.setdefault(metric, {})
                 reported_scalars[metric].setdefault(variant, {"name": variant, "x": [], "y": []})
-                if len(reported_scalars[metric][variant]["x"]) == 0 or reported_scalars[metric][variant]["x"][-1] != x_val:
+                if (
+                    len(reported_scalars[metric][variant]["x"]) == 0
+                    or reported_scalars[metric][variant]["x"][-1] != x_val
+                ):
                     reported_scalars[metric][variant]["x"].append(x_val)
                     reported_scalars[metric][variant]["y"].append(y_val)
                 else:
@@ -2058,11 +2232,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             scroll_id = response["scroll_id"]
         return reported_scalars
 
-    def get_reported_plots(
-            self,
-            max_iterations=None
-    ):
-        # type: (...) -> List[dict]
+    def get_reported_plots(self, max_iterations: Optional[int] = None) -> List[dict]:
         """
         Return a list of all the plots reported for this Task,
         Notice the plot data is plotly compatible.
@@ -2094,8 +2264,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         # send request
         res = self.send(
             events.GetTaskPlotsRequest(
-                task=self.id, iters=max_iterations or 1,
-                _allow_extra_fields_=True, no_scroll=True
+                task=self.id,
+                iters=max_iterations or 1,
+                _allow_extra_fields_=True,
+                no_scroll=True,
             ),
             raise_on_errors=False,
             ignore_errors=True,
@@ -2110,10 +2282,9 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         if not response.response_data:
             return []
 
-        return response.response_data.get('plots', [])
+        return response.response_data.get("plots", [])
 
-    def get_reported_console_output(self, number_of_reports=1):
-        # type: (int) -> Sequence[str]
+    def get_reported_console_output(self, number_of_reports: int = 1) -> Sequence[str]:
         """
         Return a list of console outputs reported by the Task. Retrieved outputs are the most updated console outputs.
 
@@ -2121,28 +2292,24 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             last (most updated) console output
         :return: A list of strings, each entry corresponds to one report.
         """
-        if Session.check_min_api_version('2.9'):
+        if Session.check_min_api_version("2.9"):
             request = events.GetTaskLogRequest(
                 task=self.id,
-                order='asc',
+                order="asc",
                 navigate_earlier=True,
-                batch_size=number_of_reports)
+                batch_size=number_of_reports,
+            )
         else:
-            request = events.GetTaskLogRequest(
-                task=self.id,
-                order='asc',
-                from_='tail',
-                batch_size=number_of_reports)
+            request = events.GetTaskLogRequest(task=self.id, order="asc", from_="tail", batch_size=number_of_reports)
         res = self.send(request)
         response = res.wait()
-        if not response.ok() or not response.response_data.get('events'):
+        if not response.ok() or not response.response_data.get("events"):
             return []
 
-        lines = [r.get('msg', '') for r in response.response_data['events']]
+        lines = [r.get("msg", "") for r in response.response_data["events"]]
         return lines
 
-    def get_configuration_object(self, name):
-        # type: (str) -> Optional[str]
+    def get_configuration_object(self, name: str) -> Optional[str]:
         """
         Get the Task's configuration object section as a blob of text
         Use only for automation (externally), otherwise use `Task.connect_configuration`.
@@ -2153,8 +2320,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         return self._get_configuration_text(name)
 
-    def get_configuration_object_as_dict(self, name):
-        # type: (str) -> Optional[Union[dict, list]]
+    def get_configuration_object_as_dict(self, name: str) -> Optional[Union[dict, list]]:
         """
         Get the Task's configuration object section as parsed dictionary
         Parsing supports JSON and HOCON, otherwise parse manually with `get_configuration_object()`
@@ -2166,8 +2332,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         return self._get_configuration_dict(name)
 
-    def get_configuration_objects(self):
-        # type: () -> Optional[Mapping[str, str]]
+    def get_configuration_objects(self) -> Optional[Mapping[str, str]]:
         """
         Get the Task's configuration object section as a blob of text
         Use only for automation (externally), otherwise use `Task.connect_configuration`.
@@ -2175,16 +2340,16 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :return: The Task's configurations as a dict (config name as key) and text blob as value (unconstrained text
             string)
         """
-        if not Session.check_min_api_version('2.9'):
+        if not Session.check_min_api_version("2.9"):
             raise ValueError(
                 "Multiple configurations are not supported with the current 'clearml-server', "
-                "please upgrade to the latest version")
+                "please upgrade to the latest version"
+            )
 
         configuration = self.data.configuration or {}
         return {k: v.value for k, v in configuration.items()}
 
-    def get_reported_single_values(self):
-        # type: () -> Dict[str, float]
+    def get_reported_single_values(self) -> Dict[str, float]:
         """
         Get all reported single values as a dictionary, where the keys are the names of the values
         and the values of the dictionary are the actual reported values.
@@ -2205,8 +2370,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             result[value.get("variant")] = value.get("value")
         return result
 
-    def get_reported_single_value(self, name):
-        # type: (str) -> Optional[float]
+    def get_reported_single_value(self, name: str) -> Optional[float]:
         """
         Get a single reported value, identified by its name. Note that this function calls
         `Task.get_reported_single_values`.
@@ -2217,8 +2381,14 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         return self.get_reported_single_values().get(name)
 
-    def set_configuration_object(self, name, config_text=None, description=None, config_type=None, config_dict=None):
-        # type: (str, Optional[str], Optional[str], Optional[str], Optional[Union[dict, list]]) -> None
+    def set_configuration_object(
+        self,
+        name: str,
+        config_text: Optional[str] = None,
+        description: Optional[str] = None,
+        config_type: Optional[str] = None,
+        config_dict: Optional[Union[dict, list]] = None,
+    ) -> None:
         """
         Set the Task's configuration object as a blob of text or automatically encoded dictionary/list.
         Use only for automation (externally), otherwise use `Task.connect_configuration`.
@@ -2232,12 +2402,15 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             Notice you can either pass `config_text` or `config_dict`, not both
         """
         return self._set_configuration(
-            name=name, description=description, config_type=config_type,
-            config_text=config_text, config_dict=config_dict)
+            name=name,
+            description=description,
+            config_type=config_type,
+            config_text=config_text,
+            config_dict=config_dict,
+        )
 
     @classmethod
-    def get_projects(cls, **kwargs):
-        # type: (**Any) -> (List['projects.Project'])
+    def get_projects(cls, **kwargs: Any) -> List["projects.Project"]:
         """
         Return a list of projects in the system, sorted by last updated time
 
@@ -2262,8 +2435,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return ret_projects
 
     @classmethod
-    def get_project_id(cls, project_name, search_hidden=True):
-        # type: (str, bool) -> Optional[str]
+    def get_project_id(cls, project_name: str, search_hidden: bool = True) -> Optional[str]:
         """
         Return a project's unique ID (str).
         If more than one project matched the project_name, return the last updated project
@@ -2276,19 +2448,15 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         extra = {"search_hidden": search_hidden} if Session.check_min_api_version("2.20") else {}
         res = cls._send(
             cls._get_default_session(),
-            projects.GetAllRequest(
-                order_by=['last_update'],
-                name=exact_match_regex(project_name),
-                **extra
-            ),
-            raise_on_errors=False)
+            projects.GetAllRequest(order_by=["last_update"], name=exact_match_regex(project_name), **extra),
+            raise_on_errors=False,
+        )
         if res and res.response and res.response.projects:
             return [projects.Project(**p.to_dict()).id for p in res.response.projects][0]
         return None
 
     @staticmethod
-    def running_locally():
-        # type: () -> bool
+    def running_locally() -> bool:
         """
         Is the task running locally (i.e., ``clearml-agent`` is not executing it)
 
@@ -2298,17 +2466,22 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return not running_remotely()
 
     @classmethod
-    def add_requirements(cls, package_name, package_version=None):
-        # type: (str, Optional[str]) -> None
+    def add_requirements(cls, package_name: str, package_version: Optional[str] = None) -> None:
         """
         Force the adding of a package to the requirements list. If ``package_version`` is None, use the
         installed package version, if found.
-        Example: Task.add_requirements('tensorflow', '2.4.0')
-        Example: Task.add_requirements('tensorflow', '>=2.4')
-        Example: Task.add_requirements('tensorflow') -> use the installed tensorflow version
-        Example: Task.add_requirements('tensorflow', '') -> no version limit
-        Alternatively, you can add all requirements from a file.
-        Example: Task.add_requirements('/path/to/your/project/requirements.txt')
+
+        Example: ``Task.add_requirements('tensorflow', '2.4.0')``
+
+        Example: ``Task.add_requirements('tensorflow', '>=2.4')``
+
+        Example: ``Task.add_requirements('tensorflow')`` -> use the installed tensorflow version
+
+        Example: ``Task.add_requirements('tensorflow', '')`` -> no version limit
+
+        Alternatively, you can add all requirements from a file:
+
+        Example: ``Task.add_requirements('/path/to/your/project/requirements.txt')``
 
         .. note::
             Task.add_requirements does not directly modify the task's requirements. Instead, it improves the accuracy
@@ -2328,7 +2501,8 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             import pkg_resources
         except ImportError:
             get_logger("task").warning(
-                "Requirement file `{}` skipped since pkg_resources is not installed".format(package_name))
+                "Requirement file `{}` skipped since pkg_resources is not installed".format(package_name)
+            )
         else:
             with Path(package_name).open() as requirements_txt:
                 for req in pkg_resources.parse_requirements(requirements_txt):
@@ -2336,22 +2510,25 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                         cls._force_requirements[req.name] = str(req.specifier)
 
     @classmethod
-    def ignore_requirements(cls, package_name):
-        # type: (str) -> None
+    def ignore_requirements(cls, package_name: str) -> None:
         """
         Ignore a specific package when auto generating the requirements list.
         Example: Task.ignore_requirements('pywin32')
 
         :param str package_name: The package name to remove/ignore from the "Installed Packages" section of the task.
         """
-        if not running_remotely() and hasattr(cls, 'current_task') and cls.current_task():
-            get_logger('task').warning(
-                'Requirement ignored, Task.ignore_requirements() must be called before Task.init()')
+        if not running_remotely() and hasattr(cls, "current_task") and cls.current_task():
+            get_logger("task").warning(
+                "Requirement ignored, Task.ignore_requirements() must be called before Task.init()"
+            )
         cls._ignore_requirements.add(str(package_name))
 
     @classmethod
-    def force_requirements_env_freeze(cls, force=True, requirements_file=None):
-        # type: (bool, Optional[Union[str, Path]]) -> None
+    def force_requirements_env_freeze(
+        cls,
+        force: bool = True,
+        requirements_file: Optional[Union[str, Path]] = None,
+    ) -> None:
         """
         Force the use of ``pip freeze`` or ``conda list`` to capture the requirements from the active
         environment (instead of statically analyzing the running code and listing directly imported packages).
@@ -2362,11 +2539,15 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :param requirements_file: (Optional) Pass a requirements.txt file to specify the required packages (instead of
             ``pip freeze`` or automatic analysis). This will overwrite any existing requirement listing.
         """
+        if not running_remotely() and hasattr(cls, "current_task") and cls.current_task():
+            get_logger("task").warning(
+                "Requirements env freeze ignored, "
+                "Task.force_requirements_env_freeze() must be called before Task.init()"
+            )
         cls._force_use_pip_freeze = requirements_file if requirements_file else bool(force)
 
     @classmethod
-    def force_store_standalone_script(cls, force=True):
-        # type: (bool) -> None
+    def force_store_standalone_script(cls, force: bool = True) -> None:
         """
         Force using storing the main python file as a single standalone script, instead of linking with the
         local git repository/commit ID.
@@ -2375,23 +2556,25 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         :param force: Set force storing the main python file as a single standalone script
         """
+        if not running_remotely() and hasattr(cls, "current_task") and cls.current_task():
+            get_logger("task").warning(
+                "Store standalone script ignored, "
+                "Task.force_store_standalone_script() must be called before Task.init()"
+            )
         cls._force_store_standalone_script = bool(force)
 
-    def _set_random_seed_used(self, random_seed):
-        # type: (Optional[int]) -> ()
+    def _set_random_seed_used(self, random_seed: Optional[int]) -> ():
         self._random_seed = random_seed
 
-    def _get_default_report_storage_uri(self):
-        # type: () -> str
+    def _get_default_report_storage_uri(self) -> str:
         if self._offline_mode:
-            return str(self.get_offline_mode_folder() / 'data')
+            return str(self.get_offline_mode_folder() / "data")
 
         if not self._files_server:
             self._files_server = Session.get_files_server_host()
         return self._files_server
 
-    def get_status_message(self):
-        # type: () -> (Optional[str], Optional[str])
+    def get_status_message(self) -> (Optional[str], Optional[str]):
         """
         Return The task status without refreshing the entire Task object (only the status property)
         Return also the last message coupled with the status change
@@ -2409,8 +2592,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return status, status_message
 
-    def _get_status(self):
-        # type: () -> (Optional[str], Optional[str])
+    def _get_status(self) -> (Optional[str], Optional[str]):
         """
         retrieve Task status & message, But do not update the Task local status
         this is important if we want to query in the background without breaking Tasks consistency
@@ -2422,8 +2604,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return status, status_message
 
     @classmethod
-    def _get_tasks_status(cls, ids):
-        # type: (List[str]) -> List[(Optional[str], Optional[str], Optional[str])]
+    def _get_tasks_status(cls, ids: List[str]) -> List[Optional[str]]:
         """
         :param ids: task IDs (str) to query
         :return: list of tuples (status, status_message, task_id)
@@ -2433,41 +2614,42 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         # noinspection PyBroadException
         try:
-            all_tasks = cls._get_default_session().send(
-                tasks.GetAllRequest(id=ids, only_fields=["status", "status_message", "id"]),
-            ).response.tasks
+            all_tasks = (
+                cls._get_default_session()
+                .send(
+                    tasks.GetAllRequest(id=ids, only_fields=["status", "status_message", "id"]),
+                )
+                .response.tasks
+            )
             return [(task.status, task.status_message, task.id) for task in all_tasks]
         except Exception:
             return [(None, None, None) for _ in ids]
 
-    def _get_last_update(self):
-        # type: () -> (Optional[datetime])
+    def _get_last_update(self) -> Optional[datetime]:
         if self._offline_mode:
             return None
 
         # noinspection PyBroadException
         try:
             all_tasks = self.send(
-                tasks.GetAllRequest(id=[self.id], only_fields=['last_update']),
+                tasks.GetAllRequest(id=[self.id], only_fields=["last_update"]),
             ).response.tasks
             return all_tasks[0].last_update
         except Exception:
             return None
 
-    def _reload_last_iteration(self):
-        # type: () -> ()
+    def _reload_last_iteration(self) -> ():
         # noinspection PyBroadException
         try:
             all_tasks = self.send(
-                tasks.GetAllRequest(id=[self.id], only_fields=['last_iteration']),
+                tasks.GetAllRequest(id=[self.id], only_fields=["last_iteration"]),
             ).response.tasks
             self.data.last_iteration = all_tasks[0].last_iteration
         except Exception:
             return None
 
-    def _set_runtime_properties(self, runtime_properties):
-        # type: (Mapping[str, Union[str, int, float]]) -> bool
-        if not Session.check_min_api_version('2.13') or not runtime_properties:
+    def _set_runtime_properties(self, runtime_properties: Mapping[str, Union[str, int, float]]) -> bool:
+        if not Session.check_min_api_version("2.13") or not runtime_properties:
             return False
 
         with self._edit_lock:
@@ -2479,72 +2661,107 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return True
 
-    def _get_runtime_properties(self):
-        # type: () -> Dict[str, str]
-        if not Session.check_min_api_version('2.13'):
+    def _get_runtime_properties(self) -> Dict[str, str]:
+        if not Session.check_min_api_version("2.13"):
             return dict()
         return dict(**self.data.runtime) if self.data.runtime else dict()
 
-    def _clear_task(self, system_tags=None, comment=None):
-        # type: (Optional[Sequence[str]], Optional[str]) -> ()
+    def _clear_task(
+        self,
+        system_tags: Optional[Sequence[str]] = None,
+        comment: Optional[str] = None,
+    ) -> ():
         self._data.script = tasks.Script(
-            binary='', repository='', tag='', branch='', version_num='', entry_point='',
-            working_dir='', requirements={}, diff='',
+            binary="",
+            repository="",
+            tag="",
+            branch="",
+            version_num="",
+            entry_point="",
+            working_dir="",
+            requirements={},
+            diff="",
         )
         if Session.check_min_api_version("2.13"):
             self._data.models = tasks.TaskModels(input=[], output=[])
             self._data.container = dict()
 
         self._data.execution = tasks.Execution(
-            artifacts=[], dataviews=[], model='', model_desc={}, model_labels={}, parameters={}, docker_cmd='')
+            artifacts=[],
+            dataviews=[],
+            model="",
+            model_desc={},
+            model_labels={},
+            parameters={},
+            docker_cmd="",
+        )
 
         self._data.comment = str(comment)
 
         self._storage_uri = None
         self._data.output.destination = self._storage_uri
 
-        if Session.check_min_api_version('2.13'):
+        if Session.check_min_api_version("2.13"):
             self._set_task_property("system_tags", system_tags)
             self._data.script.requirements = dict()
-            self._edit(system_tags=self._data.system_tags, comment=self._data.comment,
-                       script=self._data.script, execution=self._data.execution, output_dest='',
-                       hyperparams=dict(), configuration=dict(),
-                       container=self._data.container, models=self._data.models)
-        elif Session.check_min_api_version('2.9'):
-            self._update_requirements('')
+            self._edit(
+                system_tags=self._data.system_tags,
+                comment=self._data.comment,
+                script=self._data.script,
+                execution=self._data.execution,
+                output_dest="",
+                hyperparams=dict(),
+                configuration=dict(),
+                container=self._data.container,
+                models=self._data.models,
+            )
+        elif Session.check_min_api_version("2.9"):
+            self._update_requirements("")
             self._set_task_property("system_tags", system_tags)
-            self._edit(system_tags=self._data.system_tags, comment=self._data.comment,
-                       script=self._data.script, execution=self._data.execution, output_dest='',
-                       hyperparams=dict(), configuration=dict())
-        elif Session.check_min_api_version('2.3'):
+            self._edit(
+                system_tags=self._data.system_tags,
+                comment=self._data.comment,
+                script=self._data.script,
+                execution=self._data.execution,
+                output_dest="",
+                hyperparams=dict(),
+                configuration=dict(),
+            )
+        elif Session.check_min_api_version("2.3"):
             self._set_task_property("system_tags", system_tags)
-            self._edit(system_tags=self._data.system_tags, comment=self._data.comment,
-                       script=self._data.script, execution=self._data.execution, output_dest='')
+            self._edit(
+                system_tags=self._data.system_tags,
+                comment=self._data.comment,
+                script=self._data.script,
+                execution=self._data.execution,
+                output_dest="",
+            )
         else:
             self._set_task_property("tags", system_tags)
-            self._edit(tags=self._data.tags, comment=self._data.comment,
-                       script=self._data.script, execution=self._data.execution, output_dest=None)
+            self._edit(
+                tags=self._data.tags,
+                comment=self._data.comment,
+                script=self._data.script,
+                execution=self._data.execution,
+                output_dest=None,
+            )
 
     @classmethod
-    def _get_api_server(cls):
-        # type: () -> ()
+    def _get_api_server(cls) -> ():
         return Session.get_api_server_host()
 
-    def _get_app_server(self):
-        # type: () -> str
+    def _get_app_server(self) -> str:
         if not self._app_server:
             self._app_server = Session.get_app_server_host()
         return self._app_server
 
-    def _is_remote_main_task(self):
-        # type: () -> bool
+    def _is_remote_main_task(self) -> bool:
         """
         :return: return True if running remotely and this Task is the registered main task
         """
         return running_remotely() and get_remote_task_id() == self.id
 
-    def _save_data_to_offline_dir(self, **kwargs):
-        # type: (**Any) -> ()
+    def _save_data_to_offline_dir(self, **kwargs: Any) -> ():
         for k, v in kwargs.items():
             setattr(self.data, k, v)
         offline_mode_folder = self.get_offline_mode_folder()
@@ -2558,8 +2775,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             export_data["offline_output_models"] = self._offline_output_models
             json.dump(export_data, f, ensure_ascii=True, sort_keys=True)
 
-    def _edit(self, **kwargs):
-        # type: (**Any) -> Any
+    def _edit(self, **kwargs: Any) -> Any:
         with self._edit_lock:
             if self._offline_mode:
                 self._save_data_to_offline_dir(**kwargs)
@@ -2567,8 +2783,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
             # Since we ae using forced update, make sure he task status is valid
             status = self._data.status if self._data and self._reload_skip_flag else self.data.status
-            if not kwargs.pop("force", False) and \
-                    status not in (self.TaskStatusEnum.created, self.TaskStatusEnum.in_progress):
+            if not kwargs.pop("force", False) and status not in (
+                self.TaskStatusEnum.created,
+                self.TaskStatusEnum.in_progress,
+            ):
                 # the exception being name/comment that we can always change.
                 if kwargs and all(
                     k in ("name", "project", "comment", "tags", "system_tags", "runtime") for k in kwargs.keys()
@@ -2580,19 +2798,21 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                         "[status={} fields={}]".format(status, list(kwargs.keys()))
                     )
 
-            res = self.send(tasks.EditRequest(task=self.id, force=True, **kwargs), raise_on_errors=False)
+            res = self.send(
+                tasks.EditRequest(task=self.id, force=True, **kwargs),
+                raise_on_errors=False,
+            )
             return res
 
-    def _update_requirements(self, requirements):
-        # type: (Union[dict, str, Sequence[str]]) -> ()
+    def _update_requirements(self, requirements: Union[dict, str, Sequence[str]]) -> ():
         if not isinstance(requirements, dict):
-            requirements = {'pip': requirements}
+            requirements = {"pip": requirements}
 
         # make sure we have str as values:
         for key in requirements.keys():
             # fix python2 support (str/unicode)
             if requirements[key] and not isinstance(requirements[key], six.string_types):
-                requirements[key] = '\n'.join(requirements[key])
+                requirements[key] = "\n".join(requirements[key])
 
         # protection, Old API might not support it
         # noinspection PyBroadException
@@ -2607,16 +2827,21 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         except Exception:
             pass
 
-    def _update_script(self, script):
-        # type: (dict) -> ()
+    def _update_script(self, script: dict) -> ():
         with self._edit_lock:
             self.reload()
             self.data.script = script
             self._edit(script=script)
 
     def _set_configuration(
-            self, name, description=None, config_type=None, config_text=None, config_dict=None, **kwargs):
-        # type: (str, Optional[str], Optional[str], Optional[str], Optional[Union[Mapping, list]], **Any) -> None
+        self,
+        name: str,
+        description: Optional[str] = None,
+        config_type: Optional[str] = None,
+        config_text: Optional[str] = None,
+        config_dict: Optional[Union[Mapping, list]] = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Set Task configuration text/dict. Multiple configurations are supported.
 
@@ -2631,9 +2856,11 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         # make sure we have either dict or text
         mutually_exclusive(config_dict=config_dict, config_text=config_text, _check_none=True)
 
-        if not Session.check_min_api_version('2.9'):
-            raise ValueError("Multiple configurations are not supported with the current 'clearml-server', "
-                             "please upgrade to the latest version")
+        if not Session.check_min_api_version("2.9"):
+            raise ValueError(
+                "Multiple configurations are not supported with the current 'clearml-server', "
+                "please upgrade to the latest version"
+            )
 
         if description:
             description = str(description)
@@ -2643,11 +2870,14 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self.reload()
             configuration = self.data.configuration or {}
             configuration[name] = tasks.ConfigurationItem(
-                name=name, value=a_config, description=description or None, type=config_type or None)
+                name=name,
+                value=a_config,
+                description=description or None,
+                type=config_type or None,
+            )
             self._edit(configuration=configuration, **kwargs)
 
-    def _get_configuration_text(self, name):
-        # type: (str) -> Optional[str]
+    def _get_configuration_text(self, name: str) -> Optional[str]:
         """
         Get Task configuration section as text
 
@@ -2655,17 +2885,18 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         :return: The Task configuration as text (unconstrained text string).
             return None if configuration name is not valid.
         """
-        if not Session.check_min_api_version('2.9'):
-            raise ValueError("Multiple configurations are not supported with the current 'clearml-server', "
-                             "please upgrade to the latest version")
+        if not Session.check_min_api_version("2.9"):
+            raise ValueError(
+                "Multiple configurations are not supported with the current 'clearml-server', "
+                "please upgrade to the latest version"
+            )
 
         configuration = self.data.configuration or {}
         if not configuration.get(name):
             return None
         return configuration[name].value
 
-    def _get_configuration_dict(self, name):
-        # type: (str) -> Optional[dict]
+    def _get_configuration_dict(self, name: str) -> Optional[dict]:
         """
         Get Task configuration section as dictionary
 
@@ -2678,8 +2909,39 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             return None
         return text_to_config_dict(config_text)
 
-    def get_offline_mode_folder(self):
-        # type: () -> (Optional[Path])
+    def _validate_static_route(self, static_route: str):
+        """
+        Validate a static route by its name. If the static route is not, an exception will be raised
+
+        :param static_route: The static route to validate
+        """
+        Session.verify_feature_set("advanced")
+        if not Session.check_min_server_version("3.26"):
+            raise ValueError(
+                "Static routes not supported by the server version. "
+                "Minimum required version is 3.26"
+            )
+        response = self._get_default_session().send_request(
+            "routers", "get_routes", json={"name": "^{}$".format(static_route)}
+        )
+        if response.status_code != 200:
+            raise ValueError(
+                "Static route validation request for '{}' failed with status code {}".format(
+                    static_route, response.status_code
+                )
+            )
+        static_route_object = response.json().get("data", {}).get("routes")
+        if not static_route_object:
+            raise ValueError("Static route '{}' does not exist".format(static_route))
+        static_route_object = static_route_object[0]
+        if not static_route_object.get("enabled", False):
+            raise ValueError("Static route '{}' is disabled".format(static_route))
+        if static_route_object.get("status", "") == "active" and not static_route_object.get("load_balancer", {}).get(
+            "enabled", False
+        ):
+            raise ValueError("Static route '{}' is active but not load-balanced".format(static_route))
+
+    def get_offline_mode_folder(self) -> Optional[Path]:
         """
         Return the folder where all the task outputs and logs are stored in the offline session.
         :return: Path object, local folder, later to be used with `report_offline_session()`
@@ -2695,18 +2957,17 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
     @classmethod
     def _clone_task(
-            cls,
-            cloned_task_id,  # type: str
-            name=None,   # type: Optional[str]
-            comment=None,   # type: Optional[str]
-            execution_overrides=None,   # type: Optional[dict]
-            tags=None,   # type: Optional[Sequence[str]]
-            parent=None,   # type: Optional[str]
-            project=None,   # type: Optional[str]
-            log=None,    # type: Optional[logging.Logger]
-            session=None,    # type: Optional[Session]
-    ):
-        # type: (...) -> str
+        cls,
+        cloned_task_id: str,
+        name: Optional[str] = None,
+        comment: Optional[str] = None,
+        execution_overrides: Optional[dict] = None,
+        tags: Optional[Sequence[str]] = None,
+        parent: Optional[str] = None,
+        project: Optional[str] = None,
+        log: Optional[logging.Logger] = None,
+        session: Optional[Session] = None,
+    ) -> str:
         """
         Clone a task
 
@@ -2725,10 +2986,11 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
 
         session = session if session else cls._get_default_session()
-        use_clone_api = Session.check_min_api_version('2.9')
+        use_clone_api = Session.check_min_api_version("2.9")
         if use_clone_api:
             res = cls._send(
-                session=session, log=log,
+                session=session,
+                log=log,
                 req=tasks.CloneRequest(
                     task=cloned_task_id,
                     new_task_name=name,
@@ -2737,7 +2999,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                     new_task_parent=parent,
                     new_task_project=project,
                     execution_overrides=execution_overrides,
-                )
+                ),
             )
             cloned_task_id = res.response.id
             return cloned_task_id
@@ -2748,26 +3010,28 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         if task.output:
             output_dest = task.output.destination
         execution = task.execution.to_dict() if task.execution else {}
-        execution = ConfigTree.merge_configs(ConfigFactory.from_dict(execution),
-                                             ConfigFactory.from_dict(execution_overrides or {}))
+        execution = ConfigTree.merge_configs(
+            ConfigFactory.from_dict(execution),
+            ConfigFactory.from_dict(execution_overrides or {}),
+        )
         # clear all artifacts
-        execution['artifacts'] = [e for e in execution['artifacts'] if e.get('mode') == 'input']
+        execution["artifacts"] = [e for e in execution["artifacts"] if e.get("mode") == "input"]
 
-        if not hasattr(task, 'system_tags') and not tags and task.tags:
+        if not hasattr(task, "system_tags") and not tags and task.tags:
             tags = [t for t in task.tags if t != cls._development_tag]
 
         extra = {}
-        if hasattr(task, 'hyperparams'):
-            extra['hyperparams'] = task.hyperparams
-        if hasattr(task, 'configuration'):
-            extra['configuration'] = task.configuration
-        if getattr(task, 'system_tags', None):
-            extra['system_tags'] = [t for t in task.system_tags if t not in (cls._development_tag, cls.archived_tag)]
+        if hasattr(task, "hyperparams"):
+            extra["hyperparams"] = task.hyperparams
+        if hasattr(task, "configuration"):
+            extra["configuration"] = task.configuration
+        if getattr(task, "system_tags", None):
+            extra["system_tags"] = [t for t in task.system_tags if t not in (cls._development_tag, cls.archived_tag)]
 
         req = tasks.CreateRequest(
             name=name or task.name,
             type=task.type,
-            input=task.input if hasattr(task, 'input') else {'view': {}},
+            input=task.input if hasattr(task, "input") else {"view": {}},
             tags=tags,
             comment=comment if comment is not None else task.comment,
             parent=parent,
@@ -2775,19 +3039,26 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             output_dest=output_dest,
             execution=execution.as_plain_ordered_dict(),
             script=task.script,
-            **extra
+            **extra,
         )
         res = cls._send(session=session, log=log, req=req)
         cloned_task_id = res.response.id
 
         if task.script and task.script.requirements:
-            cls._send(session=session, log=log, req=tasks.SetRequirementsRequest(
-                task=cloned_task_id, requirements=task.script.requirements))
+            cls._send(
+                session=session,
+                log=log,
+                req=tasks.SetRequirementsRequest(task=cloned_task_id, requirements=task.script.requirements),
+            )
         return cloned_task_id
 
     @classmethod
-    def get_all(cls, session=None, log=None, **kwargs):
-        # type: (Optional[Session], Optional[logging.Logger], **Any) -> Any
+    def get_all(
+        cls,
+        session: Optional[Session] = None,
+        log: Optional[logging.Logger] = None,
+        **kwargs: Any,
+    ) -> Any:
         """
         List all the Tasks based on specific projection.
 
@@ -2812,8 +3083,12 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return res
 
     @classmethod
-    def get_task_output_log_web_page(cls, task_id, project_id=None, app_server_host=None):
-        # type: (str, Optional[str], Optional[str]) -> str
+    def get_task_output_log_web_page(
+        cls,
+        task_id: str,
+        project_id: Optional[str] = None,
+        app_server_host: Optional[str] = None,
+    ) -> str:
         """
         Return the Task results & outputs web page address.
         For example: https://demoapp.demo.clear.ml/projects/216431/experiments/60763e04/output/log
@@ -2829,22 +3104,28 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 cls.__cached_app_server_host = Session.get_app_server_host()
             app_server_host = cls.__cached_app_server_host
 
-        return "{}/projects/{}/experiments/{}/output/log".format(
+        template = "{}/projects/{}/tasks/{}/output/log" if Session.check_min_api_version("2.31") \
+            else "{}/projects/{}/experiments/{}/output/log"
+
+        return template.format(
             app_server_host.rstrip("/"),
-            project_id if project_id is not None else '*',
+            project_id if project_id is not None else "*",
             task_id,
         )
 
     @classmethod
-    def _get_project_name(cls, project_id):
-        res = cls._send(cls._get_default_session(), projects.GetByIdRequest(project=project_id), raise_on_errors=False)
+    def _get_project_name(cls, project_id: str) -> Optional[str]:
+        res = cls._send(
+            cls._get_default_session(),
+            projects.GetByIdRequest(project=project_id),
+            raise_on_errors=False,
+        )
         if not res or not res.response or not res.response.project:
             return None
         return res.response.project.name
 
     @classmethod
-    def _get_project_names(cls, project_ids):
-        # type: (Sequence[str]) -> Dict[str, str]
+    def _get_project_names(cls, project_ids: Sequence[str]) -> Dict[str, str]:
         page = -1
         page_size = 500
         all_responses = []
@@ -2862,9 +3143,13 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return {p.id: p.name for p in all_responses}
 
     def _get_all_events(
-        self, max_events=100, batch_size=500, order='asc', event_type=None, unique_selector=None
-    ):
-        # type: (int, int, str, str, Callable[[dict], Any]) -> Union[List[Any], Set[Any]]
+        self,
+        max_events: int = 100,
+        batch_size: int = 500,
+        order: str = "asc",
+        event_type: str = None,
+        unique_selector: Callable[[dict], Any] = None,
+    ) -> Union[List[Any], Set[Any]]:
         """
         Get a list of all reported events.
 
@@ -2883,8 +3168,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         batch_size = max_events or batch_size
 
-        def apply_unique_selector(events_set, evs):
-            # type: (Set[Any], List[dict]) -> ()
+        def apply_unique_selector(events_set: Set[Any], evs: List[dict]) -> ():
             try:
                 events_set.update(map(unique_selector, evs))
             except TypeError:
@@ -2893,12 +3177,14 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 )
                 raise
 
-        log_events = self.send(events.GetTaskEventsRequest(
-            task=self.id,
-            order=order,
-            batch_size=batch_size,
-            event_type=event_type,
-        ))
+        log_events = self.send(
+            events.GetTaskEventsRequest(
+                task=self.id,
+                order=order,
+                batch_size=batch_size,
+                event_type=event_type,
+            )
+        )
 
         returned_count = log_events.response.returned
         total_events = log_events.response.total
@@ -2910,13 +3196,15 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             events_list = log_events.response.events
 
         while returned_count < total_events and (max_events is None or len(events_list) < max_events):
-            log_events = self.send(events.GetTaskEventsRequest(
-                task=self.id,
-                order=order,
-                batch_size=batch_size,
-                event_type=event_type,
-                scroll_id=scroll,
-            ))
+            log_events = self.send(
+                events.GetTaskEventsRequest(
+                    task=self.id,
+                    order=order,
+                    batch_size=batch_size,
+                    event_type=event_type,
+                    scroll_id=scroll,
+                )
+            )
             scroll = log_events.response.scroll_id
             returned_count += log_events.response.returned
             if unique_selector:
@@ -2927,9 +3215,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return events_list
 
     @property
-    def _edit_lock(self):
-        # type: () -> ()
-
+    def _edit_lock(self) -> ():
         # skip the actual lock, this one-time lock will always enter
         # only used on shutdown process to avoid deadlocks
         if self.__edit_lock is False:
@@ -2937,10 +3223,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         if self.__edit_lock:
             return self.__edit_lock
-        if not PROC_MASTER_ID_ENV_VAR.get() or len(PROC_MASTER_ID_ENV_VAR.get().split(':')) < 2:
+        if not PROC_MASTER_ID_ENV_VAR.get() or len(PROC_MASTER_ID_ENV_VAR.get().split(":")) < 2:
             self.__edit_lock = RLock()
-        elif PROC_MASTER_ID_ENV_VAR.get().split(':')[1] == str(self.id):
-            filename = os.path.join(gettempdir(), 'clearml_{}.lock'.format(self.id))
+        elif PROC_MASTER_ID_ENV_VAR.get().split(":")[1] == str(self.id):
+            filename = os.path.join(gettempdir(), "clearml_{}.lock".format(self.id))
             # no need to remove previous file lock if we have a dead process, it will automatically release the lock.
             # # noinspection PyBroadException
             # try:
@@ -2954,65 +3240,70 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return self.__edit_lock
 
     @_edit_lock.setter
-    def _edit_lock(self, value):
-        # type: (RLock) -> ()
+    def _edit_lock(self, value: RLock) -> ():
         self.__edit_lock = value
 
     @classmethod
-    def __update_master_pid_task(cls, pid=None, task=None):
-        # type: (Optional[int], Optional[Union[str, Task]]) -> None
+    def __update_master_pid_task(
+        cls,
+        pid: Optional[int] = None,
+        task: Optional[Union[str, "Task"]] = None,
+    ) -> None:
         pid = pid or os.getpid()
         if not task:
-            PROC_MASTER_ID_ENV_VAR.set(str(pid) + ':')
+            PROC_MASTER_ID_ENV_VAR.set(str(pid) + ":")
         elif isinstance(task, str):
-            PROC_MASTER_ID_ENV_VAR.set(str(pid) + ':' + task)
+            PROC_MASTER_ID_ENV_VAR.set(str(pid) + ":" + task)
         else:
             # noinspection PyUnresolvedReferences
-            PROC_MASTER_ID_ENV_VAR.set(str(pid) + ':' + str(task.id))
+            PROC_MASTER_ID_ENV_VAR.set(str(pid) + ":" + str(task.id))
             # make sure we refresh the edit lock next time we need it,
             task._edit_lock = None
 
     @classmethod
-    def __get_master_id_task_id(cls):
-        # type: () -> Optional[str]
-        if not PROC_MASTER_ID_ENV_VAR.get(''):
+    def __get_master_id_task_id(cls) -> Optional[str]:
+        if not PROC_MASTER_ID_ENV_VAR.get(""):
             return None
-        master_pid, _, master_task_id = PROC_MASTER_ID_ENV_VAR.get('').partition(':')
+        master_pid, _, master_task_id = PROC_MASTER_ID_ENV_VAR.get("").partition(":")
         # we could not find a task ID, revert to old stub behaviour
         if not master_task_id:
             return None
         return master_task_id
 
     @classmethod
-    def __get_master_process_id(cls):
-        # type: () -> Optional[str]
-        if not PROC_MASTER_ID_ENV_VAR.get(''):
+    def __get_master_process_id(cls) -> Optional[str]:
+        if not PROC_MASTER_ID_ENV_VAR.get(""):
             return None
-        master_task_id = PROC_MASTER_ID_ENV_VAR.get().split(':')
+        master_task_id = PROC_MASTER_ID_ENV_VAR.get().split(":")
         # we could not find a task ID, revert to old stub behaviour
         if len(master_task_id) < 2 or not master_task_id[1]:
             return None
         return master_task_id[0]
 
     @classmethod
-    def __is_subprocess(cls):
-        # type: () -> bool
+    def __is_subprocess(cls) -> bool:
         # notice this class function is called from Task.ExitHooks, do not rename/move it.
-        is_subprocess = PROC_MASTER_ID_ENV_VAR.get() and \
-            PROC_MASTER_ID_ENV_VAR.get().split(':')[0] != str(os.getpid())
+        is_subprocess = PROC_MASTER_ID_ENV_VAR.get() and PROC_MASTER_ID_ENV_VAR.get().split(":")[0] != str(os.getpid())
         return is_subprocess
 
     @classmethod
-    def _get_task_status(cls, task_id):
-        # type: (str) -> (Optional[str], Optional[str])
+    def _get_task_status(cls, task_id: str) -> (Optional[str], Optional[str]):
         if cls._offline_mode:
-            return cls.TaskStatusEnum.created, 'offline'
+            return cls.TaskStatusEnum.created, "offline"
 
         # noinspection PyBroadException
         try:
-            all_tasks = cls._get_default_session().send(
-                tasks.GetAllRequest(id=[task_id], only_fields=['status', 'status_message']),
-            ).response.tasks
+            all_tasks = (
+                cls._get_default_session()
+                .send(
+                    tasks.GetAllRequest(id=[task_id], only_fields=["status", "status_message"]),
+                )
+                .response.tasks
+            )
             return all_tasks[0].status, all_tasks[0].status_message
         except Exception:
             return None, None
+
+    @property
+    def report_subprocess_enabled(self) -> None:
+        return self._report_subprocess_enabled

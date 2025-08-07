@@ -9,16 +9,15 @@ from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from time import time, sleep
-from typing import Optional, Mapping, Sequence, Any, Callable, Union
+from typing import Optional, Mapping, Sequence, Callable, Union, Tuple, List, Any
 
 from pathlib2 import Path
 
 from ..backend_api import Session
+from ..backend_api.services import tasks as tasks_service
 from ..backend_interface.util import get_or_create_project, exact_match_regex
 from ..storage.util import hash_dict
 from ..task import Task
-from ..backend_api.services import tasks as tasks_service
-
 
 logger = getLogger("clearml.automation.job")
 
@@ -29,8 +28,7 @@ class BaseJob(object):
     _hashing_callback = None
     _last_batch_status_update_ts = 0
 
-    def __init__(self):
-        # type: () -> ()
+    def __init__(self) -> ():
         """
         Base Job is an abstract CLearML Job
         """
@@ -42,8 +40,7 @@ class BaseJob(object):
         self._last_status_ts = 0
         self._last_status = None
 
-    def get_metric(self, title, series):
-        # type: (str, str) -> (float, float, float)
+    def get_metric(self, title: str, series: str) -> (float, float, float):
         """
         Retrieve a specific scalar metric from the running Task.
 
@@ -69,7 +66,7 @@ class BaseJob(object):
         return tuple(response.response_data["tasks"][0]["last_metrics"][title][series][v] for v in values)
 
     @staticmethod
-    def get_metric_req_params(title, series):
+    def get_metric_req_params(title: str, series: str) -> Tuple[List[str], str, str, List[str]]:
         title = hashlib.md5(str(title).encode("utf-8")).hexdigest()
         series = hashlib.md5(str(series).encode("utf-8")).hexdigest()
         metric = "last_metrics.{}.{}.".format(title, series)
@@ -77,8 +74,7 @@ class BaseJob(object):
         metrics = [metric + v for v in values]
         return metrics, title, series, values
 
-    def launch(self, queue_name=None):
-        # type: (str) -> bool
+    def launch(self, queue_name: str = None) -> bool:
         """
         Send Job for execution on the requested execution queue
 
@@ -95,8 +91,7 @@ class BaseJob(object):
             logger.warning("Error enqueuing Task {} to {}: {}".format(self.task, queue_name, ex))
         return False
 
-    def abort(self):
-        # type: () -> ()
+    def abort(self) -> ():
         """
         Abort currently running job (can be called multiple times)
         """
@@ -112,8 +107,7 @@ class BaseJob(object):
             except Exception as ex:
                 logger.warning(ex)
 
-    def elapsed(self):
-        # type: () -> float
+    def elapsed(self) -> float:
         """
         Return the time in seconds since job started. Return -1 if job is still pending
 
@@ -128,8 +122,7 @@ class BaseJob(object):
                 return -1
         return (datetime.now(tz=self.task.data.started.tzinfo) - self.task.data.started).total_seconds()
 
-    def iterations(self):
-        # type: () -> int
+    def iterations(self) -> int:
         """
         Return the last iteration value of the current job. -1 if job has not started yet
 
@@ -140,8 +133,7 @@ class BaseJob(object):
         self.task_started = True
         return self.task.get_last_iteration()
 
-    def task_id(self):
-        # type: () -> str
+    def task_id(self) -> str:
         """
         Return the Task id.
 
@@ -149,8 +141,7 @@ class BaseJob(object):
         """
         return self.task.id
 
-    def status(self, force=False):
-        # type: (bool) -> str
+    def status(self, force: bool = False) -> str:
         """
         Return the Job Task current status. Options are: "created", "queued", "in_progress", "stopped", "published",
         "publishing", "closed", "failed", "completed", "unknown".
@@ -167,8 +158,7 @@ class BaseJob(object):
         self._last_status_ts = time()
         return self._last_status
 
-    def status_message(self):
-        # type: () -> str
+    def status_message(self) -> str:
         """
         Gets the status message of the task. Note that the message is updated only after `BaseJob.status()`
         is called
@@ -178,8 +168,7 @@ class BaseJob(object):
         return str(self.task.data.status_message)
 
     @classmethod
-    def update_status_batch(cls, jobs):
-        # type: (Sequence[BaseJob]) -> ()
+    def update_status_batch(cls, jobs: Sequence["BaseJob"]) -> ():
         """
         Update the status of jobs, in batch_size
 
@@ -208,8 +197,12 @@ class BaseJob(object):
             # noinspection PyProtectedMember
             id_map[task_id]._last_status_ts = last_batch_update_ts
 
-    def wait(self, timeout=None, pool_period=30.0, aborted_nonresponsive_as_running=False):
-        # type: (Optional[float], float, bool) -> bool
+    def wait(
+        self,
+        timeout: Optional[float] = None,
+        pool_period: float = 30.0,
+        aborted_nonresponsive_as_running: bool = False,
+    ) -> bool:
         """
         Wait until the task is fully executed (i.e., aborted/completed/failed)
 
@@ -228,8 +221,7 @@ class BaseJob(object):
 
         return self.is_stopped(aborted_nonresponsive_as_running=aborted_nonresponsive_as_running)
 
-    def get_console_output(self, number_of_reports=1):
-        # type: (int) -> Sequence[str]
+    def get_console_output(self, number_of_reports: int = 1) -> Sequence[str]:
         """
         Return a list of console outputs reported by the Task.
         Returned console outputs are retrieved from the most updated console outputs.
@@ -239,8 +231,7 @@ class BaseJob(object):
         """
         return self.task.get_reported_console_output(number_of_reports=number_of_reports)
 
-    def worker(self):
-        # type: () -> Optional[str]
+    def worker(self) -> Optional[str]:
         """
         Return the current worker ID executing this Job. If job is pending, returns None
 
@@ -255,8 +246,7 @@ class BaseJob(object):
 
         return self._worker
 
-    def is_running(self):
-        # type: () -> bool
+    def is_running(self) -> bool:
         """
         Return True, if job is currently running (pending is considered False)
 
@@ -264,8 +254,7 @@ class BaseJob(object):
         """
         return self.status() == Task.TaskStatusEnum.in_progress
 
-    def is_stopped(self, aborted_nonresponsive_as_running=False):
-        # type: (bool) -> bool
+    def is_stopped(self, aborted_nonresponsive_as_running: bool = False) -> bool:
         """
         Return True, if job finished executing (for any reason)
 
@@ -301,8 +290,7 @@ class BaseJob(object):
             # if we do not need to ignore the nonactive state, it means this Task stopped
             return True
 
-    def is_failed(self):
-        # type: () -> bool
+    def is_failed(self) -> bool:
         """
         Return True, if job is has executed and failed
 
@@ -310,17 +298,18 @@ class BaseJob(object):
         """
         return self.status() in (Task.TaskStatusEnum.failed,)
 
-    def is_completed(self):
-        # type: () -> bool
+    def is_completed(self) -> bool:
         """
         Return True, if job was executed and completed successfully
 
         :return: True the task is currently in completed or published state
         """
-        return self.status() in (Task.TaskStatusEnum.completed, Task.TaskStatusEnum.published)
+        return self.status() in (
+            Task.TaskStatusEnum.completed,
+            Task.TaskStatusEnum.published,
+        )
 
-    def is_aborted(self):
-        # type: () -> bool
+    def is_aborted(self) -> bool:
         """
         Return True, if job was executed and aborted
 
@@ -328,30 +317,33 @@ class BaseJob(object):
         """
         return self.status() in (Task.TaskStatusEnum.stopped,)
 
-    def is_pending(self):
-        # type: () -> bool
+    def is_pending(self) -> bool:
         """
         Return True, if job is waiting for execution
 
         :return: True if the task is currently queued.
         """
-        return self.status() in (Task.TaskStatusEnum.queued, Task.TaskStatusEnum.created)
+        return self.status() in (
+            Task.TaskStatusEnum.queued,
+            Task.TaskStatusEnum.created,
+        )
 
-    def started(self):
-        # type: () -> bool
+    def started(self) -> bool:
         """
         Return True, if job already started, or ended. False, if created/pending.
 
         :return: False, if the task is currently in draft mode or pending.
         """
-        if not self.task_started and self.task.status in (Task.TaskStatusEnum.in_progress, Task.TaskStatusEnum.created):
+        if not self.task_started and self.task.status in (
+            Task.TaskStatusEnum.in_progress,
+            Task.TaskStatusEnum.created,
+        ):
             return False
 
         self.task_started = True
         return True
 
-    def delete(self):
-        # type: () -> bool
+    def delete(self) -> bool:
         """
         Delete the current temporary job (before launching)
         Return False if the Job/Task could not deleted
@@ -365,16 +357,14 @@ class BaseJob(object):
 
         return False
 
-    def is_cached_task(self):
-        # type: () -> bool
+    def is_cached_task(self) -> bool:
         """
         :return: True if the internal Task is a cached one, False otherwise.
         """
         return self._is_cached_task
 
     @classmethod
-    def register_hashing_callback(cls, a_function):
-        # type: (Callable[[dict], dict]) -> None
+    def register_hashing_callback(cls, a_function: Callable[[dict], dict]) -> None:
         """
         Allow to customize the dict used for hashing the Task.
         Provided function will be called with a dict representing a Task,
@@ -388,13 +378,12 @@ class BaseJob(object):
     @classmethod
     def _create_task_hash(
         cls,
-        task,
-        section_overrides=None,
-        params_override=None,
-        configurations_override=None,
-        explicit_docker_image=None,
-    ):
-        # type: (Task, Optional[dict], Optional[dict], Optional[dict], Optional[str]) -> Optional[str]
+        task: Task,
+        section_overrides: Optional[dict] = None,
+        params_override: Optional[dict] = None,
+        configurations_override: Optional[dict] = None,
+        explicit_docker_image: Optional[str] = None,
+    ) -> Optional[str]:
         """
         Create Hash (str) representing the state of the Task
 
@@ -466,8 +455,7 @@ class BaseJob(object):
         return hash_dict(repr_dict, hash_func=hash_func)
 
     @classmethod
-    def _get_cached_task(cls, task_hash):
-        # type: (str) -> Optional[Task]
+    def _get_cached_task(cls, task_hash: str) -> Optional[Task]:
         """
 
         :param task_hash:
@@ -480,7 +468,10 @@ class BaseJob(object):
             potential_tasks = Task._query_tasks(
                 status=["completed", "published"],
                 system_tags=["-{}".format(Task.archived_tag)],
-                _all_=dict(fields=["runtime.{}".format(cls._job_hash_property)], pattern=exact_match_regex(task_hash)),
+                _all_=dict(
+                    fields=["runtime.{}".format(cls._job_hash_property)],
+                    pattern=exact_match_regex(task_hash),
+                ),
                 only_fields=["id"],
             )
         else:
@@ -488,7 +479,10 @@ class BaseJob(object):
             potential_tasks = Task._query_tasks(
                 status=["completed", "published"],
                 system_tags=["-{}".format(Task.archived_tag)],
-                _all_=dict(fields=["comment"], pattern=cls._job_hash_description.format(task_hash)),
+                _all_=dict(
+                    fields=["comment"],
+                    pattern=cls._job_hash_description.format(task_hash),
+                ),
                 only_fields=["id"],
             )
         for obj in potential_tasks:
@@ -497,8 +491,7 @@ class BaseJob(object):
         return None
 
     @classmethod
-    def _set_task_cache_hash(cls, task, task_hash=None):
-        # type: (Task, Optional[str]) -> ()
+    def _set_task_cache_hash(cls, task: Task, task_hash: Optional[str] = None) -> ():
         """
         Store the task state hash for later querying
         :param task: The Task object that was created
@@ -519,20 +512,19 @@ class BaseJob(object):
 class ClearmlJob(BaseJob):
     def __init__(
         self,
-        base_task_id,  # type: str
-        parameter_override=None,  # type: Optional[Mapping[str, str]]
-        task_overrides=None,  # type: Optional[Mapping[str, str]]
-        configuration_overrides=None,  # type: Optional[Mapping[str, Union[str, Mapping]]]
-        tags=None,  # type: Optional[Sequence[str]]
-        parent=None,  # type: Optional[str]
-        disable_clone_task=False,  # type: bool
-        allow_caching=False,  # type: bool
-        target_project=None,  # type: Optional[str]
-        output_uri=None,  # type: Optional[Union[str, bool]]
-        enable_local_imports=True,  # type: bool
-        **kwargs  # type: Any
-    ):
-        # type: (...) -> ()
+        base_task_id: str,
+        parameter_override: Optional[Mapping[str, str]] = None,
+        task_overrides: Optional[Mapping[str, str]] = None,
+        configuration_overrides: Optional[Mapping[str, Union[str, Mapping]]] = None,
+        tags: Optional[Sequence[str]] = None,
+        parent: Optional[str] = None,
+        disable_clone_task: bool = False,
+        allow_caching: bool = False,
+        target_project: Optional[str] = None,
+        output_uri: Optional[Union[str, bool]] = None,
+        enable_local_imports: bool = True,
+        **kwargs: Any,
+    ) -> ():
         """
         Create a new Task based on a base_task_id with a different set of parameters
 
@@ -600,7 +592,10 @@ class ClearmlJob(BaseJob):
                     task_configurations[k].value = value
                 else:
                     task_configurations[k] = tasks_service.ConfigurationItem(
-                        name=str(k), value=value, description=None, type="json" if isinstance(v, dict) else None
+                        name=str(k),
+                        value=value,
+                        description=None,
+                        type="json" if isinstance(v, dict) else None,
                     )
             configuration_overrides = {k: v.value for k, v in task_configurations.items()}
 
@@ -659,7 +654,7 @@ class ClearmlJob(BaseJob):
                 project=get_or_create_project(session=Task._get_default_session(), project_name=target_project)
                 if target_project
                 else kwargs.pop("project", None),
-                **kwargs
+                **kwargs,
             )
 
         if tags:
@@ -691,13 +686,12 @@ class LocalClearmlJob(ClearmlJob):
     or for debug purposes.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super(LocalClearmlJob, self).__init__(*args, **kwargs)
         self._job_process = None
         self._local_temp_file = None
 
-    def launch(self, queue_name=None):
-        # type: (str) -> bool
+    def launch(self, queue_name: str = None) -> bool:
         """
         Launch job as a subprocess, ignores "queue_name"
 
@@ -750,8 +744,7 @@ class LocalClearmlJob(ClearmlJob):
         self._job_process = subprocess.Popen(args=[python, local_filename], cwd=cwd, env=env)
         return True
 
-    def wait_for_process(self, timeout=None):
-        # type: (Optional[int]) -> Optional[int]
+    def wait_for_process(self, timeout: Optional[int] = None) -> Optional[int]:
         """
         Wait until Job subprocess completed/exited
 
@@ -788,8 +781,7 @@ class LocalClearmlJob(ClearmlJob):
 
         return exit_code
 
-    def status(self, force=False):
-        # type: (bool) -> str
+    def status(self, force: bool = False) -> str:
         """
         Return the Job Task current status. Options are: "created", "queued", "in_progress", "stopped", "published",
         "publishing", "closed", "failed", "completed", "unknown".
@@ -810,14 +802,12 @@ class RunningJob(BaseJob):
     Wrapper to an already running Task
     """
 
-    def __init__(self, existing_task):  # noqa
-        # type: (Union[Task, str]) -> None
+    def __init__(self, existing_task: Union[Task, str]) -> None:  # noqa
         super(RunningJob, self).__init__()
         self.task = existing_task if isinstance(existing_task, Task) else Task.get_task(task_id=existing_task)
         self.task_started = bool(self.task.status != Task.TaskStatusEnum.created)
 
-    def force_set_is_cached(self, cached):
-        # type: (bool) -> ()
+    def force_set_is_cached(self, cached: bool) -> ():
         self._is_cached_task = bool(cached)
 
 
@@ -826,7 +816,7 @@ class TrainsJob(ClearmlJob):
     Deprecated, use ClearmlJob
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super(TrainsJob, self).__init__(**kwargs)
         warnings.warn(
             "Use clearml.automation.ClearmlJob",
@@ -842,13 +832,12 @@ class _JobStub(object):
 
     def __init__(
         self,
-        base_task_id,  # type: str
-        parameter_override=None,  # type: Optional[Mapping[str, str]]
-        task_overrides=None,  # type: Optional[Mapping[str, str]]
-        tags=None,  # type: Optional[Sequence[str]]
-        **kwargs  # type: Any
-    ):
-        # type: (...) -> ()
+        base_task_id: str,
+        parameter_override: Optional[Mapping[str, str]] = None,
+        task_overrides: Optional[Mapping[str, str]] = None,
+        tags: Optional[Sequence[str]] = None,
+        **kwargs: Any,
+    ) -> ():
         self.task = None
         self.base_task_id = base_task_id
         self.parameter_override = parameter_override
@@ -857,18 +846,15 @@ class _JobStub(object):
         self.iteration = -1
         self.task_started = None
 
-    def launch(self, queue_name=None):
-        # type: (str) -> ()
+    def launch(self, queue_name: str = None) -> ():
         self.iteration = 0
         self.task_started = time()
         print("launching", self.parameter_override, "in", queue_name)
 
-    def abort(self):
-        # type: () -> ()
+    def abort(self) -> ():
         self.task_started = -1
 
-    def elapsed(self):
-        # type: () -> float
+    def elapsed(self) -> float:
         """
         Return the time in seconds since job started. Return -1 if job is still pending
 
@@ -878,8 +864,7 @@ class _JobStub(object):
             return -1
         return time() - self.task_started
 
-    def iterations(self):
-        # type: () -> int
+    def iterations(self) -> int:
         """
         Return the last iteration value of the current job. -1 if job has not started yet
         :return: Task last iteration.
@@ -888,8 +873,7 @@ class _JobStub(object):
             return -1
         return self.iteration
 
-    def get_metric(self, title, series):
-        # type: (str, str) -> (float, float, float)
+    def get_metric(self, title: str, series: str) -> (float, float, float):
         """
         Retrieve a specific scalar metric from the running Task.
 
@@ -899,16 +883,13 @@ class _JobStub(object):
         """
         return 0, 1.0, 0.123
 
-    def task_id(self):
-        # type: () -> str
+    def task_id(self) -> str:
         return "stub"
 
-    def status(self):
-        # type: () -> str
+    def status(self) -> str:
         return "in_progress"
 
-    def wait(self, timeout=None, pool_period=30.0):
-        # type: (Optional[float], float) -> bool
+    def wait(self, timeout: Optional[float] = None, pool_period: float = 30.0) -> bool:
         """
         Wait for the task to be processed (i.e., aborted/completed/failed)
 
@@ -918,8 +899,7 @@ class _JobStub(object):
         """
         return True
 
-    def get_console_output(self, number_of_reports=1):
-        # type: (int) -> Sequence[str]
+    def get_console_output(self, number_of_reports: int = 1) -> Sequence[str]:
         """
         Return a list of console outputs reported by the Task.
         Returned console outputs are retrieved from the most updated console outputs.
@@ -930,18 +910,14 @@ class _JobStub(object):
         """
         return []
 
-    def is_running(self):
-        # type: () -> bool
+    def is_running(self) -> bool:
         return self.task_started is not None and self.task_started > 0
 
-    def is_stopped(self):
-        # type: () -> bool
+    def is_stopped(self) -> bool:
         return self.task_started is not None and self.task_started < 0
 
-    def is_pending(self):
-        # type: () -> bool
+    def is_pending(self) -> bool:
         return self.task_started is None
 
-    def started(self):
-        # type: () -> bool
+    def started(self) -> bool:
         return not self.is_pending()

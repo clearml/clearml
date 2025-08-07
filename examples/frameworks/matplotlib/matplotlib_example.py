@@ -28,7 +28,7 @@ plt.show()
 # Create another plot - with a name
 x = np.linspace(0, 10, 30)
 y = np.sin(x)
-plt.plot(x, y, 'o', color='black')
+plt.plot(x, y, 'o', color='pink')
 # Plot will be reported automatically
 plt.show()
 

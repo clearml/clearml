@@ -1,12 +1,12 @@
 import os
 import sys
 from functools import partial
+from typing import Optional, Callable, Any
 
 import six
-from typing import Optional, Any, Callable
 
 
-def __buffer_writer_close_patch(self):
+def __buffer_writer_close_patch(self) -> None:
     self._trains_org_close()
     # noinspection PyBroadException
     try:
@@ -15,14 +15,13 @@ def __buffer_writer_close_patch(self):
         pass
 
 
-def buffer_writer_close_cb(bufferwriter, callback, overwrite=False):
-    # type: (Any, Callable[[Any], None], bool) -> ()
+def buffer_writer_close_cb(bufferwriter: Any, callback: Callable[[Any], None], overwrite: bool = False) -> ():
     # noinspection PyBroadException
     try:
-        if not hasattr(bufferwriter, '_trains_org_close'):
+        if not hasattr(bufferwriter, "_trains_org_close"):
             bufferwriter._trains_org_close = bufferwriter.close
             bufferwriter.close = partial(__buffer_writer_close_patch, bufferwriter)
-        elif not overwrite and hasattr(bufferwriter, '_trains_close_cb'):
+        elif not overwrite and hasattr(bufferwriter, "_trains_close_cb"):
             return
 
         bufferwriter._trains_close_cb = callback
@@ -30,8 +29,9 @@ def buffer_writer_close_cb(bufferwriter, callback, overwrite=False):
         pass
 
 
-def get_filename_from_file_object(file_object, flush=False, analyze_file_handle=False):
-    # type: (object, bool, bool) -> Optional[str]
+def get_filename_from_file_object(
+    file_object: Any, flush: bool = False, analyze_file_handle: bool = False
+) -> Optional[str]:
     """
     Return a string of the file location, extracted from any file object
     :param file_object: str, file, stream, FileIO etc.
@@ -45,7 +45,7 @@ def get_filename_from_file_object(file_object, flush=False, analyze_file_handle=
             return os.path.abspath(file_object) if file_object else file_object
         except Exception:
             return file_object
-    elif hasattr(file_object, 'name'):
+    elif hasattr(file_object, "name"):
         filename = file_object.name
         if flush:
             # noinspection PyBroadException
@@ -54,33 +54,35 @@ def get_filename_from_file_object(file_object, flush=False, analyze_file_handle=
             except Exception:
                 pass
         return os.path.abspath(filename)
-    elif analyze_file_handle and isinstance(file_object, int) or hasattr(file_object, 'fileno'):
+    elif analyze_file_handle and isinstance(file_object, int) or hasattr(file_object, "fileno"):
         # noinspection PyBroadException
         try:
             fileno = file_object if isinstance(file_object, int) else file_object.fileno()
-            if sys.platform == 'win32':
+            if sys.platform == "win32":
                 import msvcrt
                 from ctypes import windll, create_string_buffer
+
                 handle = msvcrt.get_osfhandle(fileno)
                 name = create_string_buffer(2050)
                 windll.kernel32.GetFinalPathNameByHandleA(handle, name, 2048, 0)
-                filename = name.value.decode('utf-8')
-                if filename.startswith('\\\\?\\'):
+                filename = name.value.decode("utf-8")
+                if filename.startswith("\\\\?\\"):
                     filename = filename[4:]
                 if flush:
                     os.fsync(fileno)
                 return os.path.abspath(filename)
-            elif sys.platform == 'linux':
-                filename = os.readlink('/proc/self/fd/{}'.format(fileno))
+            elif sys.platform == "linux":
+                filename = os.readlink("/proc/self/fd/{}".format(fileno))
                 if flush:
                     os.fsync(fileno)
                 return os.path.abspath(filename)
-            elif sys.platform == 'darwin':
+            elif sys.platform == "darwin":
                 import fcntl
-                name = b' ' * 1024
+
+                name = b" " * 1024
                 # F_GETPATH = 50
                 name = fcntl.fcntl(fileno, 50, name)
-                filename = name.split(b'\x00')[0].decode()
+                filename = name.split(b"\x00")[0].decode()
                 if flush:
                     os.fsync(fileno)
                 return os.path.abspath(filename)

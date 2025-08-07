@@ -5,8 +5,7 @@ import pathlib2
 import psutil
 
 
-def get_filename_max_length(dir_path):
-    # type: (str) -> int
+def get_filename_max_length(dir_path: str) -> int:
     default = 255  # Common filesystems like NTFS, EXT4 and HFS+ limited with 255
     try:
         dir_path = pathlib2.Path(os.path.abspath(dir_path))
@@ -25,7 +24,7 @@ def get_filename_max_length(dir_path):
     return default
 
 
-def is_path_traversal(target_folder, relative_path):
+def is_path_traversal(target_folder: str, relative_path: str) -> bool:
     try:
         target_folder = pathlib2.Path(target_folder)
         relative_path = pathlib2.Path(relative_path)

@@ -1,9 +1,18 @@
 import inspect
+from typing import Optional, Callable, Dict, Any
+
 from .endpoint_telemetry import EndpointTelemetry
 
 
 class Route:
-    def __init__(self, target_url, request_callback=None, response_callback=None, session=None, error_callback=None):
+    def __init__(
+        self,
+        target_url: str,
+        request_callback: Optional[Callable[[Any, Dict[str, Any]], Any]] = None,
+        response_callback: Optional[Callable[[Any, Any, Dict[str, Any]], Any]] = None,
+        session: Optional[Any] = None,
+        error_callback: Optional[Callable[[Any, Any, Dict[str, Any]], Any]] = None,
+    ) -> None:
         self.target_url = target_url
         self.request_callback = request_callback
         self.response_callback = response_callback
@@ -15,24 +24,24 @@ class Route:
 
     def set_endpoint_telemetry_args(
         self,
-        endpoint_name="endpoint",
-        model_name="model",
-        model=None,
-        model_url=None,
-        model_source=None,
-        model_version=None,
-        app_id=None,
-        app_instance=None,
-        tags=None,
-        system_tags=None,
-        container_id=None,
-        input_size=None,
-        input_type="str",
-        report_statistics=True,
-        endpoint_url=None,
-        preprocess_artifact=None,
-        force_register=False
-    ):
+        endpoint_name: str = "endpoint",
+        model_name: str = "model",
+        model: Any = None,
+        model_url: Any = None,
+        model_source: Any = None,
+        model_version: Any = None,
+        app_id: Any = None,
+        app_instance: Any = None,
+        tags: Any = None,
+        system_tags: Any = None,
+        container_id: Any = None,
+        input_size: Any = None,
+        input_type: str = "str",
+        report_statistics: bool = True,
+        endpoint_url: Any = None,
+        preprocess_artifact: Any = None,
+        force_register: bool = False,
+    ) -> None:
         self._endpoint_telemetry_args = dict(
             endpoint_name=endpoint_name,
             model_name=model_name,
@@ -50,21 +59,21 @@ class Route:
             report_statistics=report_statistics,
             endpoint_url=endpoint_url,
             preprocess_artifact=preprocess_artifact,
-            force_register=force_register
+            force_register=force_register,
         )
 
-    def start_endpoint_telemetry(self):
+    def start_endpoint_telemetry(self) -> None:
         if self._endpoint_telemetry is not None or self._endpoint_telemetry_args is None:
             return
         self._endpoint_telemetry = EndpointTelemetry(**self._endpoint_telemetry_args)
 
-    def stop_endpoint_telemetry(self):
+    def stop_endpoint_telemetry(self) -> None:
         if self._endpoint_telemetry is None:
             return
         self._endpoint_telemetry.stop()
         self._endpoint_telemetry = None
 
-    async def on_request(self, request):
+    async def on_request(self, request: Any) -> Any:
         new_request = request
         if self.request_callback:
             new_request = self.request_callback(request, persistent_state=self.persistent_state) or request
@@ -74,7 +83,7 @@ class Route:
             self._endpoint_telemetry.on_request()
         return new_request
 
-    async def on_response(self, response, request):
+    async def on_response(self, response: Any, request: Any) -> Any:
         new_response = response
         if self.response_callback:
             new_response = self.response_callback(response, request, persistent_state=self.persistent_state) or response
@@ -84,7 +93,7 @@ class Route:
             self._endpoint_telemetry.on_response()
         return new_response
 
-    async def on_error(self, request, error):
+    async def on_error(self, request: Any, error: Any) -> None:
         on_error_result = None
         if self.error_callback:
             on_error_result = self.error_callback(request, error, persistent_state=self.persistent_state)

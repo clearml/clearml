@@ -4,6 +4,8 @@ from copy import copy
 from datetime import datetime
 from functools import partial
 from tempfile import gettempdir, mkdtemp
+from types import TracebackType
+from typing import Optional, Tuple, Union, Dict, List, Any
 from urllib.parse import urlparse
 
 import attr
@@ -17,7 +19,13 @@ from .util import get_command_output, remove_user_pass_from_url
 from ....backend_api import Session
 from ....config import deferred_config, VCS_WORK_DIR, VCS_ENTRY_POINT, VCS_DIFF
 from ....debugging import get_logger
-from .detectors import GitEnvDetector, GitDetector, HgEnvDetector, HgDetector, Result as DetectionResult
+from .detectors import (
+    GitEnvDetector,
+    GitDetector,
+    HgEnvDetector,
+    HgDetector,
+    Result as DetectionResult,
+)
 from ....utilities.process.mp import SafeEvent
 
 
@@ -32,15 +40,18 @@ class ScriptRequirements(object):
     _ignore_packages = set()
 
     @classmethod
-    def _get_logger(cls):
+    def _get_logger(cls) -> logging.Logger:
         return get_logger("Repository Detection")
 
-    def __init__(self, root_folder):
+    def __init__(self, root_folder: str) -> None:
         self._root_folder = root_folder
 
     def get_requirements(
-        self, entry_point_filename=None, add_missing_installed_packages=False, detailed_req_report=None
-    ):
+        self,
+        entry_point_filename: Optional[str] = None,
+        add_missing_installed_packages: bool = False,
+        detailed_req_report: Optional[bool] = None,
+    ) -> Tuple[str, str]:
         # noinspection PyBroadException
         try:
             from ....utilities.pigar.reqs import get_installed_pkgs_detail
@@ -51,10 +62,19 @@ class ScriptRequirements(object):
                 save_path="",
                 project_path=self._root_folder,
                 installed_pkgs=installed_pkgs,
-                ignores=[".git", ".hg", ".idea", "__pycache__", ".ipynb_checkpoints", "site-packages", "dist-packages"],
+                ignores=[
+                    ".git",
+                    ".hg",
+                    ".idea",
+                    "__pycache__",
+                    ".ipynb_checkpoints",
+                    "site-packages",
+                    "dist-packages",
+                ],
             )
             reqs, try_imports, guess, local_pks = gr.extract_reqs(
-                module_callback=ScriptRequirements.add_trains_used_packages, entry_point_filename=entry_point_filename
+                module_callback=ScriptRequirements.add_trains_used_packages,
+                entry_point_filename=entry_point_filename,
             )
             if add_missing_installed_packages and guess:
                 for k in guess:
@@ -66,7 +86,7 @@ class ScriptRequirements(object):
             return "", ""
 
     @staticmethod
-    def add_trains_used_packages(modules):
+    def add_trains_used_packages(modules: Any) -> Any:
         # hack: forcefully insert storage modules if we have them
         # noinspection PyBroadException
         try:
@@ -144,7 +164,11 @@ class ScriptRequirements(object):
         return modules
 
     @staticmethod
-    def create_requirements_txt(reqs, local_pks=None, detailed=None):
+    def create_requirements_txt(
+        reqs: Dict[str, Any],
+        local_pks: Optional[Any] = None,
+        detailed: Optional[bool] = None,
+    ) -> Tuple[str, str]:
         # write requirements.txt
         if detailed is None:
             detailed = ScriptRequirements._detailed_import_report
@@ -264,7 +288,7 @@ class ScriptRequirements(object):
         )
 
     @staticmethod
-    def _make_req_line(k, version):
+    def _make_req_line(k: str, version: str) -> str:
         requirements_txt = ""
         if k == "-e" and version:
             requirements_txt += "{0}\n".format(version)
@@ -279,8 +303,13 @@ class ScriptRequirements(object):
         return requirements_txt
 
     @staticmethod
-    def _remove_package_versions(installed_pkgs, package_names_to_remove_version):
-        def _internal(_installed_pkgs):
+    def _remove_package_versions(
+        installed_pkgs: Dict[str, Union[Tuple[str, Optional[str]], Dict[str, Any]]],
+        package_names_to_remove_version: Tuple[str],
+    ) -> Dict[str, Union[Tuple[str, Optional[str]], Dict[str, Any]]]:
+        def _internal(
+            _installed_pkgs: Dict[str, Union[Tuple[str, Optional[str]], Dict[str, Any]]]
+        ) -> Dict[str, Union[Tuple[str, Optional[str]], Dict[str, Any]]]:
             return {
                 k: (v[0], None if str(k) in package_names_to_remove_version else v[1])
                 if not isinstance(v, dict)
@@ -301,11 +330,16 @@ class _JupyterObserver(object):
     _store_notebook_artifact = deferred_config("development.store_jupyter_notebook_artifact", True)
 
     @classmethod
-    def _get_logger(cls):
+    def _get_logger(cls) -> logging.Logger:
         return get_logger("Repository Detection")
 
     @classmethod
-    def observer(cls, jupyter_notebook_filename, notebook_name=None, log_history=False):
+    def observer(
+        cls,
+        jupyter_notebook_filename: str,
+        notebook_name: str = None,
+        log_history: bool = False,
+    ) -> None:
         if cls._exit_event is None:
             cls._exit_event = SafeEvent()
         if cls._sync_event is None:
@@ -327,13 +361,13 @@ class _JupyterObserver(object):
         cls._thread.start()
 
     @classmethod
-    def signal_sync(cls, *_, **__):
+    def signal_sync(cls, *_: Any, **__: Any) -> None:
         if cls._sync_event is None:
             return
         cls._sync_event.set()
 
     @classmethod
-    def close(cls):
+    def close(cls) -> None:
         if not cls._thread:
             return
         cls._exit_event.set()
@@ -342,7 +376,7 @@ class _JupyterObserver(object):
         cls._thread = None
 
     @classmethod
-    def _daemon(cls, jupyter_notebook_filename, notebook_name=None):
+    def _daemon(cls, jupyter_notebook_filename: str, notebook_name: Optional[str] = None) -> None:
         from clearml import Task
 
         # load jupyter notebook package
@@ -376,7 +410,10 @@ class _JupyterObserver(object):
         # load pigar
         # noinspection PyBroadException
         try:
-            from ....utilities.pigar.reqs import get_installed_pkgs_detail, file_import_modules
+            from ....utilities.pigar.reqs import (
+                get_installed_pkgs_detail,
+                file_import_modules,
+            )
             from ....utilities.pigar.modules import ReqsModules
             from ....utilities.pigar.log import logger
 
@@ -470,7 +507,10 @@ class _JupyterObserver(object):
                 else:
                     # serialize notebook to a temp file
                     if cls._jupyter_history_logger:
-                        script_code, current_cell = cls._jupyter_history_logger.history_to_str()
+                        (
+                            script_code,
+                            current_cell,
+                        ) = cls._jupyter_history_logger.history_to_str()
                     else:
                         # noinspection PyBroadException
                         try:
@@ -538,11 +578,13 @@ class _JupyterObserver(object):
                     if file_import_modules and Session.check_min_api_version("2.2"):
                         if fmodules is None:
                             fmodules, _ = file_import_modules(
-                                notebook.parts[-1] if notebook else "notebook", script_code
+                                notebook.parts[-1] if notebook else "notebook",
+                                script_code,
                             )
                             if current_cell:
                                 cell_fmodules, _ = file_import_modules(
-                                    notebook.parts[-1] if notebook else "notebook", current_cell
+                                    notebook.parts[-1] if notebook else "notebook",
+                                    current_cell,
                                 )
                                 # noinspection PyBroadException
                                 try:
@@ -568,11 +610,18 @@ class _JupyterObserver(object):
                                 if isinstance(installed_pkgs[name], dict):
                                     for subpackage_name, subpackage in installed_pkgs[name].items():
                                         pkg_name, version = subpackage
-                                        reqs.add(pkg_name, version, fmodules.get(subpackage_name, fmodules[name]))
+                                        reqs.add(
+                                            pkg_name,
+                                            version,
+                                            fmodules.get(subpackage_name, fmodules[name]),
+                                        )
                                 else:
                                     pkg_name, version = installed_pkgs[name]
                                     reqs.add(pkg_name, version, fmodules[name])
-                        requirements_txt, conda_requirements = ScriptRequirements.create_requirements_txt(reqs)
+                        (
+                            requirements_txt,
+                            conda_requirements,
+                        ) = ScriptRequirements.create_requirements_txt(reqs)
 
                     # remove ipython direct access from the script code
                     # we will not be able to run them anyhow
@@ -586,7 +635,10 @@ class _JupyterObserver(object):
                 prev_script_hash = current_script_hash
                 data_script = task.data.script
                 data_script.diff = script_code
-                data_script.requirements = {"pip": requirements_txt, "conda": conda_requirements}
+                data_script.requirements = {
+                    "pip": requirements_txt,
+                    "conda": conda_requirements,
+                }
                 # noinspection PyProtectedMember
                 task._update_script(script=data_script)
                 # update requirements
@@ -605,11 +657,16 @@ class ScriptInfo(object):
     """ Script info detection plugins, in order of priority """
 
     @classmethod
-    def _get_logger(cls):
+    def _get_logger(cls) -> logging.Logger:
         return get_logger("Repository Detection")
 
     @classmethod
-    def _jupyter_install_post_store_hook(cls, jupyter_notebook_filename, notebook_name=None, log_history=False):
+    def _jupyter_install_post_store_hook(
+        cls,
+        jupyter_notebook_filename: str,
+        notebook_name: str = None,
+        log_history: bool = False,
+    ) -> None:
         # noinspection PyBroadException
         try:
             if "IPython" in sys.modules:
@@ -618,7 +675,9 @@ class ScriptInfo(object):
 
                 if get_ipython():
                     _JupyterObserver.observer(
-                        jupyter_notebook_filename, notebook_name=notebook_name, log_history=log_history
+                        jupyter_notebook_filename,
+                        notebook_name=notebook_name,
+                        log_history=log_history,
                     )
                     get_ipython().events.register("pre_run_cell", _JupyterObserver.signal_sync)
                     if log_history:
@@ -627,7 +686,7 @@ class ScriptInfo(object):
             pass
 
     @classmethod
-    def _get_jupyter_notebook_filename(cls):
+    def _get_jupyter_notebook_filename(cls) -> str:
         # check if we are running in vscode, we have the jupyter notebook defined:
         if "IPython" in sys.modules:
             # noinspection PyBroadException
@@ -669,7 +728,9 @@ class ScriptInfo(object):
             # noinspection PyBroadException
             try:
                 # noinspection PyPackageRequirements
-                from notebook.notebookapp import list_running_servers  # noqa <= Notebook v6
+                from notebook.notebookapp import (
+                    list_running_servers,
+                )  # noqa <= Notebook v6
 
                 # noinspection PyBroadException
                 try:
@@ -703,7 +764,6 @@ class ScriptInfo(object):
             notebook_name = None
 
             for server_index, server_info in enumerate(jupyter_servers):
-
                 cookies = None
                 password = None
                 if server_info and server_info.get("password"):
@@ -721,7 +781,7 @@ class ScriptInfo(object):
                         headers={
                             "Authorization": "token {}".format(auth_token),
                         },
-                        verify=verify
+                        verify=verify,
                     )
                 except requests.exceptions.SSLError:
                     verify = False
@@ -756,7 +816,7 @@ class ScriptInfo(object):
                         headers={
                             "Authorization": "token {}".format(auth_token),
                         },
-                        verify=verify
+                        verify=verify,
                     )
 
                 # send request to the jupyter server
@@ -767,7 +827,8 @@ class ScriptInfo(object):
                     if server_index == len(jupyter_servers) - 1:
                         cls._get_logger().warning(
                             "Failed accessing the jupyter server{}: {}".format(
-                                " [password={}]".format(password) if server_info.get("password") else "", ex
+                                " [password={}]".format(password) if server_info.get("password") else "",
+                                ex,
                             )
                         )
                         return os.path.join(os.getcwd(), "error_notebook_not_found.py")
@@ -862,11 +923,10 @@ class ScriptInfo(object):
 
             return script_entry_point
         except Exception:
-
             return None
 
     @classmethod
-    def _authenticate_jupyter(cls, server_info):
+    def _authenticate_jupyter(cls, server_info: Dict[str, Any]) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
         """
         Authenticate to the Jupyter server using a password.
         The password is fetched from `CLEARML_JUPYTER_PASSWORD` env var or the
@@ -904,11 +964,11 @@ class ScriptInfo(object):
         return password, cookies
 
     @classmethod
-    def is_sagemaker(cls):
+    def is_sagemaker(cls) -> bool:
         return Path(cls._sagemaker_metadata_path).is_file()
 
     @classmethod
-    def _get_sagemaker_notebook(cls, current_kernel, timeout=30):
+    def _get_sagemaker_notebook(cls, current_kernel: str, timeout: int = 30) -> Tuple[Optional[str], Optional[str]]:
         # noinspection PyBroadException
         try:
             # we expect to find boto3 in the sagemaker env
@@ -918,7 +978,8 @@ class ScriptInfo(object):
                 notebook_data = json.load(f)
             client = boto3.client("sagemaker")
             response = client.create_presigned_domain_url(
-                DomainId=notebook_data["DomainId"], UserProfileName=notebook_data["UserProfileName"]
+                DomainId=notebook_data["DomainId"],
+                UserProfileName=notebook_data["UserProfileName"],
             )
             authorized_url = response["AuthorizedUrl"]
             authorized_url_parsed = urlparse(authorized_url)
@@ -934,7 +995,7 @@ class ScriptInfo(object):
         return None, None
 
     @classmethod
-    def _get_colab_notebook(cls, timeout=30):
+    def _get_colab_notebook(cls, timeout: int = 30) -> Tuple[Optional[str], Optional[str]]:
         # returns tuple (notebook name, raw string notebook)
         # None, None if fails
         try:
@@ -951,7 +1012,7 @@ class ScriptInfo(object):
             return None, None
 
     @classmethod
-    def _get_entry_point(cls, repo_root, script_path):
+    def _get_entry_point(cls, repo_root: str, script_path: str) -> str:
         if VCS_ENTRY_POINT.get():
             return VCS_ENTRY_POINT.get()
 
@@ -961,7 +1022,8 @@ class ScriptInfo(object):
         try:
             # Use os.path.relpath as it calculates up dir movements (../)
             entry_point = os.path.relpath(
-                str(os.path.realpath(script_path.as_posix())), str(cls._get_working_dir(repo_root, return_abs=True))
+                str(os.path.realpath(script_path.as_posix())),
+                str(cls._get_working_dir(repo_root, return_abs=True)),
             )
         except ValueError:
             # Working directory not under repository root
@@ -970,7 +1032,7 @@ class ScriptInfo(object):
         return Path(entry_point).as_posix()
 
     @classmethod
-    def _cwd(cls):
+    def _cwd(cls) -> Path:
         # return the current working directory (solve for hydra changing it)
         # check if running with hydra
         if sys.modules.get("hydra"):
@@ -985,7 +1047,7 @@ class ScriptInfo(object):
         return Path.cwd().absolute()
 
     @classmethod
-    def _get_working_dir(cls, repo_root, return_abs=False):
+    def _get_working_dir(cls, repo_root: str, return_abs: bool = False) -> str:
         if VCS_WORK_DIR.get():
             if return_abs and repo_root:
                 return (Path(repo_root) / VCS_WORK_DIR.get()).absolute().as_posix()
@@ -1004,7 +1066,7 @@ class ScriptInfo(object):
             return repo_root.as_posix() if return_abs else "."
 
     @classmethod
-    def _absolute_path(cls, file_path, cwd):
+    def _absolute_path(cls, file_path: str, cwd: str) -> str:
         # return the absolute path, relative to a specific working directory (cwd)
         file_path = Path(file_path)
         if file_path.is_absolute():
@@ -1013,7 +1075,7 @@ class ScriptInfo(object):
         return os.path.abspath((Path(cwd).absolute() / file_path).as_posix())
 
     @classmethod
-    def _get_script_code(cls, script_path):
+    def _get_script_code(cls, script_path: str) -> str:
         # allow to override with env variable
         # noinspection PyBroadException
         try:
@@ -1035,16 +1097,16 @@ class ScriptInfo(object):
     @classmethod
     def _get_script_info(
         cls,
-        filepaths,
-        check_uncommitted=True,
-        create_requirements=True,
-        log=None,
-        uncommitted_from_remote=False,
-        detect_jupyter_notebook=True,
-        add_missing_installed_packages=False,
-        detailed_req_report=None,
-        force_single_script=False,
-    ):
+        filepaths: List[str],
+        check_uncommitted: bool = True,
+        create_requirements: bool = True,
+        log: Optional[logging.Logger] = None,
+        uncommitted_from_remote: bool = False,
+        detect_jupyter_notebook: bool = True,
+        add_missing_installed_packages: bool = False,
+        detailed_req_report: Optional[bool] = None,
+        force_single_script: bool = False,
+    ) -> Tuple["ScriptInfoResult", Optional[ScriptRequirements]]:
         jupyter_filepath = cls._get_jupyter_notebook_filename() if detect_jupyter_notebook else None
         if jupyter_filepath:
             scripts_path = [Path(os.path.normpath(jupyter_filepath)).absolute()]
@@ -1061,7 +1123,7 @@ class ScriptInfo(object):
 
         scripts_dir = [f if f.is_dir() else f.parent for f in scripts_path]
 
-        def _log(msg, *args, **kwargs):
+        def _log(msg: str, *args: Any, **kwargs: Any) -> None:
             if not log:
                 return
             log.warning("Failed auto-detecting task repository: {}".format(msg.format(*args, **kwargs)))
@@ -1090,7 +1152,9 @@ class ScriptInfo(object):
         if plugin:
             try:
                 repo_info = plugin.get_info(
-                    str(script_dir), include_diff=check_uncommitted, diff_from_remote=uncommitted_from_remote
+                    str(script_dir),
+                    include_diff=check_uncommitted,
+                    diff_from_remote=uncommitted_from_remote,
                 )
             except SystemExit:
                 raise
@@ -1191,12 +1255,16 @@ class ScriptInfo(object):
             script_info = None
 
         return (
-            ScriptInfoResult(script=script_info, warning_messages=messages, auxiliary_git_diff=auxiliary_git_diff),
+            ScriptInfoResult(
+                script=script_info,
+                warning_messages=messages,
+                auxiliary_git_diff=auxiliary_git_diff,
+            ),
             script_requirements,
         )
 
     @classmethod
-    def _detect_distributed_execution(cls, entry_point, log):
+    def _detect_distributed_execution(cls, entry_point: str, log: logging.Logger) -> str:
         # check if we are running with torch distributed, or transformers accelerate
         # make sure we change the entry point to reflect it.
         is_torch_distributed = os.environ.get("TORCHELASTIC_RUN_ID") is not None
@@ -1247,7 +1315,7 @@ class ScriptInfo(object):
         return entry_point
 
     @staticmethod
-    def __legacy_jupyter_notebook_server_json_parsing():
+    def __legacy_jupyter_notebook_server_json_parsing() -> Optional[Dict[str, Any]]:
         # noinspection PyBroadException
         try:
             # on some jupyter notebook versions this function can crash on parsing the json file,
@@ -1273,16 +1341,16 @@ class ScriptInfo(object):
     @classmethod
     def get(
         cls,
-        filepaths=None,
-        check_uncommitted=True,
-        create_requirements=True,
-        log=None,
-        uncommitted_from_remote=False,
-        detect_jupyter_notebook=True,
-        add_missing_installed_packages=False,
-        detailed_req_report=None,
-        force_single_script=False
-    ):
+        filepaths: Optional[List[str]] = None,
+        check_uncommitted: bool = True,
+        create_requirements: bool = True,
+        log: Optional[logging.Logger] = None,
+        uncommitted_from_remote: bool = False,
+        detect_jupyter_notebook: bool = True,
+        add_missing_installed_packages: bool = False,
+        detailed_req_report: Optional[bool] = None,
+        force_single_script: bool = False,
+    ) -> Tuple["ScriptInfoResult", Optional["ScriptRequirements"]]:
         try:
             if not filepaths:
                 filepaths = [
@@ -1307,7 +1375,7 @@ class ScriptInfo(object):
         return ScriptInfoResult(), None
 
     @classmethod
-    def is_running_from_module(cls):
+    def is_running_from_module(cls) -> bool:
         # noinspection PyBroadException
         try:
             return "__main__" in sys.modules and vars(sys.modules["__main__"])["__package__"]
@@ -1315,7 +1383,7 @@ class ScriptInfo(object):
             return False
 
     @classmethod
-    def detect_running_module(cls, script_dict):
+    def detect_running_module(cls, script_dict: Dict[str, Any]) -> Dict[str, Any]:
         if not script_dict:
             return script_dict
         # noinspection PyBroadException
@@ -1333,7 +1401,10 @@ class ScriptInfo(object):
                         a_abs = os.path.abspath(a)
                         if os.path.commonpath([a_abs, git_root]) == git_root:
                             # adjust path relative to working dir inside git repo
-                            a = " " + os.path.relpath(a_abs, os.path.join(git_root, str(script_dict["working_dir"])))
+                            a = " " + os.path.relpath(
+                                a_abs,
+                                os.path.join(git_root, str(script_dict["working_dir"])),
+                            )
                     argvs += " {}".format(a)
 
                 # noinspection PyBroadException
@@ -1349,8 +1420,7 @@ class ScriptInfo(object):
         return script_dict
 
     @staticmethod
-    def is_google_colab():
-        # type: () -> bool
+    def is_google_colab() -> bool:
         """Know if the script is running from Google Colab"""
 
         # noinspection PyBroadException
@@ -1365,8 +1435,7 @@ class ScriptInfo(object):
         return False
 
     @staticmethod
-    def is_vscode():
-        # type: () -> bool
+    def is_vscode() -> bool:
         """Know if the script is running from VSCode"""
 
         if os.environ.get("TERM_PROGRAM") == "vscode":
@@ -1377,8 +1446,7 @@ class ScriptInfo(object):
         return False
 
     @staticmethod
-    def is_pycharm():
-        # type: () -> bool
+    def is_pycharm() -> bool:
         """Know if the script is running from PyCharm"""
 
         # youtrack.jetbrains.com ISSUE #PY-4853 added this variables
@@ -1389,8 +1457,7 @@ class ScriptInfo(object):
         return False
 
     @staticmethod
-    def is_jupyter():
-        # type: () -> bool
+    def is_jupyter() -> bool:
         """Know if the script is running from Jupyter"""
 
         if isinstance(ScriptInfo._get_jupyter_notebook_filename(), str):
@@ -1398,7 +1465,7 @@ class ScriptInfo(object):
         return False
 
     @staticmethod
-    def get_ide(jupyter_status=False):
+    def get_ide(jupyter_status: bool = False) -> str:
         """
         Get the details of ide script is running from
 
@@ -1421,7 +1488,7 @@ class ScriptInfo(object):
         return ide_str
 
     @classmethod
-    def close(cls):
+    def close(cls) -> None:
         _JupyterObserver.close()
 
 
@@ -1437,7 +1504,7 @@ class _JupyterHistoryLogger(object):
     _reg_replace_magic = r"\n([ \t]*)%"
     _reg_replace_bang = r"\n([ \t]*)!"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._exception_raised = False
         self._cells_code = {}
         self._counter = 0
@@ -1455,7 +1522,7 @@ class _JupyterHistoryLogger(object):
             self._replace_magic_pattern = None
             self._replace_bang_pattern = None
 
-    def hook(self, ip=None):
+    def hook(self, ip: Any = None) -> None:
         if not ip:
             # noinspection PyBroadException
             try:
@@ -1482,7 +1549,7 @@ class _JupyterHistoryLogger(object):
         self._ip.events.register("pre_run_cell", self._pre_cell_callback)
         self._ip.set_custom_exc((Exception,), self._exception_callback)
 
-    def _patched_run_cell(self, shell, *args, **kwargs):
+    def _patched_run_cell(self, shell: Any, *args: Any, **kwargs: Any) -> Any:
         # noinspection PyBroadException
         try:
             raw_cell = kwargs.get("raw_cell") or args[0]
@@ -1492,21 +1559,31 @@ class _JupyterHistoryLogger(object):
         # noinspection PyProtectedMember
         return shell._org_run_cell(*args, **kwargs)
 
-    def history(self, filename):
+    def history(self, filename: str) -> None:
         with open(filename, "wt") as f:
             for k, v in sorted(self._cells_code.items(), key=lambda p: p[0]):
                 f.write(v)
 
-    def history_to_str(self):
+    def history_to_str(self) -> Tuple[str, Optional[str]]:
         # return a pair: (history as str, current cell if we are in still in cell execution otherwise None)
-        return "\n".join(v for k, v in sorted(self._cells_code.items(), key=lambda p: p[0])), self._current_cell
+        return (
+            "\n".join(v for k, v in sorted(self._cells_code.items(), key=lambda p: p[0])),
+            self._current_cell,
+        )
 
     # noinspection PyUnusedLocal
-    def _exception_callback(self, shell, etype, value, tb, tb_offset=None):
+    def _exception_callback(
+        self,
+        shell: Any,
+        etype: type,
+        value: BaseException,
+        tb: TracebackType,
+        tb_offset: Optional[int] = None,
+    ) -> None:
         self._exception_raised = True
         return shell.showtraceback()
 
-    def _pre_cell_callback(self, *args, **_):
+    def _pre_cell_callback(self, *args: Any, **_: Any) -> None:
         # noinspection PyBroadException
         try:
             if args:
@@ -1517,7 +1594,7 @@ class _JupyterHistoryLogger(object):
         except Exception:
             pass
 
-    def _post_cell_callback(self, *_, **__):
+    def _post_cell_callback(self, *_: Any, **__: Any) -> None:
         # noinspection PyBroadException
         try:
             self._current_cell = None
@@ -1542,7 +1619,7 @@ class _JupyterHistoryLogger(object):
         except Exception:
             pass
 
-    def _initialize_history(self):
+    def _initialize_history(self) -> None:
         # only once
         if -1 in self._cells_code:
             return
@@ -1555,7 +1632,7 @@ class _JupyterHistoryLogger(object):
         cell_code = self._conform_code(cell_code)
         self._cells_code[-1] = cell_code
 
-    def _conform_code(self, cell_code, replace_magic_bang=False):
+    def _conform_code(self, cell_code: str, replace_magic_bang: bool = False) -> str:
         # fix magic / bang in code
         if self._replace_ipython_pattern:
             cell_code = self._replace_ipython_pattern.sub(r"\n# \g<1>get_ipython()", cell_code)

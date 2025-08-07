@@ -1,11 +1,12 @@
 import os
 from logging import getLogger
 from time import sleep, time
+from typing import Optional
 
 from pathlib2 import Path
 
 
-def get_torch_local_rank():
+def get_torch_local_rank() -> Optional[int]:
     """
     return the local rank of the process, notice local rank 0 does not mean global rank 0
     return None if no torch distributed is running
@@ -20,7 +21,7 @@ def get_torch_local_rank():
     return None
 
 
-def create_torch_distributed_anchor(task_id):
+def create_torch_distributed_anchor(task_id: str) -> None:
     """
     This will create a temporary file to pass the Task ID created by local_rank 0 of
     if None local rank 0 is calling this file, it
@@ -43,13 +44,13 @@ def create_torch_distributed_anchor(task_id):
         torch_dist_path = Path(torch_dist_path).parent.parent.parent
         # create the file
         with open(torch_dist_path / local_file_name, "wt") as f:
-            f.write(str(task_id)+"\n")
+            f.write(str(task_id) + "\n")
     except Exception:
         # we failed for some reason?
         getLogger().warning("Failed creating torch task ID anchor file: {}".format(torch_dist_path))
 
 
-def get_torch_distributed_anchor_task_id(timeout=None):
+def get_torch_distributed_anchor_task_id(timeout: float = None) -> str:
     """
     This will wait until a temporary file appears and read the Task ID created by local_rank 0 of
 

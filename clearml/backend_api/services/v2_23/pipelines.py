@@ -3,13 +3,9 @@ pipelines service
 
 Provides a management API for pipelines in the system.
 """
+from typing import List, Optional, Any
 import six
-
-from clearml.backend_api.session import (
-    Request,
-    Response,
-    schema_property,
-)
+from clearml.backend_api.session import Request, Response, schema_property
 
 
 class StartPipelineRequest(Request):
@@ -55,50 +51,48 @@ class StartPipelineRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, queue=None, args=None, **kwargs):
+    def __init__(
+        self, task: str, queue: Optional[str] = None, args: Optional[List[dict]] = None, **kwargs: Any
+    ) -> None:
         super(StartPipelineRequest, self).__init__(**kwargs)
         self.task = task
         self.queue = queue
         self.args = args
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> Optional[str]:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("args")
-    def args(self):
+    def args(self) -> Optional[List[dict]]:
         return self._property_args
 
     @args.setter
-    def args(self, value):
+    def args(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_args = None
             return
-
         self.assert_isinstance(value, "args", (list, tuple))
-
         self.assert_isinstance(value, "args", (dict,), is_array=True)
         self._property_args = value
 
@@ -116,7 +110,6 @@ class StartPipelineResponse(Response):
     _service = "pipelines"
     _action = "start_pipeline"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -132,38 +125,34 @@ class StartPipelineResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, pipeline=None, enqueued=None, **kwargs):
+    def __init__(self, pipeline: Optional[str] = None, enqueued: Optional[bool] = None, **kwargs: Any) -> None:
         super(StartPipelineResponse, self).__init__(**kwargs)
         self.pipeline = pipeline
         self.enqueued = enqueued
 
     @schema_property("pipeline")
-    def pipeline(self):
+    def pipeline(self) -> Optional[str]:
         return self._property_pipeline
 
     @pipeline.setter
-    def pipeline(self, value):
+    def pipeline(self, value: Optional[str]) -> None:
         if value is None:
             self._property_pipeline = None
             return
-
         self.assert_isinstance(value, "pipeline", six.string_types)
         self._property_pipeline = value
 
     @schema_property("enqueued")
-    def enqueued(self):
+    def enqueued(self) -> Optional[bool]:
         return self._property_enqueued
 
     @enqueued.setter
-    def enqueued(self, value):
+    def enqueued(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_enqueued = None
             return
-
         self.assert_isinstance(value, "enqueued", (bool,))
         self._property_enqueued = value
 
 
-response_mapping = {
-    StartPipelineRequest: StartPipelineResponse,
-}
+response_mapping = {StartPipelineRequest: StartPipelineResponse}

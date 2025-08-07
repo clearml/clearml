@@ -1,9 +1,11 @@
+from typing import Optional
+
 from .defs import TASK_ID_ENV_VAR
 
 running_remotely_task_id = TASK_ID_ENV_VAR.get()
 
 
-def override_current_task_id(task_id):
+def override_current_task_id(task_id: Optional[str]) -> None:
     """
     Overrides the current task id to simulate remote running with a specific task.
 

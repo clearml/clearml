@@ -27,6 +27,7 @@ Every version number class implements the following interface:
 """
 
 import re
+from typing import Union, Optional, Any
 
 
 class Version:
@@ -36,38 +37,38 @@ class Version:
     rich comparisons to _cmp.
     """
 
-    def __init__(self, vstring=None):
+    def __init__(self, vstring: Optional[str] = None) -> None:
         if vstring:
             self.parse(vstring)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s ('%s')" % (self.__class__.__name__, str(self))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> Optional[bool]:
         c = self._cmp(other)
         if c is NotImplemented:
             return c
         return c == 0
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> Optional[bool]:
         c = self._cmp(other)
         if c is NotImplemented:
             return c
         return c < 0
 
-    def __le__(self, other):
+    def __le__(self, other: Any) -> bool:
         c = self._cmp(other)
         if c is NotImplemented:
             return c
         return c <= 0
 
-    def __gt__(self, other):
+    def __gt__(self, other: Any) -> Optional[bool]:
         c = self._cmp(other)
         if c is NotImplemented:
             return c
         return c > 0
 
-    def __ge__(self, other):
+    def __ge__(self, other: Any) -> Optional[bool]:
         c = self._cmp(other)
         if c is NotImplemented:
             return c
@@ -92,7 +93,6 @@ class Version:
 
 
 class StrictVersion(Version):
-
     """Version numbering for anal retentives and software idealists.
     Implements the standard interface for version number classes as
     described above.  A version number consists of two or three
@@ -130,7 +130,7 @@ class StrictVersion(Version):
 
     version_re = re.compile(r"^(\d+) \. (\d+) (\. (\d+))? ([ab](\d+))?$", re.VERBOSE | re.ASCII)
 
-    def parse(self, vstring):
+    def parse(self, vstring: str) -> None:
         match = self.version_re.match(vstring)
         if not match:
             raise ValueError("invalid version number '%s'" % vstring)
@@ -147,8 +147,7 @@ class StrictVersion(Version):
         else:
             self.prerelease = None
 
-    def __str__(self):
-
+    def __str__(self) -> str:
         if self.version[2] == 0:
             vstring = ".".join(map(str, self.version[0:2]))
         else:
@@ -159,7 +158,7 @@ class StrictVersion(Version):
 
         return vstring
 
-    def _cmp(self, other):
+    def _cmp(self, other: Union[str, "StrictVersion"]) -> int:
         if isinstance(other, str):
             other = StrictVersion(other)
 
@@ -263,7 +262,6 @@ class StrictVersion(Version):
 
 
 class LooseVersion(Version):
-
     """Version numbering for anarchists and software realists.
     Implements the standard interface for version number classes as
     described above.  A version number consists of a series of numbers,
@@ -297,11 +295,11 @@ class LooseVersion(Version):
 
     component_re = re.compile(r"(\d+ | [a-z]+ | \.)", re.VERBOSE)
 
-    def __init__(self, vstring=None):
+    def __init__(self, vstring: Optional[str] = None) -> None:
         if vstring:
             self.parse(vstring)
 
-    def parse(self, vstring):
+    def parse(self, vstring: str) -> None:
         # I've given up on thinking I can reconstruct the version string
         # from the parsed tuple -- so I just store the string here for
         # use by __str__
@@ -315,13 +313,13 @@ class LooseVersion(Version):
 
         self.version = components
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.vstring
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "LooseVersion ('%s')" % str(self)
 
-    def _cmp(self, other):
+    def _cmp(self, other: Union[str, "LooseVersion"]) -> int:
         if isinstance(other, str):
             other = LooseVersion(other)
 

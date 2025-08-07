@@ -1,4 +1,5 @@
 """ Logging convenience functions and wrappers """
+import argparse
 import inspect
 import logging
 import logging.handlers
@@ -6,7 +7,7 @@ import os
 import sys
 from os import getenv
 from platform import system
-from typing import Optional, Union
+from typing import Optional, Union, TextIO, Any
 
 from pathlib2 import Path
 from six import BytesIO
@@ -34,8 +35,7 @@ _nameToLevel = {
 }
 
 
-def resolve_logging_level(level):
-    # type: (Union[str, int]) -> Optional[int]
+def resolve_logging_level(level: Union[str, int]) -> Optional[int]:
     # noinspection PyBroadException
     try:
         level = int(level)
@@ -48,12 +48,12 @@ def resolve_logging_level(level):
 
 
 class PickledLogger(logging.getLoggerClass()):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super(PickledLogger, self).__init__(*args, **kwargs)
         self._init_kwargs = None
 
     @staticmethod
-    def wrapper(a_instance, func, **kwargs):
+    def wrapper(a_instance: "PickledLogger", func: callable, **kwargs: Any) -> "PickledLogger":
         # if python 3.7 and above Loggers are pickle-able
         if sys.version_info.major >= 3 and sys.version_info.minor >= 7:
             return a_instance
@@ -72,10 +72,10 @@ class PickledLogger(logging.getLoggerClass()):
         safe_logger._init_kwargs = kwargs
         return safe_logger
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict:
         return self._init_kwargs or {}
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: dict) -> None:
         state["stream"] = (
             sys.stdout
             if state["stream"] == "stdout"
@@ -86,12 +86,12 @@ class PickledLogger(logging.getLoggerClass()):
 
 
 class _LevelRangeFilter(logging.Filter):
-    def __init__(self, min_level, max_level, name=""):
+    def __init__(self, min_level: int, max_level: int, name: str = "") -> None:
         super(_LevelRangeFilter, self).__init__(name)
         self.min_level = min_level
         self.max_level = max_level
 
-    def filter(self, record):
+    def filter(self, record: logging.LogRecord) -> bool:
         return self.min_level <= record.levelno <= self.max_level
 
 
@@ -99,7 +99,12 @@ class LoggerRoot(object):
     __base_logger = None
 
     @classmethod
-    def get_base_logger(cls, level=None, stream=sys.stdout, colored=False):
+    def get_base_logger(
+        cls,
+        level: Optional[Union[str, int]] = None,
+        stream: Union[None, TextIO] = sys.stdout,
+        colored: bool = False,
+    ) -> PickledLogger:
         if LoggerRoot.__base_logger:
             return LoggerRoot.__base_logger
 
@@ -118,7 +123,11 @@ class LoggerRoot(object):
         from ..config import get_log_redirect_level
 
         LoggerRoot.__base_logger = PickledLogger.wrapper(
-            clearml_logger, func=cls.get_base_logger, level=level, stream=stream, colored=colored
+            clearml_logger,
+            func=cls.get_base_logger,
+            level=level,
+            stream=stream,
+            colored=colored,
         )
 
         LoggerRoot.__base_logger.setLevel(level)
@@ -144,13 +153,13 @@ class LoggerRoot(object):
         return LoggerRoot.__base_logger
 
     @classmethod
-    def flush(cls):
+    def flush(cls) -> None:
         if LoggerRoot.__base_logger:
             for h in LoggerRoot.__base_logger.handlers:
                 h.flush()
 
     @staticmethod
-    def clear_logger_handlers():
+    def clear_logger_handlers() -> None:
         # https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
         loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
         for logger in loggers:
@@ -160,19 +169,24 @@ class LoggerRoot(object):
                     logger.removeHandler(handler)
 
 
-def add_options(parser):
+def add_options(parser: argparse.ArgumentParser) -> None:
     """Add logging options to an argparse.ArgumentParser object"""
     level = logging.getLevelName(default_level)
     parser.add_argument("--log-level", "-l", default=level, help="Log level (default is %s)" % level)
 
 
-def apply_logging_args(args):
+def apply_logging_args(args: argparse.Namespace) -> None:
     """Apply logging args from an argparse.ArgumentParser parsed args"""
     global default_level
     default_level = logging.getLevelName(args.log_level.upper())
 
 
-def get_logger(path=None, level=None, stream=None, colored=False):
+def get_logger(
+    path: Optional[str] = None,
+    level: Optional[int] = None,
+    stream: Optional[Union[BytesIO, TextIO]] = None,
+    colored: bool = False,
+) -> PickledLogger:
     """Get a python logging object named using the provided filename and preconfigured with a color-formatted
     stream handler
     """
@@ -195,7 +209,12 @@ def get_logger(path=None, level=None, stream=None, colored=False):
     return PickledLogger.wrapper(log, func=get_logger, path=path, level=level, stream=stream, colored=colored)
 
 
-def _add_file_handler(logger, log_dir, fh, formatter=None):
+def _add_file_handler(
+    logger: logging.Logger,
+    log_dir: Union[str, os.PathLike],
+    fh: logging.FileHandler,
+    formatter: Optional[logging.Formatter] = None,
+) -> None:
     """Adds a file handler to a logger"""
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     if not formatter:
@@ -206,16 +225,29 @@ def _add_file_handler(logger, log_dir, fh, formatter=None):
 
 
 def add_rotating_file_handler(
-    logger, log_dir, log_file_prefix, max_bytes=10 * 1024 * 1024, backup_count=20, formatter=None
-):
+    logger: logging.Logger,
+    log_dir: Union[str, os.PathLike],
+    log_file_prefix: str,
+    max_bytes: int = 10 * 1024 * 1024,
+    backup_count: int = 20,
+    formatter: Optional[logging.Formatter] = None,
+) -> None:
     """Create and add a rotating file handler to a logger"""
     fh = ClearmlRotatingFileHandler(
-        str(Path(log_dir) / ("%s.log" % log_file_prefix)), maxBytes=max_bytes, backupCount=backup_count
+        str(Path(log_dir) / ("%s.log" % log_file_prefix)),
+        maxBytes=max_bytes,
+        backupCount=backup_count,
     )
     _add_file_handler(logger, log_dir, fh, formatter)
 
 
-def add_time_rotating_file_handler(logger, log_dir, log_file_prefix, when="midnight", formatter=None):
+def add_time_rotating_file_handler(
+    logger: logging.Logger,
+    log_dir: Union[str, os.PathLike],
+    log_file_prefix: str,
+    when: str = "midnight",
+    formatter: Optional[logging.Formatter] = None,
+) -> None:
     """
     Create and add a time rotating file handler to a logger.
     Possible values for when are 'midnight', weekdays ('w0'-'W6', when 0 is Monday), and 's', 'm', 'h' amd 'd' for
@@ -225,7 +257,7 @@ def add_time_rotating_file_handler(logger, log_dir, log_file_prefix, when="midni
     _add_file_handler(logger, log_dir, fh, formatter)
 
 
-def get_null_logger(name=None):
+def get_null_logger(name: Optional[str] = None) -> PickledLogger:
     """Get a logger with a null handler"""
     log = logging.getLogger(name if name else "null")
     if not log.handlers:
@@ -243,18 +275,34 @@ class TqdmLog(object):
     class _TqdmIO(BytesIO):
         """IO wrapper class for Tqdm"""
 
-        def __init__(self, level=20, logger=None, *args, **kwargs):
+        def __init__(
+            self,
+            level: int = 20,
+            logger: Optional[logging.Logger] = None,
+            *args: Any,
+            **kwargs: Any,
+        ) -> None:
             self._log = logger or get_null_logger()
             self._level = level
             BytesIO.__init__(self, *args, **kwargs)
 
-        def write(self, buf):
+        def write(self, buf: str) -> None:
             self._buf = buf.strip("\r\n\t ")
 
-        def flush(self):
+        def flush(self) -> None:
             self._log.log(self._level, self._buf)
 
-    def __init__(self, total, desc="", log_level=20, ascii=False, logger=None, smoothing=0, mininterval=5, initial=0):
+    def __init__(
+        self,
+        total: int,
+        desc: str = "",
+        log_level: int = 20,
+        ascii: bool = False,
+        logger: Optional[logging.Logger] = None,
+        smoothing: float = 0,
+        mininterval: float = 5,
+        initial: int = 0,
+    ) -> None:
         from tqdm import tqdm
 
         self._io = self._TqdmIO(level=log_level, logger=logger)
@@ -268,13 +316,13 @@ class TqdmLog(object):
             initial=initial,
         )
 
-    def update(self, n=None):
+    def update(self, n: Optional[int] = None) -> None:
         if n is not None:
             self._tqdm.update(n=n)
         else:
             self._tqdm.update()
 
-    def close(self):
+    def close(self) -> None:
         self._tqdm.close()
 
 
@@ -283,7 +331,13 @@ class ClearmlLoggerHandler:
 
 
 class ClearmlStreamHandler(logging.StreamHandler, ClearmlLoggerHandler):
-    def __init__(self, level=None, stream=sys.stdout, colored=False, dont_set_formater=False):
+    def __init__(
+        self,
+        level: Optional[int] = None,
+        stream: Union[TextIO, BytesIO] = sys.stdout,
+        colored: bool = False,
+        dont_set_formater: bool = False,
+    ) -> None:
         super(ClearmlStreamHandler, self).__init__(stream=stream)
         self.setLevel(level)
         if dont_set_formater:

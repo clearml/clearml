@@ -2,7 +2,6 @@ import atexit
 import hashlib
 import os
 import shutil
-
 from collections import OrderedDict
 from threading import RLock
 from typing import Union, Optional, Tuple, Dict
@@ -13,9 +12,9 @@ from .helper import StorageHelper
 from .util import quote_url
 from ..config import get_cache_dir, deferred_config
 from ..debugging.log import LoggerRoot
-from ..utilities.locks.utils import Lock as FileLock
-from ..utilities.locks.exceptions import LockException
 from ..utilities.files import get_filename_max_length
+from ..utilities.locks.exceptions import LockException
+from ..utilities.locks.utils import Lock as FileLock
 
 
 class CacheManager(object):
@@ -31,23 +30,25 @@ class CacheManager(object):
     _lockfile_suffix = ".clearml"
 
     class CacheContext(object):
-        _folder_locks = dict()  # type: Dict[str, FileLock]
+        _folder_locks: Dict[str, FileLock] = dict()
         _lockfile_at_exit_cb = None
 
-        def __init__(self, cache_context, default_cache_file_limit=10):
-            # type: (str, int) -> None
+        def __init__(self, cache_context: str, default_cache_file_limit: int = 10) -> None:
             self._context = str(cache_context)
             self._file_limit = int(default_cache_file_limit)
             self._rlock = RLock()
             self._max_file_name_length = None
 
-        def set_cache_limit(self, cache_file_limit):
-            # type: (int) -> int
+        def set_cache_limit(self, cache_file_limit: int) -> int:
             self._file_limit = max(self._file_limit, int(cache_file_limit))
             return self._file_limit
 
-        def get_local_copy(self, remote_url, force_download, skip_zero_size_check=False):
-            # type: (str, bool, bool) -> Optional[str]
+        def get_local_copy(
+            self,
+            remote_url: str,
+            force_download: bool,
+            skip_zero_size_check: bool = False,
+        ) -> Optional[str]:
             helper = StorageHelper.get(remote_url)
 
             if helper.base_url == "file://":
@@ -87,8 +88,12 @@ class CacheManager(object):
             return cached_file
 
         @staticmethod
-        def upload_file(local_file, remote_url, wait_for_upload=True, retries=3):
-            # type: (str, str, bool, int) -> Optional[str]
+        def upload_file(
+            local_file: str,
+            remote_url: str,
+            wait_for_upload: bool = True,
+            retries: int = 3,
+        ) -> Optional[str]:
             helper = StorageHelper.get(remote_url)
             result = helper.upload(
                 local_file,
@@ -100,14 +105,12 @@ class CacheManager(object):
             return result
 
         @classmethod
-        def get_hashed_url_file(cls, url):
-            # type: (str) -> str
+        def get_hashed_url_file(cls, url: str) -> str:
             str_hash = hashlib.md5(url.encode()).hexdigest()
             filename = url.split("/")[-1]
             return "{}.{}".format(str_hash, quote_url(filename))
 
-        def _conform_filename(self, file_name):
-            # type: (str) -> str
+        def _conform_filename(self, file_name: str) -> str:
             """
             Renames very long filename by reducing characters from the end
             without the extensions from 2 floating point.
@@ -150,16 +153,18 @@ class CacheManager(object):
 
             return new_file_name
 
-        def get_cache_folder(self):
-            # type: () -> str
+        def get_cache_folder(self) -> str:
             """
             :return: full path to current contexts cache folder
             """
             folder = Path(get_cache_dir() / CacheManager._storage_manager_folder / self._context)
             return folder.as_posix()
 
-        def get_cache_file(self, remote_url=None, local_filename=None):
-            # type: (Optional[str], Optional[str]) -> Tuple[str, Optional[int]]
+        def get_cache_file(
+            self,
+            remote_url: Optional[str] = None,
+            local_filename: Optional[str] = None,
+        ) -> Tuple[str, Optional[int]]:
             """
             :param remote_url: check if we have the remote url in our cache
             :param local_filename: if local_file is given, search for the local file/directory in the cache folder
@@ -186,21 +191,21 @@ class CacheManager(object):
 
             return new_file.as_posix(), new_file_size
 
-        def clean_cache(self):
-            # type: () -> bool
+        def clean_cache(self) -> bool:
             """
             If cache is full, clean it by deleting old/lock files
 
             :return: True if the cache has been cleaned and False otherwise
             """
-            def safe_time(x):
+
+            def safe_time(x: Path) -> int:
                 # noinspection PyBroadException
                 try:
                     return x.stat().st_mtime
                 except Exception:
                     return 0
 
-            def sort_max_access_time(x):
+            def sort_max_access_time(x: Path) -> int:
                 atime = safe_time(x)
                 # noinspection PyBroadException
                 try:
@@ -282,8 +287,7 @@ class CacheManager(object):
                         pass
             return True
 
-        def lock_cache_folder(self, local_path):
-            # type: (Union[str, Path]) -> ()
+        def lock_cache_folder(self, local_path: Union[str, Path]) -> ():
             """
             Lock a specific cache folder, making sure it will not be deleted in the next
             cache cleanup round
@@ -321,8 +325,7 @@ class CacheManager(object):
             self._folder_locks[local_path.as_posix()] = lock
             self._rlock.release()
 
-        def unlock_cache_folder(self, local_path):
-            # type: (Union[str, Path]) -> ()
+        def unlock_cache_folder(self, local_path: Union[str, Path]) -> ():
             """
             Lock a specific cache folder, making sure it will not be deleted in the next
             cache cleanup round
@@ -340,14 +343,17 @@ class CacheManager(object):
             self._rlock.release()
 
         @classmethod
-        def _lock_file_cleanup_callback(cls):
+        def _lock_file_cleanup_callback(cls) -> None:
             for lock in cls._folder_locks.values():
                 lock.release()
                 lock.delete_lock_file()
 
     @classmethod
-    def get_cache_manager(cls, cache_context=None, cache_file_limit=None):
-        # type: (Optional[str], Optional[int]) -> CacheManager.CacheContext
+    def get_cache_manager(
+        cls,
+        cache_context: Optional[str] = None,
+        cache_file_limit: Optional[int] = None,
+    ) -> "CacheManager.CacheContext":
         cache_context = cache_context or cls._default_context
         if cache_context not in cls.__cache_managers:
             cls.__cache_managers[cache_context] = cls.CacheContext(
@@ -359,8 +365,7 @@ class CacheManager(object):
         return cls.__cache_managers[cache_context]
 
     @staticmethod
-    def get_remote_url(local_copy_path):
-        # type: (str) -> str
+    def get_remote_url(local_copy_path: str) -> str:
         if not CacheManager._local_to_remote_url_lookup:
             return local_copy_path
 
@@ -373,8 +378,7 @@ class CacheManager(object):
         return CacheManager._local_to_remote_url_lookup.get(hash(conform_local_copy_path), local_copy_path)
 
     @staticmethod
-    def _add_remote_url(remote_url, local_copy_path):
-        # type: (str, str) -> ()
+    def _add_remote_url(remote_url: str, local_copy_path: str) -> ():
         # so that we can disable the cache lookup altogether
         if CacheManager._local_to_remote_url_lookup is None:
             return
@@ -402,14 +406,12 @@ class CacheManager(object):
             CacheManager._local_to_remote_url_lookup.popitem(last=False)
 
     @classmethod
-    def set_context_folder_lookup(cls, context, name_template):
-        # type: (str, str) -> str
+    def set_context_folder_lookup(cls, context: str, name_template: str) -> str:
         cls._context_to_folder_lookup[str(context)] = str(name_template)
         return str(name_template)
 
     @classmethod
-    def get_context_folder_lookup(cls, context):
-        # type: (Optional[str]) -> str
+    def get_context_folder_lookup(cls, context: Optional[str]) -> str:
         if not context:
             return cls._default_context_folder_template
         return cls._context_to_folder_lookup.get(str(context), cls._default_context_folder_template)

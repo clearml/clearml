@@ -1,19 +1,21 @@
 import abc
+import logging
 import warnings
 from copy import copy
 from operator import itemgetter
 from os import getenv
+from typing import Tuple, Dict, List, Union, Optional, Any
 
 import furl
 import six
 from attr import attrib, attrs
 
 
-def _none_to_empty_string(maybe_string):
+def _none_to_empty_string(maybe_string: str) -> str:
     return maybe_string if maybe_string is not None else ""
 
 
-def _url_stripper(bucket):
+def _url_stripper(bucket: str) -> str:
     bucket = _none_to_empty_string(bucket)
     bucket = bucket.strip("\"'").rstrip("/")
     return bucket
@@ -38,16 +40,16 @@ class S3BucketConfig(object):
 
     def update(
         self,
-        key="",
-        secret="",
-        multipart=True,
-        region=None,
-        use_credentials_chain=False,
-        token="",
-        extra_args=None,
-        secure=True,
-        profile=""
-    ):
+        key: str = "",
+        secret: str = "",
+        multipart: bool = True,
+        region: str = None,
+        use_credentials_chain: bool = False,
+        token: str = "",
+        extra_args: dict = None,
+        secure: bool = True,
+        profile: str = "",
+    ) -> None:
         self.key = key
         self.secret = secret
         self.token = token
@@ -58,14 +60,18 @@ class S3BucketConfig(object):
         self.secure = secure
         self.profile = profile
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return (self.key and self.secret) or self.use_credentials_chain
 
-    def get_bucket_host(self):
+    def get_bucket_host(self) -> Tuple[str, str]:
         return self.bucket, self.host
 
     @classmethod
-    def from_list(cls, dict_list, log=None):
+    def from_list(
+        cls,
+        dict_list: Union[Tuple[Dict], List[Dict]],
+        log: Optional[logging.Logger] = None,
+    ) -> List["S3BucketConfig"]:
         if not isinstance(dict_list, (tuple, list)) or not all(isinstance(x, dict) for x in dict_list):
             raise ValueError("Expecting a list of configurations dictionaries")
         configs = [cls(**entry) for entry in dict_list]
@@ -86,35 +92,35 @@ BucketConfig = S3BucketConfig
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseBucketConfigurations(object):
-    def __init__(self, buckets=None, *_, **__):
+    def __init__(self, buckets: Optional[List[Any]] = None, *_: Any, **__: Any) -> None:
         self._buckets = buckets or []
         self._prefixes = None
 
-    def _update_prefixes(self, refresh=True):
+    def _update_prefixes(self, refresh: bool = True) -> None:
         if self._prefixes and not refresh:
             return
         prefixes = ((config, self._get_prefix_from_bucket_config(config)) for config in self._buckets)
         self._prefixes = sorted(prefixes, key=itemgetter(1), reverse=True)
 
     @abc.abstractmethod
-    def _get_prefix_from_bucket_config(self, config):
+    def _get_prefix_from_bucket_config(self, config: "GSBucketConfig") -> str:
         pass
 
 
 class S3BucketConfigurations(BaseBucketConfigurations):
     def __init__(
         self,
-        buckets=None,
-        default_key="",
-        default_secret="",
-        default_region="",
-        default_use_credentials_chain=False,
-        default_token="",
-        default_extra_args=None,
-        default_verify=None,
-        default_profile="",
-        default_secure=True
-    ):
+        buckets: Optional[List[S3BucketConfig]] = None,
+        default_key: str = "",
+        default_secret: str = "",
+        default_region: str = "",
+        default_use_credentials_chain: bool = False,
+        default_token: str = "",
+        default_extra_args: Optional[dict] = None,
+        default_verify: Optional[bool] = None,
+        default_profile: str = "",
+        default_secure: bool = True,
+    ) -> None:
         super(S3BucketConfigurations, self).__init__()
         self._buckets = buckets if buckets else list()
         self._default_key = default_key
@@ -129,7 +135,7 @@ class S3BucketConfigurations(BaseBucketConfigurations):
         self._default_secure = default_secure
 
     @classmethod
-    def from_config(cls, s3_configuration):
+    def from_config(cls, s3_configuration: dict) -> "S3BucketConfigurations":
         config_list = S3BucketConfig.from_list(s3_configuration.get("credentials", []))
 
         default_key = s3_configuration.get("key", "") or getenv("AWS_ACCESS_KEY_ID", "")
@@ -158,18 +164,18 @@ class S3BucketConfigurations(BaseBucketConfigurations):
             default_extra_args,
             default_verify,
             default_profile,
-            default_secure
+            default_secure,
         )
 
-    def add_config(self, bucket_config):
+    def add_config(self, bucket_config: S3BucketConfig) -> None:
         self._buckets.insert(0, bucket_config)
         self._prefixes = None
 
-    def remove_config(self, bucket_config):
+    def remove_config(self, bucket_config: S3BucketConfig) -> None:
         self._buckets.remove(bucket_config)
         self._prefixes = None
 
-    def get_config_by_bucket(self, bucket, host=None):
+    def get_config_by_bucket(self, bucket: str, host: str = None) -> S3BucketConfig:
         try:
             return next(
                 bucket_config for bucket_config in self._buckets if (bucket, host) == bucket_config.get_bucket_host()
@@ -179,7 +185,7 @@ class S3BucketConfigurations(BaseBucketConfigurations):
 
         return None
 
-    def update_config_with_defaults(self, bucket_config):
+    def update_config_with_defaults(self, bucket_config: S3BucketConfig) -> None:
         bucket_config.update(
             key=self._default_key,
             secret=self._default_secret,
@@ -192,7 +198,7 @@ class S3BucketConfigurations(BaseBucketConfigurations):
             secure=self._default_secure,
         )
 
-    def _get_prefix_from_bucket_config(self, config):
+    def _get_prefix_from_bucket_config(self, config: S3BucketConfig) -> str:
         scheme = "s3"
         prefix = furl.furl()
 
@@ -210,14 +216,14 @@ class S3BucketConfigurations(BaseBucketConfigurations):
 
         return str(prefix)
 
-    def get_config_by_uri(self, uri):
+    def get_config_by_uri(self, uri: str) -> S3BucketConfig:
         """
         Get the credentials for an AWS S3 bucket from the config
         :param uri: URI of bucket, directory or file
         :return: S3BucketConfig: bucket config
         """
 
-        def find_match(uri):
+        def find_match(uri: str) -> Optional[S3BucketConfig]:
             self._update_prefixes(refresh=False)
             uri = uri.lower()
             res = (config for config, prefix in self._prefixes if prefix is not None and uri.startswith(prefix))
@@ -253,7 +259,7 @@ class S3BucketConfigurations(BaseBucketConfigurations):
             token=self._default_token,
             extra_args=self._default_extra_args,
             profile=self._default_profile,
-            secure=self._default_secure
+            secure=self._default_secure,
         )
 
 
@@ -269,26 +275,26 @@ class GSBucketConfig(object):
     pool_connections = attrib(type=int, default=None)
     pool_maxsize = attrib(type=int, default=None)
 
-    def update(self, **kwargs):
+    def update(self, **kwargs: Any) -> None:
         for item in kwargs:
             if not hasattr(self, item):
                 warnings.warn("Unexpected argument {} for update. Ignored".format(item))
             else:
                 setattr(self, item, kwargs[item])
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return self.bucket
 
 
 class GSBucketConfigurations(BaseBucketConfigurations):
     def __init__(
         self,
-        buckets=None,
-        default_project=None,
-        default_credentials=None,
-        default_pool_connections=None,
-        default_pool_maxsize=None
-    ):
+        buckets: Optional[List[GSBucketConfig]] = None,
+        default_project: Optional[str] = None,
+        default_credentials: Optional[str] = None,
+        default_pool_connections: Optional[int] = None,
+        default_pool_maxsize: Optional[int] = None,
+    ) -> None:
         super(GSBucketConfigurations, self).__init__(buckets)
         self._default_project = default_project
         self._default_credentials = default_credentials
@@ -298,7 +304,7 @@ class GSBucketConfigurations(BaseBucketConfigurations):
         self._update_prefixes()
 
     @classmethod
-    def from_config(cls, gs_configuration):
+    def from_config(cls, gs_configuration: dict) -> "GSBucketConfigurations":
         default_credentials = getenv("GOOGLE_APPLICATION_CREDENTIALS") or {}
 
         if not gs_configuration:
@@ -313,26 +319,30 @@ class GSBucketConfigurations(BaseBucketConfigurations):
         default_pool_maxsize = gs_configuration.get("pool_maxsize", None)
 
         return cls(
-            buckets_configs, default_project, default_credentials, default_pool_connections, default_pool_maxsize
+            buckets_configs,
+            default_project,
+            default_credentials,
+            default_pool_connections,
+            default_pool_maxsize,
         )
 
-    def add_config(self, bucket_config):
+    def add_config(self, bucket_config: S3BucketConfig) -> None:
         self._buckets.insert(0, bucket_config)
         self._update_prefixes()
 
-    def remove_config(self, bucket_config):
+    def remove_config(self, bucket_config: S3BucketConfig) -> None:
         self._buckets.remove(bucket_config)
         self._update_prefixes()
 
-    def update_config_with_defaults(self, bucket_config):
+    def update_config_with_defaults(self, bucket_config: GSBucketConfig) -> None:
         bucket_config.update(
             project=bucket_config.project or self._default_project,
             credentials_json=bucket_config.credentials_json or self._default_credentials,
             pool_connections=bucket_config.pool_connections or self._default_pool_connections,
-            pool_maxsize=bucket_config.pool_maxsize or self._default_pool_maxsize
+            pool_maxsize=bucket_config.pool_maxsize or self._default_pool_maxsize,
         )
 
-    def get_config_by_uri(self, uri, create_if_not_found=True):
+    def get_config_by_uri(self, uri: str, create_if_not_found: bool = True) -> GSBucketConfig:
         """
         Get the credentials for a Google Storage bucket from the config
         :param uri: URI of bucket, directory or file
@@ -357,10 +367,10 @@ class GSBucketConfigurations(BaseBucketConfigurations):
             project=self._default_project,
             credentials_json=self._default_credentials,
             pool_connections=self._default_pool_connections,
-            pool_maxsize=self._default_pool_maxsize
+            pool_maxsize=self._default_pool_maxsize,
         )
 
-    def _get_prefix_from_bucket_config(self, config):
+    def _get_prefix_from_bucket_config(self, config: GSBucketConfig) -> str:
         prefix = furl.furl(scheme="gs", netloc=config.bucket, path=config.subdir)
         return str(prefix)
 
@@ -371,26 +381,31 @@ class AzureContainerConfig(object):
     account_key = attrib(type=str)
     container_name = attrib(type=str, default=None)
 
-    def update(self, **kwargs):
+    def update(self, **kwargs: Any) -> None:
         for item in kwargs:
             if not hasattr(self, item):
                 warnings.warn("Unexpected argument {} for update. Ignored".format(item))
             else:
                 setattr(self, item, kwargs[item])
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return self.account_name and self.container_name
 
 
 class AzureContainerConfigurations(object):
-    def __init__(self, container_configs=None, default_account=None, default_key=None):
+    def __init__(
+        self,
+        container_configs: List[AzureContainerConfig] = None,
+        default_account: str = None,
+        default_key: str = None,
+    ) -> None:
         super(AzureContainerConfigurations, self).__init__()
         self._container_configs = container_configs or []
         self._default_account = default_account
         self._default_key = default_key
 
     @classmethod
-    def from_config(cls, configuration):
+    def from_config(cls, configuration: dict) -> "AzureContainerConfigurations":
         default_account = getenv("AZURE_STORAGE_ACCOUNT")
         default_key = getenv("AZURE_STORAGE_KEY")
 
@@ -401,14 +416,18 @@ class AzureContainerConfigurations(object):
             )
 
         if configuration is None:
-            return cls(default_container_configs, default_account=default_account, default_key=default_key)
+            return cls(
+                default_container_configs,
+                default_account=default_account,
+                default_key=default_key,
+            )
 
         containers = configuration.get("containers", list())
         container_configs = [AzureContainerConfig(**entry) for entry in containers] + default_container_configs
 
         return cls(container_configs, default_account=default_account, default_key=default_key)
 
-    def get_config_by_uri(self, uri):
+    def get_config_by_uri(self, uri: str) -> AzureContainerConfig:
         """
         Get the credentials for an Azure Blob Storage container from the config
         :param uri: URI of container or blob
@@ -432,7 +451,7 @@ class AzureContainerConfigurations(object):
 
         return config
 
-    def get_config(self, account_name, container):
+    def get_config(self, account_name: str, container: str) -> AzureContainerConfig:
         return next(
             (
                 config
@@ -440,17 +459,17 @@ class AzureContainerConfigurations(object):
                 if config.account_name == account_name
                 and (not config.container_name or config.container_name == container)
             ),
-            None
+            None,
         )
 
-    def update_config_with_defaults(self, bucket_config):
+    def update_config_with_defaults(self, bucket_config: AzureContainerConfig) -> None:
         bucket_config.update(
             account_name=bucket_config.account_name or self._default_account,
-            account_key=bucket_config.account_key or self._default_key
+            account_key=bucket_config.account_key or self._default_key,
         )
 
-    def add_config(self, bucket_config):
+    def add_config(self, bucket_config: AzureContainerConfig) -> None:
         self._container_configs.append(bucket_config)
 
-    def remove_config(self, bucket_config):
+    def remove_config(self, bucket_config: AzureContainerConfig) -> None:
         self._container_configs.remove(bucket_config)

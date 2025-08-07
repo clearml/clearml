@@ -7,42 +7,66 @@ from itertools import product
 from logging import getLogger
 from threading import Thread, Event
 from time import time
-from typing import List, Set, Union, Any, Sequence, Optional, Mapping, Callable, Tuple
+from typing import (
+    List,
+    Set,
+    Union,
+    Sequence,
+    Optional,
+    Mapping,
+    Callable,
+    Tuple,
+    Generator,
+    Dict,
+    Any,
+)
 from abc import ABC, abstractmethod
 
 from .job import ClearmlJob, LocalClearmlJob
 from .parameters import Parameter
+from ..backend_api import Session
 from ..backend_interface.util import get_or_create_project, datetime_from_isoformat
 from ..logger import Logger
-from ..backend_api.services import workers as workers_service, tasks as tasks_service, events as events_service
+from ..backend_api.services import (
+    workers as workers_service,
+    tasks as tasks_service,
+    events as events_service,
+)
 from ..task import Task
 
-logger = getLogger('clearml.automation.optimization')
+logger = getLogger("clearml.automation.optimization")
 
 
 class _ObjectiveInterface(ABC):
     @abstractmethod
-    def get_objective(self, task_id):
+    def get_objective(self, task_id: Union[str, Task, ClearmlJob]) -> Optional[float]:
         pass
 
     @abstractmethod
-    def get_current_raw_objective(self, task):
+    def get_current_raw_objective(self, task: Union[ClearmlJob, Task]) -> Optional[Tuple[int, float]]:
         pass
 
     @abstractmethod
-    def get_objective_sign(self):
+    def get_objective_sign(self) -> float:
         pass
 
     @abstractmethod
-    def get_objective_metric(self):
+    def get_objective_metric(
+        self,
+    ) -> Union[Tuple[str, str], List[Tuple[str, str]]]:
         pass
 
     @abstractmethod
-    def get_normalized_objective(self, task_id):
+    def get_normalized_objective(self, task_id: Union[str, Task, ClearmlJob]) -> Optional[float]:
         pass
 
     @abstractmethod
-    def get_top_tasks(self, top_k, optimizer_task_id=None, task_filter=None):
+    def get_top_tasks(
+        self,
+        top_k: int,
+        optimizer_task_id: Optional[str] = None,
+        task_filter: Optional[dict] = None,
+    ) -> Sequence[Task]:
         pass
 
 
@@ -54,8 +78,13 @@ class Objective(_ObjectiveInterface):
     ``SearchStrategy`` and ``HyperParameterOptimizer`` use ``Objective`` in the strategy search algorithm.
     """
 
-    def __init__(self, title, series, order='max', extremum=False):
-        # type: (str, str, str, bool) -> ()
+    def __init__(
+        self,
+        title: str,
+        series: str,
+        order: str = "max",
+        extremum: bool = False,
+    ) -> ():
         """
         Construct ``Objective`` object that will return the scalar value for a specific task ID.
 
@@ -78,14 +107,16 @@ class Objective(_ObjectiveInterface):
         """
         self.title = title
         self.series = series
-        assert order in ('min', 'max',)
+        assert order in (
+            "min",
+            "max",
+        )
         # normalize value so we always look for the highest objective value
-        self.sign = -1 if (isinstance(order, str) and order.lower().strip() == 'min') else 1
+        self.sign = -1 if (isinstance(order, str) and order.lower().strip() == "min") else 1
         self._metric = None
         self.extremum = extremum
 
-    def get_objective(self, task_id):
-        # type: (Union[str, Task, ClearmlJob]) -> Optional[float]
+    def get_objective(self, task_id: Union[str, Task, ClearmlJob]) -> Optional[float]:
         """
         Return a specific task scalar value based on the objective settings (title/series).
 
@@ -105,7 +136,9 @@ class Objective(_ObjectiveInterface):
         try:
             # noinspection PyProtectedMember
             task = Task._query_tasks(
-                task_ids=[task_id], only_fields=['last_metrics.{}.{}'.format(self._metric[0], self._metric[1])])[0]
+                task_ids=[task_id],
+                only_fields=["last_metrics.{}.{}".format(self._metric[0], self._metric[1])],
+            )[0]
         except Exception:
             return None
 
@@ -117,14 +150,13 @@ class Objective(_ObjectiveInterface):
         try:
             values = metrics[self._metric[0]][self._metric[1]]
             if not self.extremum:
-                return values['value']
+                return values["value"]
 
-            return values['min_value'] if self.sign < 0 else values['max_value']
+            return values["min_value"] if self.sign < 0 else values["max_value"]
         except Exception:
             return None
 
-    def get_current_raw_objective(self, task):
-        # type: (Union[ClearmlJob, Task]) -> (int, float)
+    def get_current_raw_objective(self, task: Union[ClearmlJob, Task]) -> (int, float):
         """
         Return the current raw value (without sign normalization) of the objective.
 
@@ -148,8 +180,7 @@ class Objective(_ObjectiveInterface):
         try:
             # noinspection PyProtectedMember
             res = Task._get_default_session().send(
-                events_service.ScalarMetricsIterHistogramRequest(
-                    task=task_id, key='iter', samples=None),
+                events_service.ScalarMetricsIterHistogramRequest(task=task_id, key="iter", samples=None),
             )
         except Exception:
             res = None
@@ -163,12 +194,14 @@ class Objective(_ObjectiveInterface):
         scalars = response.response_data
         # noinspection PyBroadException
         try:
-            return scalars[self.title][self.series]['x'][-1], scalars[self.title][self.series]['y'][-1]
+            return (
+                scalars[self.title][self.series]["x"][-1],
+                scalars[self.title][self.series]["y"][-1],
+            )
         except Exception:
             return None
 
-    def get_objective_sign(self):
-        # type: () -> float
+    def get_objective_sign(self) -> float:
         """
         Return the sign of the objective.
 
@@ -179,8 +212,7 @@ class Objective(_ObjectiveInterface):
         """
         return self.sign
 
-    def get_objective_metric(self):
-        # type: () -> (str, str)
+    def get_objective_metric(self) -> (str, str):
         """
         Return the metric title, series pair of the objective.
 
@@ -188,8 +220,7 @@ class Objective(_ObjectiveInterface):
         """
         return self.title, self.series
 
-    def get_normalized_objective(self, task_id):
-        # type: (Union[str, Task, ClearmlJob]) -> Optional[float]
+    def get_normalized_objective(self, task_id: Union[str, Task, ClearmlJob]) -> Optional[float]:
         """
         Return a normalized task scalar value based on the objective settings (title/series).
         I.e. objective is always to maximize the returned value
@@ -204,8 +235,12 @@ class Objective(_ObjectiveInterface):
         # normalize value so we always look for the highest objective value
         return self.sign * objective
 
-    def get_top_tasks(self, top_k, optimizer_task_id=None, task_filter=None):
-        # type: (int, Optional[str], Optional[dict]) -> Sequence[Task]
+    def get_top_tasks(
+        self,
+        top_k: int,
+        optimizer_task_id: Optional[str] = None,
+        task_filter: Optional[dict] = None,
+    ) -> Sequence[Task]:
         """
         Return a list of Tasks of the top performing experiments, based on the title/series objective.
 
@@ -216,49 +251,55 @@ class Objective(_ObjectiveInterface):
         :return: A list of Task objects, ordered by performance, where index 0 is the best performing Task.
         """
         task_filter = deepcopy(task_filter) if task_filter else {}
-        task_filter.update({'page_size': int(top_k), 'page': 0})
+        task_filter.update({"page_size": int(top_k), "page": 0})
         if optimizer_task_id:
-            task_filter['parent'] = optimizer_task_id
+            task_filter["parent"] = optimizer_task_id
         order_by = self._get_last_metrics_encode_field()
-        if order_by and (order_by.startswith('last_metrics') or order_by.startswith('-last_metrics')):
-            parts = order_by.split('.')
-            if parts[-1] in ('min', 'max', 'last'):
-                title = hashlib.md5(str(parts[1]).encode('utf-8')).hexdigest()
-                series = hashlib.md5(str(parts[2]).encode('utf-8')).hexdigest()
-                minmax = 'min_value' if 'min' in parts[3] else ('max_value' if 'max' in parts[3] else 'value')
-                order_by = '{}last_metrics.'.join(
-                    ('-' if order_by and order_by[0] == '-' else '', title, series, minmax))
+        if order_by and (order_by.startswith("last_metrics") or order_by.startswith("-last_metrics")):
+            parts = order_by.split(".")
+            if parts[-1] in ("min", "max", "last"):
+                title = hashlib.md5(str(parts[1]).encode("utf-8")).hexdigest()
+                series = hashlib.md5(str(parts[2]).encode("utf-8")).hexdigest()
+                minmax = "min_value" if "min" in parts[3] else ("max_value" if "max" in parts[3] else "value")
+                order_by = "{}last_metrics.".join(
+                    (
+                        "-" if order_by and order_by[0] == "-" else "",
+                        title,
+                        series,
+                        minmax,
+                    )
+                )
 
         if order_by:
-            task_filter['order_by'] = [order_by]
+            task_filter["order_by"] = [order_by]
 
         return Task.get_tasks(task_filter=task_filter)
 
-    def _get_last_metrics_encode_field(self):
-        # type: () -> str
+    def _get_last_metrics_encode_field(self) -> str:
         """
         Return encoded representation of the title/series metric.
 
         :return: The objective title/series.
         """
         if not self._metric:
-            title = hashlib.md5(str(self.title).encode('utf-8')).hexdigest()
-            series = hashlib.md5(str(self.series).encode('utf-8')).hexdigest()
+            title = hashlib.md5(str(self.title).encode("utf-8")).hexdigest()
+            series = hashlib.md5(str(self.series).encode("utf-8")).hexdigest()
             self._metric = title, series
-        return '{}last_metrics.{}.{}.{}'.format(
-            '-' if self.sign > 0 else '', self._metric[0], self._metric[1],
-            ('min_value' if self.sign < 0 else 'max_value') if self.extremum else 'value')
+        return "{}last_metrics.{}.{}.{}".format(
+            "-" if self.sign > 0 else "",
+            self._metric[0],
+            self._metric[1],
+            ("min_value" if self.sign < 0 else "max_value") if self.extremum else "value",
+        )
 
 
 class Budget(object):
     class Field(object):
-        def __init__(self, limit=None):
-            # type: (Optional[float]) -> ()
+        def __init__(self, limit: Optional[float] = None) -> ():
             self.limit = limit
             self.current = {}
 
-        def update(self, uid, value):
-            # type: (Union[str, int], float) -> ()
+        def update(self, uid: Union[str, int], value: float) -> ():
             if value is not None:
                 try:
                     self.current[uid] = float(value)
@@ -266,29 +307,36 @@ class Budget(object):
                     pass
 
         @property
-        def used(self):
-            # type: () -> (Optional[float])
+        def used(self) -> Optional[float]:
             if self.limit is None or not self.current:
                 return None
             return sum(self.current.values()) / float(self.limit)
 
-    def __init__(self, jobs_limit, iterations_limit, compute_time_limit):
-        # type: (Optional[int], Optional[int], Optional[float]) -> ()
+    def __init__(
+        self,
+        jobs_limit: Optional[int],
+        iterations_limit: Optional[int],
+        compute_time_limit: Optional[float],
+    ) -> ():
         self.jobs = self.Field(jobs_limit)
         self.iterations = self.Field(iterations_limit)
         self.compute_time = self.Field(compute_time_limit)
 
-    def to_dict(self):
-        # type: () -> (Mapping[str, Mapping[str, float]])
-
+    def to_dict(self) -> Mapping[str, Mapping[str, float]]:
         # returned dict is Mapping[Union['jobs', 'iterations', 'compute_time'], Mapping[Union['limit', 'used'], float]]
         current_budget = {}
         jobs = self.jobs.used
-        current_budget['jobs'] = {'limit': self.jobs.limit, 'used': jobs if jobs else 0}
+        current_budget["jobs"] = {"limit": self.jobs.limit, "used": jobs if jobs else 0}
         iterations = self.iterations.used
-        current_budget['iterations'] = {'limit': self.iterations.limit, 'used': iterations if iterations else 0}
+        current_budget["iterations"] = {
+            "limit": self.iterations.limit,
+            "used": iterations if iterations else 0,
+        }
         compute_time = self.compute_time.used
-        current_budget['compute_time'] = {'limit': self.compute_time.limit, 'used': compute_time if compute_time else 0}
+        current_budget["compute_time"] = {
+            "limit": self.compute_time.limit,
+            "used": compute_time if compute_time else 0,
+        }
         return current_budget
 
 
@@ -296,25 +344,25 @@ class SearchStrategy(object):
     """
     The base search strategy class. Inherit this class to implement your custom strategy.
     """
-    _tag = 'optimization'
-    _job_class = ClearmlJob  # type: ClearmlJob
+
+    _tag = "optimization"
+    _job_class: ClearmlJob = ClearmlJob
 
     def __init__(
-            self,
-            base_task_id,  # type: str
-            hyper_parameters,  # type: Sequence[Parameter]
-            objective_metric,  # type: Objective
-            execution_queue,  # type: str
-            num_concurrent_workers,  # type: int
-            pool_period_min=2.,  # type: float
-            time_limit_per_job=None,  # type: Optional[float]
-            compute_time_limit=None,  # type: Optional[float]
-            min_iteration_per_job=None,  # type: Optional[int]
-            max_iteration_per_job=None,  # type: Optional[int]
-            total_max_jobs=None,  # type: Optional[int]
-            **_  # type: Any
-    ):
-        # type: (...) -> ()
+        self,
+        base_task_id: str,
+        hyper_parameters: Sequence[Parameter],
+        objective_metric: Objective,
+        execution_queue: str,
+        num_concurrent_workers: int,
+        pool_period_min: float = 2.0,
+        time_limit_per_job: Optional[float] = None,
+        compute_time_limit: Optional[float] = None,
+        min_iteration_per_job: Optional[int] = None,
+        max_iteration_per_job: Optional[int] = None,
+        total_max_jobs: Optional[int] = None,
+        **_: Any
+    ) -> ():
         """
         Initialize a search strategy optimizer.
 
@@ -358,14 +406,14 @@ class SearchStrategy(object):
         self.budget = Budget(
             jobs_limit=self.total_max_jobs,
             compute_time_limit=self.compute_time_limit if self.compute_time_limit else None,
-            iterations_limit=self.total_max_jobs * self.max_iteration_per_job if
-            self.max_iteration_per_job and self.total_max_jobs else None
+            iterations_limit=self.total_max_jobs * self.max_iteration_per_job
+            if self.max_iteration_per_job and self.total_max_jobs
+            else None,
         )
         self._validate_base_task()
         self._optimizer_task = None
 
-    def start(self):
-        # type: () -> ()
+    def start(self) -> ():
         """
         Start the Optimizer controller function loop(). If the calling process is stopped, the controller will stop
         as well.
@@ -376,22 +424,20 @@ class SearchStrategy(object):
         """
         counter = 0
         while True:
-            logger.debug('optimization loop #{}'.format(counter))
+            logger.debug("optimization loop #{}".format(counter))
             if not self.process_step():
                 break
-            if self._stop_event.wait(timeout=self.pool_period_minutes * 60.):
+            if self._stop_event.wait(timeout=self.pool_period_minutes * 60.0):
                 break
             counter += 1
 
-    def stop(self):
-        # type: () -> ()
+    def stop(self) -> ():
         """
         Stop the current running optimization loop. Called from a different thread than the :meth:`start`.
         """
         self._stop_event.set()
 
-    def process_step(self):
-        # type: () -> bool
+    def process_step(self) -> bool:
         """
         Abstract helper function. Implementation is not required. Default use in start default implementation
         Main optimization loop, called from the daemon thread created by :meth:`start`.
@@ -443,8 +489,7 @@ class SearchStrategy(object):
 
         return bool(self._current_jobs)
 
-    def create_job(self):
-        # type: () -> Optional[ClearmlJob]
+    def create_job(self) -> Optional[ClearmlJob]:
         """
         Abstract helper function. Implementation is not required. Default use in process_step default implementation
         Create a new job if needed. return the newly created job. If no job needs to be created, return ``None``.
@@ -453,8 +498,7 @@ class SearchStrategy(object):
         """
         return None
 
-    def monitor_job(self, job):
-        # type: (ClearmlJob) -> bool
+    def monitor_job(self, job: ClearmlJob) -> bool:
         """
         Helper function, Implementation is not required. Default use in process_step default implementation.
         Check if the job needs to be aborted or already completed.
@@ -477,10 +521,10 @@ class SearchStrategy(object):
 
         return not job.is_stopped()
 
-    def update_budget_per_job(self, job):
+    def update_budget_per_job(self, job: ClearmlJob) -> bool:
         abort_job = False
         if self.time_limit_per_job:
-            elapsed = job.elapsed() / 60.
+            elapsed = job.elapsed() / 60.0
             if elapsed > 0:
                 self.budget.compute_time.update(job.task_id(), elapsed)
                 if elapsed > self.time_limit_per_job:
@@ -488,7 +532,7 @@ class SearchStrategy(object):
 
         if self.compute_time_limit:
             if not self.time_limit_per_job:
-                elapsed = job.elapsed() / 60.
+                elapsed = job.elapsed() / 60.0
                 if elapsed > 0:
                     self.budget.compute_time.update(job.task_id(), elapsed)
 
@@ -501,8 +545,7 @@ class SearchStrategy(object):
 
         return abort_job
 
-    def get_running_jobs(self):
-        # type: () -> Sequence[ClearmlJob]
+    def get_running_jobs(self) -> Sequence[ClearmlJob]:
         """
         Return the current running ClearmlJob.
 
@@ -510,8 +553,7 @@ class SearchStrategy(object):
         """
         return self._current_jobs
 
-    def get_created_jobs_ids(self):
-        # type: () -> Mapping[str, dict]
+    def get_created_jobs_ids(self) -> Mapping[str, dict]:
         """
         Return a Task IDs dict created by this optimizer until now, including completed and running jobs.
         The values of the returned dict are the parameters used in the specific job
@@ -520,8 +562,7 @@ class SearchStrategy(object):
         """
         return {job_id: job_val[1] for job_id, job_val in self._created_jobs_ids.items()}
 
-    def get_created_jobs_tasks(self):
-        # type: () -> Mapping[str, dict]
+    def get_created_jobs_tasks(self) -> Mapping[str, dict]:
         """
         Return a Task IDs dict created by this optimizer until now.
         The values of the returned dict are the ClearmlJob.
@@ -530,8 +571,7 @@ class SearchStrategy(object):
         """
         return {job_id: job_val[0] for job_id, job_val in self._created_jobs_ids.items()}
 
-    def get_top_experiments(self, top_k):
-        # type: (int) -> Sequence[Task]
+    def get_top_experiments(self, top_k: int) -> Sequence[Task]:
         """
         Return a list of Tasks of the top performing experiments, based on the controller ``Objective`` object.
 
@@ -539,11 +579,16 @@ class SearchStrategy(object):
 
         :return: A list of Task objects, ordered by performance, where index 0 is the best performing Task.
         """
-        return self._objective_metric.get_top_tasks(top_k=top_k,
-                                                    optimizer_task_id=self._job_parent_id or self._base_task_id)
+        return self._objective_metric.get_top_tasks(
+            top_k=top_k, optimizer_task_id=self._job_parent_id or self._base_task_id
+        )
 
-    def get_top_experiments_id_metrics_pair(self, top_k, all_metrics=False, only_completed=False):
-        # type: (int, bool, bool) -> Sequence[(str, dict)]
+    def get_top_experiments_id_metrics_pair(
+        self,
+        top_k: int,
+        all_metrics: bool = False,
+        only_completed: bool = False,
+    ) -> Sequence[Union[str, dict]]:
         """
         Return a list of pairs (Task ID, scalar metric dict) of the top performing experiments.
         Order is based on the controller ``Objective`` object.
@@ -600,32 +645,39 @@ class SearchStrategy(object):
         """
         additional_filters = dict(page_size=int(top_k), page=0)
         if only_completed:
-            additional_filters['status'] = ["completed"]
+            additional_filters["status"] = ["completed"]
 
         # noinspection PyProtectedMember
         top_tasks_ids_metric = self._get_child_tasks_ids(
             parent_task_id=self._job_parent_id or self._base_task_id,
             order_by=self._objective_metric._get_last_metrics_encode_field()[0],
             additional_filters=additional_filters,
-            additional_fields=['last_metrics']
+            additional_fields=["last_metrics"],
         )
 
         title_series = self._objective_metric.get_objective_metric() if not all_metrics else (None, None)
         titles = [ts[0] for ts in title_series]
         series = [ts[1] for ts in title_series]
-        return [(i, {'{}/{}'.format(v['metric'], v['variant']): v
-                     for variant in metric.values() for v in variant.values()
-                     if all_metrics or (v['metric'] in titles and v['variant'] in series)}
-                 ) for i, metric in top_tasks_ids_metric]
+        return [
+            (
+                i,
+                {
+                    "{}/{}".format(v["metric"], v["variant"]): v
+                    for variant in metric.values()
+                    for v in variant.values()
+                    if all_metrics or (v["metric"] in titles and v["variant"] in series)
+                },
+            )
+            for i, metric in top_tasks_ids_metric
+        ]
 
     def get_top_experiments_details(
-            self,
-            top_k,
-            all_metrics=False,
-            all_hyper_parameters=False,
-            only_completed=False
-    ):
-        # type: (int, bool, bool, bool) -> Sequence[(str, dict)]
+        self,
+        top_k: int,
+        all_metrics: bool = False,
+        all_hyper_parameters: bool = False,
+        only_completed: bool = False,
+    ) -> Sequence[Union[str, dict]]:
         """
         Return a list of dictionaries of the top performing experiments.
         Example: ``[{'task_id': Task-ID, 'metrics': scalar-metric-dict, 'hyper_parameters': Hyper-Parameters},]``
@@ -689,15 +741,16 @@ class SearchStrategy(object):
         """
         additional_filters = dict(page_size=int(top_k), page=0)
         if only_completed:
-            additional_filters['status'] = ["completed"]
+            additional_filters["status"] = ["completed"]
 
         # noinspection PyProtectedMember
         top_tasks_ids_metric_params = self._get_child_tasks_ids(
             parent_task_id=self._job_parent_id or self._base_task_id,
-            order_by=self._objective_metric._get_last_metrics_encode_field()[
-                0] if self._objective_metric.len == 1 else None,
+            order_by=self._objective_metric._get_last_metrics_encode_field()[0]
+            if self._objective_metric.len == 1
+            else None,
             additional_filters=additional_filters,
-            additional_fields=['last_metrics', 'hyperparams']
+            additional_fields=["last_metrics", "hyperparams"],
         )
         if self._objective_metric.len != 1:
             top_tasks_ids_metric_params_dict = {}
@@ -718,21 +771,26 @@ class SearchStrategy(object):
         series = [ts[1] for ts in title_series]
         return [
             {
-                'task_id': tid,
-                'hyper_parameters': {
-                    '{}/{}'.format(p.section, p.name): p.value
-                    for params in (param_sections or {}).values() for p in (params or {}).values()
-                    if all_hyper_parameters or '{}/{}'.format(p.section, p.name) in hp_params
+                "task_id": tid,
+                "hyper_parameters": {
+                    "{}/{}".format(p.section, p.name): p.value
+                    for params in (param_sections or {}).values()
+                    for p in (params or {}).values()
+                    if all_hyper_parameters or "{}/{}".format(p.section, p.name) in hp_params
                 },
-                'metrics': {
-                    '{}/{}'.format(v['metric'], v['variant']): v for variant in metric.values()
-                    for v in variant.values() if all_metrics or v['metric'] in titles and v['variant'] in series
-                }
-            } for tid, metric, param_sections in top_tasks_ids_metric_params
+                "metrics": {
+                    "{}/{}".format(v["metric"], v["variant"]): v
+                    for variant in metric.values()
+                    for v in variant.values()
+                    if all_metrics or v["metric"] in titles and v["variant"] in series
+                },
+            }
+            for tid, metric, param_sections in top_tasks_ids_metric_params
         ]
 
-    def get_objective_metric(self):
-        # type: () -> Union[Tuple[str, str], List[Tuple[str, str]]]
+    def get_objective_metric(
+        self,
+    ) -> Union[Tuple[str, str], List[Tuple[str, str]]]:
         """
         Return the metric title, series pair of the objective.
 
@@ -742,45 +800,51 @@ class SearchStrategy(object):
         return objective[0] if self._objective_metric.len == 1 else objective
 
     def helper_create_job(
-            self,
-            base_task_id,  # type: str
-            parameter_override=None,  # type: Optional[Mapping[str, str]]
-            task_overrides=None,  # type: Optional[Mapping[str, str]]
-            tags=None,  # type: Optional[Sequence[str]]
-            parent=None,  # type: Optional[str]
-            **kwargs  # type: Any
-    ):
-        # type: (...) -> ClearmlJob
+        self,
+        base_task_id: str,
+        parameter_override: Optional[Mapping[str, str]] = None,
+        task_overrides: Optional[Mapping[str, str]] = None,
+        tags: Optional[Sequence[str]] = None,
+        parent: Optional[str] = None,
+        **kwargs: Any
+    ) -> ClearmlJob:
         """
         Create a Job using the specified arguments, ``ClearmlJob`` for details.
 
         :return: A newly created Job instance.
         """
         if parameter_override:
-            param_str = ['{}={}'.format(k, parameter_override[k]) for k in sorted(parameter_override.keys())]
+            param_str = ["{}={}".format(k, parameter_override[k]) for k in sorted(parameter_override.keys())]
             if self._naming_function:
                 name = self._naming_function(self._base_task_name, parameter_override)
             elif self._naming_function is False:
                 name = None
             else:
-                name = '{}: {}'.format(self._base_task_name, ' '.join(param_str))
-            comment = '\n'.join(param_str)
+                name = "{}: {}".format(self._base_task_name, " ".join(param_str))
+            comment = "\n".join(param_str)
         else:
             name = None
             comment = None
-        tags = (tags or []) + [self._tag, 'opt' + (': {}'.format(self._job_parent_id) if self._job_parent_id else '')]
+        tags = (tags or []) + [
+            self._tag,
+            "opt" + (": {}".format(self._job_parent_id) if self._job_parent_id else ""),
+        ]
         new_job = self._job_class(
-            base_task_id=base_task_id, parameter_override=parameter_override,
-            task_overrides=task_overrides, tags=tags, parent=parent or self._job_parent_id,
-            name=name, comment=comment,
+            base_task_id=base_task_id,
+            parameter_override=parameter_override,
+            task_overrides=task_overrides,
+            tags=tags,
+            parent=parent or self._job_parent_id,
+            name=name,
+            comment=comment,
             project=self._job_project_id or self._get_task_project(parent or self._job_parent_id),
-            **kwargs)
+            **kwargs
+        )
         self._created_jobs_ids[new_job.task_id()] = (new_job, parameter_override)
-        logger.info('Creating new Task: {}'.format(parameter_override))
+        logger.info("Creating new Task: {}".format(parameter_override))
         return new_job
 
-    def set_job_class(self, job_class):
-        # type: (ClearmlJob) -> ()
+    def set_job_class(self, job_class: ClearmlJob) -> ():
         """
         Set the class to use for the :meth:`helper_create_job` function.
 
@@ -788,8 +852,11 @@ class SearchStrategy(object):
         """
         self._job_class = job_class
 
-    def set_job_default_parent(self, job_parent_task_id, project_name=None):
-        # type: (Optional[str], Optional[str]) -> ()
+    def set_job_default_parent(
+        self,
+        job_parent_task_id: Optional[str],
+        project_name: Optional[str] = None,
+    ) -> ():
         """
         Set the default parent for all Jobs created by the :meth:`helper_create_job` method.
 
@@ -798,12 +865,17 @@ class SearchStrategy(object):
         """
         self._job_parent_id = job_parent_task_id
         # noinspection PyProtectedMember
-        self._job_project_id = get_or_create_project(
-            session=Task._get_default_session(), project_name=project_name, description='HPO process spawned Tasks') \
-            if project_name else None
+        self._job_project_id = (
+            get_or_create_project(
+                session=Task._get_default_session(),
+                project_name=project_name,
+                description="HPO process spawned Tasks",
+            )
+            if project_name
+            else None
+        )
 
-    def set_job_naming_scheme(self, naming_function):
-        # type: (Optional[Callable[[str, dict], str]]) -> ()
+    def set_job_naming_scheme(self, naming_function: Optional[Callable[[str, dict], str]]) -> ():
         """
         Set the function used to name a newly created job.
 
@@ -817,8 +889,7 @@ class SearchStrategy(object):
         """
         self._naming_function = naming_function
 
-    def set_optimizer_task(self, task):
-        # type: (Task) -> ()
+    def set_optimizer_task(self, task: Task) -> ():
         """
         Set the optimizer task object to be used to store/generate reports on the optimization process.
         Usually this is the current task of this process.
@@ -827,8 +898,7 @@ class SearchStrategy(object):
         """
         self._optimizer_task = task
 
-    def _validate_base_task(self):
-        # type: () -> ()
+    def _validate_base_task(self) -> ():
         """
         Check the base task exists and contains the requested Objective metric and hyperparameters.
         """
@@ -842,15 +912,20 @@ class SearchStrategy(object):
         task_parameters = task.get_parameters(backwards_compatibility=False)
         missing_params = [h.name for h in self._hyper_parameters if h.name not in task_parameters]
         if missing_params:
-            logger.warning('Could not find requested hyper-parameters {} on base task {}'.format(
-                missing_params, self._base_task_id))
+            logger.warning(
+                "Could not find requested hyper-parameters {} on base task {}".format(
+                    missing_params, self._base_task_id
+                )
+            )
         # check if the objective metric exists (i.e. no typos etc)
         if self._objective_metric.get_objective(self._base_task_id) is None:
-            logger.warning('Could not find requested metric {} report on base task {}'.format(
-                self._objective_metric.get_objective_metric(), self._base_task_id))
+            logger.warning(
+                "Could not find requested metric {} report on base task {}".format(
+                    self._objective_metric.get_objective_metric(), self._base_task_id
+                )
+            )
 
-    def _get_task_project(self, parent_task_id):
-        # type: (str) -> (Optional[str])
+    def _get_task_project(self, parent_task_id: str) -> Optional[str]:
         if not parent_task_id:
             return
         if parent_task_id not in self._job_project:
@@ -859,8 +934,7 @@ class SearchStrategy(object):
 
         return self._job_project.get(parent_task_id)
 
-    def _get_job_iterations(self, job):
-        # type: (Union[ClearmlJob, Task]) -> int
+    def _get_job_iterations(self, job: Union[ClearmlJob, Task]) -> int:
         iteration_value = self._objective_metric.get_current_raw_objective(job)
         if iteration_value is not None and any(iv is not None and iv[0] is not None for iv in iteration_value):
             return max(iv[0] for iv in iteration_value if iv is not None)
@@ -868,14 +942,13 @@ class SearchStrategy(object):
 
     @classmethod
     def _get_child_tasks_ids(
-            cls,
-            parent_task_id,  # type: str
-            status=None,  # type: Optional[Union[Task.TaskStatusEnum], Sequence[Task.TaskStatusEnum]]
-            order_by=None,  # type: Optional[str]
-            additional_fields=None,  # type: Optional[Sequence[str]]
-            additional_filters=None,  # type: Optional[dict]
-    ):
-        # type: (...) -> (Union[Sequence[str], Sequence[List]])
+        cls,
+        parent_task_id: str,
+        status: Optional[Union[Task.TaskStatusEnum, Sequence[Task.TaskStatusEnum]]] = None,
+        order_by: Optional[str] = None,
+        additional_fields: Optional[Sequence[str]] = None,
+        additional_filters: Optional[dict] = None,
+    ) -> Union[Sequence[str], Sequence[List]]:
         """
         Helper function. Return a list of tasks is tagged automl, with specific ``status``, ordered by ``sort_field``.
 
@@ -899,7 +972,7 @@ class SearchStrategy(object):
         :return: A list of Task IDs (str)
         """
         task_filter = {
-            'parent': parent_task_id,
+            "parent": parent_task_id,
             # 'tags': [cls._tag],
             # since we have auto archive we do not want to filter out archived tasks
             # 'system_tags': ['-archived'],
@@ -907,22 +980,28 @@ class SearchStrategy(object):
         task_filter.update(additional_filters or {})
 
         if status:
-            task_filter['status'] = status if isinstance(status, (tuple, list)) else [status]
+            task_filter["status"] = status if isinstance(status, (tuple, list)) else [status]
 
-        if order_by and (order_by.startswith('last_metrics') or order_by.startswith('-last_metrics')):
-            parts = order_by.split('.')
-            if parts[-1] in ('min', 'max', 'last'):
-                title = hashlib.md5(str(parts[1]).encode('utf-8')).hexdigest()
-                series = hashlib.md5(str(parts[2]).encode('utf-8')).hexdigest()
-                minmax = 'min_value' if 'min' in parts[3] else ('max_value' if 'max' in parts[3] else 'value')
-                order_by = '{}last_metrics.'.join(
-                    ('-' if order_by and order_by[0] == '-' else '', title, series, minmax))
+        if order_by and (order_by.startswith("last_metrics") or order_by.startswith("-last_metrics")):
+            parts = order_by.split(".")
+            if parts[-1] in ("min", "max", "last"):
+                title = hashlib.md5(str(parts[1]).encode("utf-8")).hexdigest()
+                series = hashlib.md5(str(parts[2]).encode("utf-8")).hexdigest()
+                minmax = "min_value" if "min" in parts[3] else ("max_value" if "max" in parts[3] else "value")
+                order_by = "{}last_metrics.".join(
+                    (
+                        "-" if order_by and order_by[0] == "-" else "",
+                        title,
+                        series,
+                        minmax,
+                    )
+                )
 
         if order_by:
-            task_filter['order_by'] = [order_by]
+            task_filter["order_by"] = [order_by]
 
         if additional_fields:
-            task_filter['only_fields'] = list(set(list(additional_fields) + ['id']))
+            task_filter["only_fields"] = list(set(list(additional_fields) + ["id"]))
 
         # noinspection PyProtectedMember
         task_objects = Task._query_tasks(**task_filter)
@@ -932,13 +1011,12 @@ class SearchStrategy(object):
 
     @classmethod
     def _get_child_tasks(
-            cls,
-            parent_task_id,  # type: str
-            status=None,  # type: Optional[Union[Task.TaskStatusEnum], Sequence[Task.TaskStatusEnum]]
-            order_by=None,  # type: Optional[str]
-            additional_filters=None  # type: Optional[dict]
-    ):
-        # type: (...) -> (Sequence[Task])
+        cls,
+        parent_task_id: str,
+        status: Optional[Union[Task.TaskStatusEnum, Sequence[Task.TaskStatusEnum]]] = None,
+        order_by: Optional[str] = None,
+        additional_filters: Optional[dict] = None,
+    ) -> Sequence[Task]:
         """
         Helper function. Return a list of tasks tagged automl, with specific ``status``, ordered by ``sort_field``.
 
@@ -960,16 +1038,24 @@ class SearchStrategy(object):
         :return: A list of Task objects
         """
         return [
-            Task.get_task(task_id=t_id) for t_id in cls._get_child_tasks_ids(
+            Task.get_task(task_id=t_id)
+            for t_id in cls._get_child_tasks_ids(
                 parent_task_id=parent_task_id,
                 status=status,
                 order_by=order_by,
-                additional_filters=additional_filters)
+                additional_filters=additional_filters,
+            )
         ]
 
 
 class MultiObjective(_ObjectiveInterface):
-    def __init__(self, title, series, order, extremum):
+    def __init__(
+        self,
+        title: Union[str, Sequence[str]],
+        series: Union[str, Sequence[str]],
+        order: Union[str, Sequence[str]],
+        extremum: Union[bool, Sequence[bool]],
+    ) -> None:
         self.title = title
         self.series = series
         self.order = order
@@ -979,8 +1065,7 @@ class MultiObjective(_ObjectiveInterface):
             self.objectives.append(Objective(title=title_, series=series_, order=order_, extremum=extremum_))
         self.len = len(self.objectives)
 
-    def get_objective(self, task_id):
-        # type: (Union[str, Task, ClearmlJob]) -> Optional[List[float]]
+    def get_objective(self, task_id: Union[str, Task, ClearmlJob]) -> Optional[List[float]]:
         """
         Return a specific task scalar values based on the objective settings (title/series).
 
@@ -993,8 +1078,7 @@ class MultiObjective(_ObjectiveInterface):
             return None
         return objective
 
-    def get_current_raw_objective(self, task):
-        # type: (Union[ClearmlJob, Task]) -> Optional[List[Tuple[int, float]]]
+    def get_current_raw_objective(self, task: Union[ClearmlJob, Task]) -> Optional[List[Tuple[int, float]]]:
         """
         Return the current raw value (without sign normalization) of each objective.
 
@@ -1006,8 +1090,7 @@ class MultiObjective(_ObjectiveInterface):
             return None
         return objective
 
-    def get_objective_sign(self):
-        # type: () -> List[float]
+    def get_objective_sign(self) -> List[float]:
         """
         Return the sign of the objectives.
 
@@ -1018,8 +1101,7 @@ class MultiObjective(_ObjectiveInterface):
         """
         return [o.get_objective_sign() for o in self.objectives]
 
-    def get_normalized_objective(self, task_id):
-        # type: (Union[str, Task, ClearmlJob]) -> Optional[List[float]]
+    def get_normalized_objective(self, task_id: Union[str, Task, ClearmlJob]) -> Optional[List[float]]:
         """
         Return a normalized task scalar values based on the objective settings (title/series).
         I.e. objective is always to maximize the returned value
@@ -1033,8 +1115,7 @@ class MultiObjective(_ObjectiveInterface):
             return None
         return objective
 
-    def get_objective_metric(self):
-        # type: () -> List[(str, str)]
+    def get_objective_metric(self) -> List[Tuple[str, str]]:
         """
         Return the metric title, series pairs of the objectives.
 
@@ -1042,8 +1123,12 @@ class MultiObjective(_ObjectiveInterface):
         """
         return [o.get_objective_metric() for o in self.objectives]
 
-    def get_top_tasks(self, top_k, optimizer_task_id=None, task_filter=None):
-        # type: (int, Optional[str], Optional[dict]) -> Sequence[Task]
+    def get_top_tasks(
+        self,
+        top_k: int,
+        optimizer_task_id: Optional[str] = None,
+        task_filter: Optional[dict] = None,
+    ) -> Sequence[Task]:
         """
         Return a list of Tasks of the top performing experiments.
         If there is only one objective, the tasks are sorted based on that objective.
@@ -1062,7 +1147,7 @@ class MultiObjective(_ObjectiveInterface):
             return self.objectives[0].get_top_tasks(
                 top_k=top_k,
                 optimizer_task_id=optimizer_task_id,
-                task_filter=task_filter
+                task_filter=task_filter,
             )
         task_filter = deepcopy(task_filter) if task_filter else {}
         if optimizer_task_id:
@@ -1080,26 +1165,29 @@ class MultiObjective(_ObjectiveInterface):
             return []
         return Task.get_tasks(task_ids=sorted_ids[:top_k])
 
-    def _get_last_metrics_encode_field(self):
+    def _get_last_metrics_encode_field(self) -> List[str]:
         # noinspection PyProtectedMember
         return [o._get_last_metrics_encode_field() for o in self.objectives]
 
-    def _weakly_dominates_normalized(self, lhs, rhs):
+    def _weakly_dominates_normalized(self, lhs: List[float], rhs: List[float]) -> bool:
         return all(lhs_elem * o.sign >= rhs_elem * o.sign for lhs_elem, rhs_elem, o in zip(lhs, rhs, self.objectives))
 
     @staticmethod
-    def _dominates(lhs, rhs):
-        return all(lhs_elem >= rhs_elem for lhs_elem, rhs_elem in zip(lhs, rhs)) and \
-            any(lhs_elem > rhs_elem for lhs_elem, rhs_elem in zip(lhs, rhs))
+    def _dominates(lhs: List[float], rhs: List[float]) -> bool:
+        return all(lhs_elem >= rhs_elem for lhs_elem, rhs_elem in zip(lhs, rhs)) and any(
+            lhs_elem > rhs_elem for lhs_elem, rhs_elem in zip(lhs, rhs)
+        )
 
-    def _sort_jobs_by_domination(self, jobs):
+    def _sort_jobs_by_domination(self, jobs: Mapping[str, Tuple[List[float], str]]) -> List[str]:
         job_ids = list(jobs.keys())
         job_ids_sorted = []
         while len(job_ids_sorted) < len(jobs.keys()):
             have_result = False
             for job_id in job_ids:
-                if all(self._weakly_dominates_normalized(jobs[job_id][0], jobs[other_job_id][0])
-                       for other_job_id in job_ids):
+                if all(
+                    self._weakly_dominates_normalized(jobs[job_id][0], jobs[other_job_id][0])
+                    for other_job_id in job_ids
+                ):
                     have_result = True
                     job_ids_sorted.append(job_id)
             if not have_result:
@@ -1114,20 +1202,19 @@ class GridSearch(SearchStrategy):
     """
 
     def __init__(
-            self,
-            base_task_id,  # type: str
-            hyper_parameters,  # type: Sequence[Parameter]
-            objective_metric,  # type: Objective
-            execution_queue,  # type: str
-            num_concurrent_workers,  # type: int
-            pool_period_min=2.,  # type: float
-            time_limit_per_job=None,  # type: Optional[float]
-            compute_time_limit=None,  # type: Optional[float]
-            max_iteration_per_job=None,  # type: Optional[int]
-            total_max_jobs=None,  # type: Optional[int]
-            **_  # type: Any
-    ):
-        # type: (...) -> ()
+        self,
+        base_task_id: str,
+        hyper_parameters: Sequence[Parameter],
+        objective_metric: Objective,
+        execution_queue: str,
+        num_concurrent_workers: int,
+        pool_period_min: float = 2.0,
+        time_limit_per_job: Optional[float] = None,
+        compute_time_limit: Optional[float] = None,
+        max_iteration_per_job: Optional[int] = None,
+        total_max_jobs: Optional[int] = None,
+        **_: Any
+    ) -> ():
         """
         Initialize a grid search optimizer
 
@@ -1147,15 +1234,21 @@ class GridSearch(SearchStrategy):
             unlimited.
         """
         super(GridSearch, self).__init__(
-            base_task_id=base_task_id, hyper_parameters=hyper_parameters, objective_metric=objective_metric,
-            execution_queue=execution_queue, num_concurrent_workers=num_concurrent_workers,
-            pool_period_min=pool_period_min, time_limit_per_job=time_limit_per_job,
-            compute_time_limit=compute_time_limit, max_iteration_per_job=max_iteration_per_job,
-            total_max_jobs=total_max_jobs, **_)
+            base_task_id=base_task_id,
+            hyper_parameters=hyper_parameters,
+            objective_metric=objective_metric,
+            execution_queue=execution_queue,
+            num_concurrent_workers=num_concurrent_workers,
+            pool_period_min=pool_period_min,
+            time_limit_per_job=time_limit_per_job,
+            compute_time_limit=compute_time_limit,
+            max_iteration_per_job=max_iteration_per_job,
+            total_max_jobs=total_max_jobs,
+            **_
+        )
         self._param_iterator = None
 
-    def create_job(self):
-        # type: () -> Optional[ClearmlJob]
+    def create_job(self) -> Optional[ClearmlJob]:
         """
         Create a new job if needed. Return the newly created job. If no job needs to be created, return ``None``.
 
@@ -1168,9 +1261,8 @@ class GridSearch(SearchStrategy):
 
         return self.helper_create_job(base_task_id=self._base_task_id, parameter_override=parameters)
 
-    def _next_configuration(self):
-        # type: () -> Mapping[str, str]
-        def param_iterator_fn():
+    def _next_configuration(self) -> Mapping[str, str]:
+        def param_iterator_fn() -> Generator[Dict[str, Any], None, None]:
             hyper_params_values = [p.to_list() for p in self._hyper_parameters]
             for state in product(*hyper_params_values):
                 yield dict(kv for d in state for kv in d.items())
@@ -1189,20 +1281,19 @@ class RandomSearch(SearchStrategy):
     _hp_space_cover_samples = 42
 
     def __init__(
-            self,
-            base_task_id,  # type: str
-            hyper_parameters,  # type: Sequence[Parameter]
-            objective_metric,  # type: Objective
-            execution_queue,  # type: str
-            num_concurrent_workers,  # type: int
-            pool_period_min=2.,  # type: float
-            time_limit_per_job=None,  # type: Optional[float]
-            compute_time_limit=None,  # type: Optional[float]
-            max_iteration_per_job=None,  # type: Optional[int]
-            total_max_jobs=None,  # type: Optional[int]
-            **_  # type: Any
-    ):
-        # type: (...) -> ()
+        self,
+        base_task_id: str,
+        hyper_parameters: Sequence[Parameter],
+        objective_metric: Objective,
+        execution_queue: str,
+        num_concurrent_workers: int,
+        pool_period_min: float = 2.0,
+        time_limit_per_job: Optional[float] = None,
+        compute_time_limit: Optional[float] = None,
+        max_iteration_per_job: Optional[int] = None,
+        total_max_jobs: Optional[int] = None,
+        **_: Any
+    ) -> ():
         """
         Initialize a random search optimizer.
 
@@ -1222,15 +1313,21 @@ class RandomSearch(SearchStrategy):
             unlimited.
         """
         super(RandomSearch, self).__init__(
-            base_task_id=base_task_id, hyper_parameters=hyper_parameters, objective_metric=objective_metric,
-            execution_queue=execution_queue, num_concurrent_workers=num_concurrent_workers,
-            pool_period_min=pool_period_min, time_limit_per_job=time_limit_per_job,
-            compute_time_limit=compute_time_limit, max_iteration_per_job=max_iteration_per_job,
-            total_max_jobs=total_max_jobs, **_)
+            base_task_id=base_task_id,
+            hyper_parameters=hyper_parameters,
+            objective_metric=objective_metric,
+            execution_queue=execution_queue,
+            num_concurrent_workers=num_concurrent_workers,
+            pool_period_min=pool_period_min,
+            time_limit_per_job=time_limit_per_job,
+            compute_time_limit=compute_time_limit,
+            max_iteration_per_job=max_iteration_per_job,
+            total_max_jobs=total_max_jobs,
+            **_
+        )
         self._hyper_parameters_collection = set()
 
-    def create_job(self):
-        # type: () -> Optional[ClearmlJob]
+    def create_job(self) -> Optional[ClearmlJob]:
         """
         Create a new job if needed. Return the newly created job. If no job needs to be created, return ``None``.
 
@@ -1264,27 +1361,27 @@ class HyperParameterOptimizer(object):
     Hyperparameter search controller. Clones the base experiment, changes arguments and tries to maximize/minimize
     the defined objective.
     """
-    _tag = 'optimization'
+
+    _tag = "optimization"
 
     def __init__(
-            self,
-            base_task_id,  # type: str
-            hyper_parameters,  # type: Sequence[Parameter]
-            objective_metric_title,  # type: Union[str, Sequence[str]]
-            objective_metric_series,  # type: Union[str, Sequence[str]]
-            objective_metric_sign="min",  # type: Union[str, Sequence[str]]
-            optimizer_class=RandomSearch,  # type: Union[SearchStrategy, type(SearchStrategy)]
-            max_number_of_concurrent_tasks=10,  # type: int
-            execution_queue="default",  # type: str
-            optimization_time_limit=None,  # type: Optional[float]
-            compute_time_limit=None,  # type: Optional[float]
-            auto_connect_task=True,  # type: Union[bool, Task]
-            always_create_task=False,  # type: bool
-            spawn_project=None,  # type: Optional[str]
-            save_top_k_tasks_only=None,  # type: Optional[int]
-            **optimizer_kwargs  # type: Any
-    ):
-        # type: (...) -> ()
+        self,
+        base_task_id: str,
+        hyper_parameters: Sequence[Parameter],
+        objective_metric_title: Union[str, Sequence[str]],
+        objective_metric_series: Union[str, Sequence[str]],
+        objective_metric_sign: Union[str, Sequence[str]] = "min",
+        optimizer_class: Union[SearchStrategy, type(SearchStrategy)] = RandomSearch,
+        max_number_of_concurrent_tasks: int = 10,
+        execution_queue: str = "default",
+        optimization_time_limit: Optional[float] = None,
+        compute_time_limit: Optional[float] = None,
+        auto_connect_task: Union[bool, Task] = True,
+        always_create_task: bool = False,
+        spawn_project: Optional[str] = None,
+        save_top_k_tasks_only: Optional[int] = None,
+        **optimizer_kwargs: Any
+    ) -> ():
         """
         Create a new hyperparameter controller. The newly created object will launch and monitor the new experiments.
 
@@ -1376,7 +1473,8 @@ class HyperParameterOptimizer(object):
                 an_optimizer.stop()
         """
         if type(objective_metric_title) is not type(objective_metric_series) or type(
-                objective_metric_title) is not type(objective_metric_sign):
+            objective_metric_title
+        ) is not type(objective_metric_sign):
             raise TypeError(
                 "objective_metric_series, objective_metric_title and objective_metric_sign have to be of the same type"
                 " (strings if doing single objective optimization and lists of the same length"
@@ -1387,7 +1485,7 @@ class HyperParameterOptimizer(object):
             objective_metric_title = [objective_metric_title]
             objective_metric_sign = [objective_metric_sign]
         if len(objective_metric_series) != len(objective_metric_title) or len(objective_metric_series) != len(
-                objective_metric_sign
+            objective_metric_sign
         ):
             raise ValueError(
                 "Can not use multiple objective optimization when objective_metric_series, objective_metric_title"
@@ -1395,13 +1493,15 @@ class HyperParameterOptimizer(object):
             )
         # create a new Task, if we do not have one already
         self._task = auto_connect_task if isinstance(auto_connect_task, Task) else Task.current_task()
-        self._readonly_task = \
-            isinstance(auto_connect_task, Task) and str(self._task.status) not in ('created', 'in_progress')
+        self._readonly_task = isinstance(auto_connect_task, Task) and str(self._task.status) not in (
+            "created",
+            "in_progress",
+        )
         if not self._task and always_create_task:
             base_task = Task.get_task(task_id=base_task_id)
             self._task = Task.init(
                 project_name=base_task.get_project_name(),
-                task_name='Optimizing: {}'.format(base_task.name),
+                task_name="Optimizing: {}".format(base_task.name),
                 task_type=Task.TaskTypes.optimizer,
             )
 
@@ -1414,26 +1514,30 @@ class HyperParameterOptimizer(object):
             execution_queue=execution_queue,
             optimization_time_limit=optimization_time_limit,
             compute_time_limit=compute_time_limit,
-            optimizer_kwargs=optimizer_kwargs)
+            optimizer_kwargs=optimizer_kwargs,
+        )
         # make sure all the created tasks are our children, as we are creating them
         if self._task and not self._readonly_task:
             self._task.add_tags([self._tag])
             if auto_connect_task:
                 optimizer_class, hyper_parameters, opts = self._connect_args(
-                    optimizer_class=optimizer_class, hyper_param_configuration=hyper_parameters, **opts)
+                    optimizer_class=optimizer_class, hyper_param_configuration=hyper_parameters, **opts
+                )
 
-        self.base_task_id = opts['base_task_id']
+        self.base_task_id = opts["base_task_id"]
         self.hyper_parameters = hyper_parameters
-        self.max_number_of_concurrent_tasks = opts['max_number_of_concurrent_tasks']
-        self.execution_queue = opts['execution_queue']
+        self.max_number_of_concurrent_tasks = opts["max_number_of_concurrent_tasks"]
+        self.execution_queue = opts["execution_queue"]
         self._objective_metric = MultiObjective(
             title=opts["objective_metric_title"],
             series=opts["objective_metric_series"],
             order=["min" if sign_ in ("min", "min_global") else "max" for sign_ in opts["objective_metric_sign"]],
-            extremum=[sign_.endswith("_global") for sign_ in opts["objective_metric_sign"]]
+            extremum=[sign_.endswith("_global") for sign_ in opts["objective_metric_sign"]],
         )
-        optuna_error_message = "Multi parameter optimization is only supported via Optuna. Please install Optuna via" + \
-                               " `pip install optuna and set the `optimizer_class` to `clearml.automation.optuna.OptimizerOptuna`"
+        optuna_error_message = (
+            "Multi parameter optimization is only supported via Optuna. Please install Optuna via"
+            + " `pip install optuna and set the `optimizer_class` to `clearml.automation.optuna.OptimizerOptuna`"
+        )
         try:
             if self._objective_metric.len != 1:
                 from .optuna import OptimizerOptuna
@@ -1447,25 +1551,27 @@ class HyperParameterOptimizer(object):
             self.optimizer = optimizer_class
         else:
             self.optimizer = optimizer_class(
-                base_task_id=opts['base_task_id'], hyper_parameters=hyper_parameters,
-                objective_metric=self._objective_metric, execution_queue=opts['execution_queue'],
-                num_concurrent_workers=opts['max_number_of_concurrent_tasks'],
-                compute_time_limit=opts['compute_time_limit'], **opts.get('optimizer_kwargs', {}))
+                base_task_id=opts["base_task_id"],
+                hyper_parameters=hyper_parameters,
+                objective_metric=self._objective_metric,
+                execution_queue=opts["execution_queue"],
+                num_concurrent_workers=opts["max_number_of_concurrent_tasks"],
+                compute_time_limit=opts["compute_time_limit"],
+                **opts.get("optimizer_kwargs", {})
+            )
         self.optimizer.set_optimizer_task(self._task)
         self.optimization_timeout = None
         self.optimization_start_time = None
         self._thread = None
         self._stop_event = None
-        self._report_period_min = 5.
+        self._report_period_min = 5.0
         self._thread_reporter = None
         self._experiment_completed_cb = None
         self._save_top_k_tasks_only = max(0, save_top_k_tasks_only or 0)
-        self.optimizer.set_job_default_parent(
-            self._task.id if self._task else None, project_name=spawn_project or None)
-        self.set_time_limit(in_minutes=opts['optimization_time_limit'])
+        self.optimizer.set_job_default_parent(self._task.id if self._task else None, project_name=spawn_project or None)
+        self.set_time_limit(in_minutes=opts["optimization_time_limit"])
 
-    def get_num_active_experiments(self):
-        # type: () -> int
+    def get_num_active_experiments(self) -> int:
         """
         Return the number of current active experiments.
 
@@ -1475,8 +1581,7 @@ class HyperParameterOptimizer(object):
             return 0
         return len(self.optimizer.get_running_jobs())
 
-    def get_active_experiments(self):
-        # type: () -> Sequence[Task]
+    def get_active_experiments(self) -> Sequence[Task]:
         """
         Return a list of Tasks of the current active experiments.
 
@@ -1486,8 +1591,10 @@ class HyperParameterOptimizer(object):
             return []
         return [j.task for j in self.optimizer.get_running_jobs()]
 
-    def start_locally(self, job_complete_callback=None):
-        # type: (Optional[Callable[[str, float, int, dict, str], None]]) -> bool
+    def start_locally(
+        self,
+        job_complete_callback: Optional[Callable[[str, float, int, dict, str], None]] = None,
+    ) -> bool:
         """
         Start the HyperParameterOptimizer controller completely locally. Both the optimizer task
         and all spawned substasks are run on the local machine using the current environment.
@@ -1512,8 +1619,10 @@ class HyperParameterOptimizer(object):
         self.optimizer.set_job_class(LocalClearmlJob)
         return self.start(job_complete_callback=job_complete_callback)
 
-    def start(self, job_complete_callback=None):
-        # type: (Optional[Callable[[str, float, int, dict, str], None]]) -> bool
+    def start(
+        self,
+        job_complete_callback: Optional[Callable[[str, float, int, dict, str], None]] = None,
+    ) -> bool:
         """
         Start the HyperParameterOptimizer controller. If the calling process is stopped, then the controller stops
         as well.
@@ -1551,8 +1660,11 @@ class HyperParameterOptimizer(object):
         self._thread_reporter.start()
         return True
 
-    def stop(self, timeout=None, wait_for_reporter=True):
-        # type: (Optional[float], Optional[bool]) -> ()
+    def stop(
+        self,
+        timeout: Optional[float] = None,
+        wait_for_reporter: Optional[bool] = True,
+    ) -> ():
         """
         Stop the HyperParameterOptimizer controller and the optimization thread.
 
@@ -1571,7 +1683,7 @@ class HyperParameterOptimizer(object):
 
         # wait for optimizer thread
         if timeout is not None:
-            _thread.join(timeout=timeout * 60.)
+            _thread.join(timeout=timeout * 60.0)
 
         # stop all running tasks:
         for j in self.optimizer.get_running_jobs():
@@ -1583,8 +1695,7 @@ class HyperParameterOptimizer(object):
             # wait for reporter to flush
             self._thread_reporter.join()
 
-    def is_active(self):
-        # type: () -> bool
+    def is_active(self) -> bool:
         """
         Is the optimization procedure active (still running)
 
@@ -1600,8 +1711,7 @@ class HyperParameterOptimizer(object):
         """
         return self._stop_event is None or self._thread is not None
 
-    def is_running(self):
-        # type: () -> bool
+    def is_running(self) -> bool:
         """
         Is the optimization controller is running
 
@@ -1614,8 +1724,7 @@ class HyperParameterOptimizer(object):
         """
         return self._thread is not None
 
-    def wait(self, timeout=None):
-        # type: (Optional[float]) -> bool
+    def wait(self, timeout: Optional[float] = None) -> bool:
         """
         Wait for the optimizer to finish.
 
@@ -1632,10 +1741,11 @@ class HyperParameterOptimizer(object):
             return True
 
         if timeout is not None:
-            timeout *= 60.
+            timeout *= 60.0
         else:
-            timeout = max(0, self.optimization_timeout - self.optimization_start_time) \
-                if self.optimization_timeout else None
+            timeout = (
+                max(0, self.optimization_timeout - self.optimization_start_time) if self.optimization_timeout else None
+            )
 
         _thread = self._thread
 
@@ -1645,8 +1755,11 @@ class HyperParameterOptimizer(object):
 
         return True
 
-    def set_time_limit(self, in_minutes=None, specific_time=None):
-        # type: (Optional[float], Optional[datetime]) -> ()
+    def set_time_limit(
+        self,
+        in_minutes: Optional[float] = None,
+        specific_time: Optional[datetime] = None,
+    ) -> ():
         """
         Set a time limit for the HyperParameterOptimizer controller. If we reached the time limit, stop the optimization
         process. If ``specific_time`` is provided, use it; otherwise, use the ``in_minutes``.
@@ -1657,10 +1770,9 @@ class HyperParameterOptimizer(object):
         if specific_time:
             self.optimization_timeout = specific_time.timestamp()
         else:
-            self.optimization_timeout = (float(in_minutes) * 60.) + time() if in_minutes else None
+            self.optimization_timeout = (float(in_minutes) * 60.0) + time() if in_minutes else None
 
-    def get_time_limit(self):
-        # type: () -> datetime
+    def get_time_limit(self) -> datetime:
         """
         Return the controller optimization time limit.
 
@@ -1668,8 +1780,7 @@ class HyperParameterOptimizer(object):
         """
         return datetime.fromtimestamp(self.optimization_timeout)
 
-    def elapsed(self):
-        # type: () -> float
+    def elapsed(self) -> float:
         """
         Return minutes elapsed from controller stating time stamp.
 
@@ -1677,10 +1788,9 @@ class HyperParameterOptimizer(object):
         """
         if self.optimization_start_time is None:
             return -1.0
-        return (time() - self.optimization_start_time) / 60.
+        return (time() - self.optimization_start_time) / 60.0
 
-    def reached_time_limit(self):
-        # type: () -> bool
+    def reached_time_limit(self) -> bool:
         """
         Did the optimizer reach the time limit
 
@@ -1700,8 +1810,7 @@ class HyperParameterOptimizer(object):
 
         return time() > self.optimization_timeout
 
-    def get_top_experiments(self, top_k):
-        # type: (int) -> Sequence[Task]
+    def get_top_experiments(self, top_k: int) -> Sequence[Task]:
         """
         Return a list of Tasks of the top performing experiments, based on the controller ``Objective`` object.
 
@@ -1714,13 +1823,12 @@ class HyperParameterOptimizer(object):
         return self.optimizer.get_top_experiments(top_k=top_k)
 
     def get_top_experiments_details(
-            self,
-            top_k,
-            all_metrics=False,
-            all_hyper_parameters=False,
-            only_completed=False
-    ):
-        # type: (int, bool, bool, bool) -> Sequence[(str, dict)]
+        self,
+        top_k: int,
+        all_metrics: bool = False,
+        all_hyper_parameters: bool = False,
+        only_completed: bool = False,
+    ) -> Sequence[Union[str, dict]]:
         """
         Return a list of dictionaries of the top performing experiments.
         Example: ``[{'task_id': Task-ID, 'metrics': scalar-metric-dict, 'hyper_parameters': Hyper-Parameters},]``
@@ -1788,10 +1896,10 @@ class HyperParameterOptimizer(object):
             top_k=top_k,
             all_metrics=all_metrics,
             all_hyper_parameters=all_hyper_parameters,
-            only_completed=only_completed)
+            only_completed=only_completed,
+        )
 
-    def get_optimizer(self):
-        # type: () -> SearchStrategy
+    def get_optimizer(self) -> SearchStrategy:
         """
         Return the currently used optimizer object.
 
@@ -1799,8 +1907,7 @@ class HyperParameterOptimizer(object):
         """
         return self.optimizer
 
-    def set_default_job_class(self, job_class):
-        # type: (ClearmlJob) -> ()
+    def set_default_job_class(self, job_class: ClearmlJob) -> ():
         """
         Set the Job class to use when the optimizer spawns new Jobs.
 
@@ -1808,8 +1915,7 @@ class HyperParameterOptimizer(object):
         """
         self.optimizer.set_job_class(job_class)
 
-    def set_report_period(self, report_period_minutes):
-        # type: (float) -> ()
+    def set_report_period(self, report_period_minutes: float) -> ():
         """
         Set reporting period for the accumulated objective report (minutes). This report is sent on the Optimizer Task,
         and collects the Objective metric from all running jobs.
@@ -1820,14 +1926,13 @@ class HyperParameterOptimizer(object):
 
     @classmethod
     def get_optimizer_top_experiments(
-            cls,
-            objective_metric_title,  # type: Union[str, List[str]]
-            objective_metric_series,  # type: Union[str, List[str]]
-            objective_metric_sign,  # type: Union[str, List[str]]
-            optimizer_task_id,  # type: str
-            top_k,  # type: int
-    ):
-        # type: (...) -> Sequence[Task]
+        cls,
+        objective_metric_title: Union[str, List[str]],
+        objective_metric_series: Union[str, List[str]],
+        objective_metric_sign: Union[str, List[str]],
+        optimizer_task_id: str,
+        top_k: int,
+    ) -> Sequence[Task]:
         """
         Return a list of Tasks of the top performing experiments
         for a specific HyperParameter Optimization session (i.e. Task ID), based on the title/series objective.
@@ -1847,84 +1952,106 @@ class HyperParameterOptimizer(object):
         :return: A list of Task objects, ordered by performance, where index 0 is the best performing Task.
         """
         objective = Objective(
-            title=objective_metric_title, series=objective_metric_series, order=objective_metric_sign)
+            title=objective_metric_title,
+            series=objective_metric_series,
+            order=objective_metric_sign,
+        )
         return objective.get_top_tasks(top_k=top_k, optimizer_task_id=optimizer_task_id)
 
     @property
-    def objective_metric(self):
+    def objective_metric(self) -> Union[Objective, MultiObjective]:
         if self._objective_metric.len == 1:
             return self._objective_metric.objectives[0]
         return self._objective_metric
 
-    def _connect_args(self, optimizer_class=None, hyper_param_configuration=None, **kwargs):
-        # type: (SearchStrategy, dict, Any) -> (SearchStrategy, list, dict)
+    def _connect_args(
+        self, optimizer_class: SearchStrategy = None, hyper_param_configuration: dict = None, **kwargs: Any
+    ) -> (SearchStrategy, list, dict):
         if not self._task or self._readonly_task:
-            logger.warning('Auto Connect turned on but no Task was found, '
-                           'hyper-parameter optimization argument logging disabled')
+            logger.warning(
+                "Auto Connect turned on but no Task was found, "
+                "hyper-parameter optimization argument logging disabled"
+            )
             return optimizer_class, hyper_param_configuration, kwargs
 
-        configuration_dict = {'parameter_optimization_space': [c.to_dict() for c in hyper_param_configuration]}
+        configuration_dict = {"parameter_optimization_space": [c.to_dict() for c in hyper_param_configuration]}
         self._task.connect_configuration(configuration_dict)
         # this is the conversion back magic:
-        configuration_dict = {'parameter_optimization_space': [
-            Parameter.from_dict(c) for c in configuration_dict['parameter_optimization_space']]}
+        configuration_dict = {
+            "parameter_optimization_space": [
+                Parameter.from_dict(c) for c in configuration_dict["parameter_optimization_space"]
+            ]
+        }
 
         complex_optimizer_kwargs = None
-        if 'optimizer_kwargs' in kwargs:
+        if "optimizer_kwargs" in kwargs:
             # do not store complex optimizer kwargs:
-            optimizer_kwargs = kwargs.pop('optimizer_kwargs', {})
+            optimizer_kwargs = kwargs.pop("optimizer_kwargs", {})
             complex_optimizer_kwargs = {
-                k: v for k, v in optimizer_kwargs.items()
-                if not isinstance(v, six.string_types + six.integer_types +
-                                  (six.text_type, float, list, tuple, dict, type(None)))}
-            kwargs['optimizer_kwargs'] = {
-                k: v for k, v in optimizer_kwargs.items() if k not in complex_optimizer_kwargs}
+                k: v
+                for k, v in optimizer_kwargs.items()
+                if not isinstance(
+                    v,
+                    six.string_types + six.integer_types + (six.text_type, float, list, tuple, dict, type(None)),
+                )
+            }
+            kwargs["optimizer_kwargs"] = {
+                k: v for k, v in optimizer_kwargs.items() if k not in complex_optimizer_kwargs
+            }
 
         # skip non basic types:
-        arguments = {'opt': kwargs}
-        if type(optimizer_class) != type:
-            logger.warning('Auto Connect optimizer_class disabled, {} is already instantiated'.format(optimizer_class))
+        arguments = {"opt": kwargs}
+        if not isinstance(optimizer_class, type):
+            logger.warning("Auto Connect optimizer_class disabled, {} is already instantiated".format(optimizer_class))
             self._task.connect(arguments)
         else:
-            arguments['opt']['optimizer_class'] = str(optimizer_class).split('.')[-1][:-2] \
-                if not isinstance(optimizer_class, str) else optimizer_class
+            arguments["opt"]["optimizer_class"] = (
+                str(optimizer_class).split(".")[-1][:-2] if not isinstance(optimizer_class, str) else optimizer_class
+            )
             self._task.connect(arguments)
             # this is the conversion back magic:
             original_class = optimizer_class
-            optimizer_class = arguments['opt'].pop('optimizer_class', None)
-            if optimizer_class == 'RandomSearch':
+            optimizer_class = arguments["opt"].pop("optimizer_class", None)
+            if optimizer_class == "RandomSearch":
                 optimizer_class = RandomSearch
-            elif optimizer_class == 'GridSearch':
+            elif optimizer_class == "GridSearch":
                 optimizer_class = GridSearch
-            elif optimizer_class == 'OptimizerBOHB':
+            elif optimizer_class == "OptimizerBOHB":
                 from .hpbandster import OptimizerBOHB
+
                 optimizer_class = OptimizerBOHB
-            elif optimizer_class == 'OptimizerOptuna':
+            elif optimizer_class == "OptimizerOptuna":
                 from .optuna import OptimizerOptuna
+
                 optimizer_class = OptimizerOptuna
             else:
-                logger.warning("Could not resolve optimizer_class {} reverting to original class {}".format(
-                    optimizer_class, original_class))
+                logger.warning(
+                    "Could not resolve optimizer_class {} reverting to original class {}".format(
+                        optimizer_class, original_class
+                    )
+                )
                 optimizer_class = original_class
 
         if complex_optimizer_kwargs:
-            if 'optimizer_kwargs' not in arguments['opt']:
-                arguments['opt']['optimizer_kwargs'] = complex_optimizer_kwargs
+            if "optimizer_kwargs" not in arguments["opt"]:
+                arguments["opt"]["optimizer_kwargs"] = complex_optimizer_kwargs
             else:
-                arguments['opt']['optimizer_kwargs'].update(complex_optimizer_kwargs)
+                arguments["opt"]["optimizer_kwargs"].update(complex_optimizer_kwargs)
 
-        return optimizer_class, configuration_dict['parameter_optimization_space'], arguments['opt']
+        return (
+            optimizer_class,
+            configuration_dict["parameter_optimization_space"],
+            arguments["opt"],
+        )
 
-    def _daemon(self):
-        # type: () -> ()
+    def _daemon(self) -> ():
         """
         Implement the main pooling thread, calling loop every ``self.pool_period_minutes`` minutes.
         """
         self.optimizer.start()
         self._thread = None
 
-    def _report_daemon(self):
-        # type: () -> ()
+    def _report_daemon(self) -> ():
         title_series = self._objective_metric.get_objective_metric()
         title = ["{}/{}".format(ts[0], ts[1]) for ts in title_series]
         counter = 0
@@ -1934,8 +2061,7 @@ class HyperParameterOptimizer(object):
         cur_task = self._task or Task.current_task()
         if cur_task and self.optimizer:
             # noinspection PyProtectedMember
-            child_tasks = self.optimizer._get_child_tasks(
-                parent_task_id=cur_task.id, status=['completed', 'stopped'])
+            child_tasks = self.optimizer._get_child_tasks(parent_task_id=cur_task.id, status=["completed", "stopped"])
             hyper_parameters = [h.name for h in self.hyper_parameters]
             for task in child_tasks:
                 params = {k: v for k, v in task.get_parameters().items() if k in hyper_parameters}
@@ -1944,24 +2070,25 @@ class HyperParameterOptimizer(object):
                 iteration_value = task.get_last_iteration()
                 objective = self._objective_metric.get_objective(task)
                 completed_jobs[task.id] = (
-                    objective if objective is not None else (
-                            [-1] * self._objective_metric.len
-                    ),
-                    [iteration_value] * self._objective_metric.len if iteration_value is not None else (
-                            [-1] * self._objective_metric.len
-                    ),
-                    params
+                    objective if objective is not None else ([-1] * self._objective_metric.len),
+                    [iteration_value] * self._objective_metric.len
+                    if iteration_value is not None
+                    else ([-1] * self._objective_metric.len),
+                    params,
                 )
 
         while self._thread is not None:
-            timeout = self.optimization_timeout - time() if self.optimization_timeout else 0.
+            timeout = self.optimization_timeout - time() if self.optimization_timeout else 0.0
 
             if timeout >= 0:
-                timeout = min(self._report_period_min * 60., timeout if timeout else self._report_period_min * 60.)
+                timeout = min(
+                    self._report_period_min * 60.0,
+                    timeout if timeout else self._report_period_min * 60.0,
+                )
                 # make sure that we have the first report fired before we actually go to sleep, wait for 15 sec.
                 if counter <= 0:
                     timeout = 15
-                print('Progress report #{} completed, sleeping for {} minutes'.format(counter, timeout / 60.))
+                print("Progress report #{} completed, sleeping for {} minutes".format(counter, timeout / 60.0))
                 if self._stop_event.wait(timeout=timeout):
                     # wait for one last report
                     timeout = -1
@@ -1978,13 +2105,14 @@ class HyperParameterOptimizer(object):
                 self._report_remaining_budget(task_logger, counter)
 
                 if (
-                        self.optimizer.budget.compute_time.used
-                        and self.optimizer.budget.compute_time.limit
-                        and self.optimizer.budget.compute_time.used >= self.optimizer.budget.compute_time.limit
+                    self.optimizer.budget.compute_time.used
+                    and self.optimizer.budget.compute_time.limit
+                    and self.optimizer.budget.compute_time.used >= self.optimizer.budget.compute_time.limit
                 ):
                     logger.warning(
                         "Optimizer task reached compute time limit (used {:.2f} out of {:.2f})".format(
-                            self.optimizer.budget.compute_time.limit, self.optimizer.compute_time.used
+                            self.optimizer.budget.compute_time.limit,
+                            self.optimizer.compute_time.used,
                         )
                     )
                     timeout = -1
@@ -2013,7 +2141,14 @@ class HyperParameterOptimizer(object):
 
         self._auto_archive_low_performance_tasks(completed_jobs)
 
-    def _report_completed_status(self, completed_jobs, cur_completed_jobs, task_logger, title, force=False):
+    def _report_completed_status(
+        self,
+        completed_jobs: Mapping[str, Tuple[Union[List[float], float], Union[List[int], int], dict]],
+        cur_completed_jobs: Set[str],
+        task_logger: Logger,
+        title: Union[str, List[str]],
+        force: bool = False,
+    ) -> None:
         job_ids_sorted_by_objective = self.__sort_jobs_by_objective(completed_jobs)
         best_experiment = (
             (
@@ -2041,11 +2176,14 @@ class HyperParameterOptimizer(object):
                         completed_jobs[job_id] = (
                             value,
                             iteration,
-                            copy(dict(status=id_status.get(job_id), **params)))
+                            copy(dict(status=id_status.get(job_id), **params)),
+                        )
                     elif completed_jobs.get(job_id):
-                        completed_jobs[job_id] = (completed_jobs[job_id][0],
-                                                  completed_jobs[job_id][1],
-                                                  copy(dict(status=id_status.get(job_id), **params)))
+                        completed_jobs[job_id] = (
+                            completed_jobs[job_id][0],
+                            completed_jobs[job_id][1],
+                            copy(dict(status=id_status.get(job_id), **params)),
+                        )
                     pairs.append((i, completed_jobs[job_id][0]))
                     labels.append(str(completed_jobs[job_id][2])[1:-1])
                 elif value is not None and all(v is not None for v in value):
@@ -2059,18 +2197,26 @@ class HyperParameterOptimizer(object):
                     completed_jobs[job_id] = (
                         value,
                         iteration,
-                        copy(dict(status=id_status.get(job_id), **params)))
+                        copy(dict(status=id_status.get(job_id), **params)),
+                    )
                     # callback new experiment completed
                     if self._experiment_completed_cb:
                         normalized_value = self._objective_metric.get_normalized_objective(job_id)
-                        if self._objective_metric.len == 1 and normalized_value is not None and \
-                                normalized_value[0] > best_experiment[0][0]:
+                        if (
+                            self._objective_metric.len == 1
+                            and normalized_value is not None
+                            and normalized_value[0] > best_experiment[0][0]
+                        ):
                             best_experiment = normalized_value, job_id
-                        elif self._objective_metric.len != 1 and normalized_value is not None and \
-                                all(n is not None for n in normalized_value) and (best_experiment[0] == float("-inf") or
-                                                                                  MultiObjective._dominates(
-                                                                                      normalized_value,
-                                                                                      best_experiment[0])):  # noqa
+                        elif (
+                            self._objective_metric.len != 1
+                            and normalized_value is not None
+                            and all(n is not None for n in normalized_value)
+                            and (
+                                best_experiment[0] == float("-inf")
+                                or MultiObjective._dominates(normalized_value, best_experiment[0])
+                            )
+                        ):  # noqa
                             best_experiment = normalized_value, job_id
                         c = completed_jobs[job_id]
                         self._experiment_completed_cb(job_id, c[0], c[1], c[2], best_experiment[1])
@@ -2110,12 +2256,16 @@ class HyperParameterOptimizer(object):
             concat_iterations = True
             if self._objective_metric.len == 1:
                 # add the index column (task id) and the first two columns 'objective', 'iteration' then the rest
-                table_values = [['task id', 'objective', 'iteration'] + columns]
-                table_values += \
-                    [([job, completed_jobs[job][0][0], completed_jobs[job][1][0]] +
-                      [completed_jobs[job][2].get(c, '') for c in columns]) for job in job_ids_sorted_by_objective]
+                table_values = [["task id", "objective", "iteration"] + columns]
+                table_values += [
+                    (
+                        [job, completed_jobs[job][0][0], completed_jobs[job][1][0]]
+                        + [completed_jobs[job][2].get(c, "") for c in columns]
+                    )
+                    for job in job_ids_sorted_by_objective
+                ]
             else:
-                table_values = ['task id']
+                table_values = ["task id"]
                 for job in job_ids_sorted_by_objective:
                     if not all(iter_ == completed_jobs[job][1][0] for iter_ in completed_jobs[job][1]):
                         concat_iterations = False
@@ -2130,7 +2280,7 @@ class HyperParameterOptimizer(object):
                         for val in completed_jobs[job][0]:
                             entry += [val]
                         entry += [completed_jobs[job][1][0]]
-                        entry += [completed_jobs[job][2].get(c, '') for c in columns]
+                        entry += [completed_jobs[job][2].get(c, "") for c in columns]
                         table_values.append(entry)
                 else:
                     for objective in self._objective_metric.objectives:
@@ -2141,21 +2291,23 @@ class HyperParameterOptimizer(object):
                         entry = [job]
                         for val, iter_ in zip(completed_jobs[job][0], completed_jobs[job][1]):
                             entry += [val, iter_]
-                        entry += [completed_jobs[job][2].get(c, '') for c in columns]
+                        entry += [completed_jobs[job][2].get(c, "") for c in columns]
                         table_values.append(entry)
 
             # create links for task id in the table
-            task_link_template = self._task.get_output_log_web_page() \
-                .replace('/{}/'.format(self._task.project), '/{project}/') \
-                .replace('/{}/'.format(self._task.id), '/{task}/')
+            task_link_template = (
+                self._task.get_output_log_web_page()
+                .replace("/{}/".format(self._task.project), "/{project}/")
+                .replace("/{}/".format(self._task.id), "/{task}/")
+            )
             # create links for task id in the table
             table_values_with_links = deepcopy(table_values)
             for i in range(1, len(table_values_with_links)):
                 task_id = table_values_with_links[i][0]
-                project_id = created_jobs_tasks[task_id].task.project \
-                    if task_id in created_jobs_tasks else '*'
+                project_id = created_jobs_tasks[task_id].task.project if task_id in created_jobs_tasks else "*"
                 table_values_with_links[i][0] = '<a href="{}"> {} </a>'.format(
-                    task_link_template.format(project=project_id, task=task_id), task_id)
+                    task_link_template.format(project=project_id, task=task_id), task_id
+                )
 
             task_logger.report_table(
                 "summary",
@@ -2171,9 +2323,11 @@ class HyperParameterOptimizer(object):
             if len(table_values) > 1:
                 table_values_columns = [[row[i] for row in table_values] for i in range(len(table_values[0]))]
                 if self._objective_metric.len == 1:
-                    table_values_columns = \
-                        [[table_values_columns[0][0]] + [c[:6] + '...' for c in table_values_columns[0][1:]]] + \
-                        table_values_columns[2:-1] + [[title] + table_values_columns[1][1:]]
+                    table_values_columns = (
+                        [[table_values_columns[0][0]] + [c[:6] + "..." for c in table_values_columns[0][1:]]]
+                        + table_values_columns[2:-1]
+                        + [[title] + table_values_columns[1][1:]]
+                    )
                 else:
                     if not concat_iterations:
                         new_table_values_columns = []
@@ -2188,10 +2342,11 @@ class HyperParameterOptimizer(object):
                             prefix.append(table_values_columns[i])
                         table_values_columns = prefix + new_table_values_columns
                     else:
-                        table_values_columns = ([table_values_columns[0]] +
-                                                table_values_columns[len(self._objective_metric.objectives) + 1:-1] +
-                                                table_values_columns[1:len(self._objective_metric.objectives) + 1]
-                                                )
+                        table_values_columns = (
+                            [table_values_columns[0]]
+                            + table_values_columns[len(self._objective_metric.objectives) + 1 : -1]
+                            + table_values_columns[1 : len(self._objective_metric.objectives) + 1]
+                        )
                     for i in range(len(table_values_columns[0]) - 1):
                         table_values_columns[0][i + 1] = table_values_columns[0][i + 1][:6] + "..."
                 pcc_dims = []
@@ -2229,15 +2384,20 @@ class HyperParameterOptimizer(object):
                     ],
                     layout={},
                 )
-                task_logger.report_plotly(title="Parallel Coordinates", series="", iteration=0, figure=plotly_pcc)
+                task_logger.report_plotly(
+                    title="Parallel Coordinates",
+                    series="",
+                    iteration=0,
+                    figure=plotly_pcc,
+                )
 
             # upload summary as artifact
             if force:
                 task = self._task or Task.current_task()
                 if task:
-                    task.upload_artifact(name='summary', artifact_object={'table': table_values})
+                    task.upload_artifact(name="summary", artifact_object={"table": table_values})
 
-    def _report_remaining_budget(self, task_logger, counter):
+    def _report_remaining_budget(self, task_logger: Logger, counter: int) -> None:
         # noinspection PyBroadException
         try:
             budget = self.optimizer.budget.to_dict()
@@ -2246,18 +2406,34 @@ class HyperParameterOptimizer(object):
         # report remaining budget
         for budget_part, value in budget.items():
             task_logger.report_scalar(
-                title='remaining budget', series='{} %'.format(budget_part),
-                iteration=counter, value=round(100 - value['used'] * 100., ndigits=1))
+                title="remaining budget",
+                series="{} %".format(budget_part),
+                iteration=counter,
+                value=round(100 - value["used"] * 100.0, ndigits=1),
+            )
         if self.optimization_timeout and self.optimization_start_time:
             task_logger.report_scalar(
-                title='remaining budget', series='time %',
+                title="remaining budget",
+                series="time %",
                 iteration=counter,
-                value=round(100 - (100. * (time() - self.optimization_start_time) /
-                                   (self.optimization_timeout - self.optimization_start_time)), ndigits=1)
+                value=round(
+                    100
+                    - (
+                        100.0
+                        * (time() - self.optimization_start_time)
+                        / (self.optimization_timeout - self.optimization_start_time)
+                    ),
+                    ndigits=1,
+                ),
             )
 
-    def _report_completed_tasks_best_results(self, completed_jobs, task_logger, title, counter):
-        # type: (Set[str], Logger, str, int) -> ()
+    def _report_completed_tasks_best_results(
+        self,
+        completed_jobs: Set[str],
+        task_logger: Logger,
+        title: str,
+        counter: int,
+    ) -> ():
         if not completed_jobs:
             return
 
@@ -2273,16 +2449,17 @@ class HyperParameterOptimizer(object):
                 val = value_func(obj_values)
                 task_logger.report_scalar(title=title_, series=series_name, iteration=counter, value=val)
                 task_logger.report_scalar(
-                    title=title_, series="last reported", iteration=counter, value=latest_completed
+                    title=title_,
+                    series="last reported",
+                    iteration=counter,
+                    value=latest_completed,
                 )
 
-    def _report_resources(self, task_logger, iteration):
-        # type: (Logger, int) -> ()
+    def _report_resources(self, task_logger: Logger, iteration: int) -> ():
         self._report_active_workers(task_logger, iteration)
         self._report_tasks_status(task_logger, iteration)
 
-    def _report_active_workers(self, task_logger, iteration):
-        # type: (Logger, int) -> ()
+    def _report_active_workers(self, task_logger: Logger, iteration: int) -> ():
         res = self.__get_session().send(workers_service.GetAllRequest())
         response = res.wait()
         if response.ok():
@@ -2295,13 +2472,14 @@ class HyperParameterOptimizer(object):
                     if q.get("name") == self.execution_queue
                 ]
             )
-            task_logger.report_scalar(title="resources",
-                                      series="queue workers",
-                                      iteration=iteration,
-                                      value=queue_workers)
+            task_logger.report_scalar(
+                title="resources",
+                series="queue workers",
+                iteration=iteration,
+                value=queue_workers,
+            )
 
-    def _report_tasks_status(self, task_logger, iteration):
-        # type: (Logger, int) -> ()
+    def _report_tasks_status(self, task_logger: Logger, iteration: int) -> ():
         tasks_status = {"running tasks": 0, "pending tasks": 0}
         for job in self.optimizer.get_running_jobs():
             if job.is_running():
@@ -2309,12 +2487,15 @@ class HyperParameterOptimizer(object):
             else:
                 tasks_status["pending tasks"] += 1
         for series, val in tasks_status.items():
-            task_logger.report_scalar(
-                title="resources", series=series,
-                iteration=iteration, value=val)
+            task_logger.report_scalar(title="resources", series=series, iteration=iteration, value=val)
 
-    def _get_latest_completed_task_value(self, cur_completed_jobs, series_name, title, series):
-        # type: (Set[str], str) -> (float, List[float])
+    def _get_latest_completed_task_value(
+        self,
+        cur_completed_jobs: Set[str],
+        series_name: str,
+        title: str,
+        series: str,
+    ) -> Tuple[Optional[float], List[float]]:
         completed_value = None
         latest_completed = None
         obj_values = []
@@ -2327,18 +2508,20 @@ class HyperParameterOptimizer(object):
             completed_time = datetime_from_isoformat(response.response_data["task"]["completed"].partition("+")[0])
             completed_time = completed_time.timestamp()
             completed_values = self._get_last_value(response, title, series)
-            obj_values.append(completed_values['max_value'] if series_name == "max" else completed_values['min_value'])
+            obj_values.append(completed_values["max_value"] if series_name == "max" else completed_values["min_value"])
             if not latest_completed or completed_time > latest_completed:
                 latest_completed = completed_time
-                completed_value = completed_values['value']
+                completed_value = completed_values["value"]
         return completed_value, obj_values
 
-    def _get_last_value(self, response, title, series):
+    def _get_last_value(self, response: Any, title: str, series: str) -> Any:
         metrics, title, series, values = ClearmlJob.get_metric_req_params(title, series)
-        last_values = response.response_data["task"]['last_metrics'][title][series]
+        last_values = response.response_data["task"]["last_metrics"][title][series]
         return last_values
 
-    def _auto_archive_low_performance_tasks(self, completed_jobs):
+    def _auto_archive_low_performance_tasks(
+        self, completed_jobs: Mapping[str, Tuple[List[float], List[int], dict]]
+    ) -> None:
         if self._save_top_k_tasks_only <= 0:
             return
 
@@ -2346,41 +2529,51 @@ class HyperParameterOptimizer(object):
         job_ids_sorted_by_objective = self.__sort_jobs_by_objective(completed_jobs)
 
         # query system_tags only
-        res = self.__get_session().send(tasks_service.GetAllRequest(
-            id=job_ids_sorted_by_objective, status=['completed', 'stopped'], only_fields=['id', 'system_tags']))
+        res = self.__get_session().send(
+            tasks_service.GetAllRequest(
+                id=job_ids_sorted_by_objective,
+                status=["completed", "stopped"],
+                only_fields=["id", "system_tags"],
+            )
+        )
         response = res.wait()
         if not response.ok():
             return
 
         tasks_system_tags_lookup = {
-            task.get("id"): task.get("system_tags") for task in response.response_data.get("tasks")}
+            task.get("id"): task.get("system_tags") for task in response.response_data.get("tasks")
+        }
         for i, task_id in enumerate(job_ids_sorted_by_objective):
             system_tags = tasks_system_tags_lookup.get(task_id, [])
             if i < self._save_top_k_tasks_only and Task.archived_tag in system_tags:
-                print('Restoring from archive Task id={} (#{} objective={})'.format(
-                    task_id, i, completed_jobs[task_id][0]))
+                print(
+                    "Restoring from archive Task id={} (#{} objective={})".format(
+                        task_id, i, completed_jobs[task_id][0]
+                    )
+                )
                 # top_k task and is archived, remove archive tag
                 system_tags = list(set(system_tags) - {Task.archived_tag})
                 res = self.__get_session().send(
-                    tasks_service.EditRequest(task=task_id, system_tags=system_tags, force=True))
+                    tasks_service.EditRequest(task=task_id, system_tags=system_tags, force=True)
+                )
                 res.wait()
             elif i >= self._save_top_k_tasks_only and Task.archived_tag not in system_tags:
-                print('Archiving Task id={} (#{} objective={})'.format(
-                    task_id, i, completed_jobs[task_id][0]))
+                print("Archiving Task id={} (#{} objective={})".format(task_id, i, completed_jobs[task_id][0]))
                 # Not in top_k task and not archived, add archive tag
                 system_tags = list(set(system_tags) | {Task.archived_tag})
                 res = self.__get_session().send(
-                    tasks_service.EditRequest(task=task_id, system_tags=system_tags, force=True))
+                    tasks_service.EditRequest(task=task_id, system_tags=system_tags, force=True)
+                )
                 res.wait()
 
-    def __get_session(self):
+    def __get_session(self) -> Session:
         cur_task = self._task or Task.current_task()
         if cur_task:
             return cur_task.default_session
         # noinspection PyProtectedMember
         return Task._get_default_session()
 
-    def __sort_jobs_by_objective(self, completed_jobs):
+    def __sort_jobs_by_objective(self, completed_jobs: Mapping[str, Tuple[List[float], List[int], dict]]) -> List[str]:
         if not completed_jobs:
             return []
         if self._objective_metric.len != 1:

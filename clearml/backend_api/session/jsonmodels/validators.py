@@ -1,5 +1,6 @@
 """Predefined validators."""
 import re
+from typing import Any
 
 from six.moves import reduce
 
@@ -8,10 +9,9 @@ from . import utilities
 
 
 class Min(object):
-
     """Validator for minimum value."""
 
-    def __init__(self, minimum_value, exclusive=False):
+    def __init__(self, minimum_value: Any, exclusive: bool = False) -> None:
         """Init.
 
         :param minimum_value: Minimum value for validator.
@@ -22,31 +22,29 @@ class Min(object):
         self.minimum_value = minimum_value
         self.exclusive = exclusive
 
-    def validate(self, value):
+    def validate(self, value: Any) -> None:
         """Validate value."""
         if self.exclusive:
             if value <= self.minimum_value:
                 tpl = "'{value}' is lower or equal than minimum ('{min}')."
-                raise ValidationError(
-                    tpl.format(value=value, min=self.minimum_value))
+                raise ValidationError(tpl.format(value=value, min=self.minimum_value))
         else:
             if value < self.minimum_value:
                 raise ValidationError(
-                    "'{value}' is lower than minimum ('{min}').".format(
-                        value=value, min=self.minimum_value))
+                    "'{value}' is lower than minimum ('{min}').".format(value=value, min=self.minimum_value)
+                )
 
-    def modify_schema(self, field_schema):
+    def modify_schema(self, field_schema: dict) -> None:
         """Modify field schema."""
-        field_schema['minimum'] = self.minimum_value
+        field_schema["minimum"] = self.minimum_value
         if self.exclusive:
-            field_schema['exclusiveMinimum'] = True
+            field_schema["exclusiveMinimum"] = True
 
 
 class Max(object):
-
     """Validator for maximum value."""
 
-    def __init__(self, maximum_value, exclusive=False):
+    def __init__(self, maximum_value: Any, exclusive: bool = False) -> None:
         """Init.
 
         :param maximum_value: Maximum value for validator.
@@ -57,36 +55,34 @@ class Max(object):
         self.maximum_value = maximum_value
         self.exclusive = exclusive
 
-    def validate(self, value):
+    def validate(self, value: Any) -> None:
         """Validate value."""
         if self.exclusive:
             if value >= self.maximum_value:
                 tpl = "'{val}' is bigger or equal than maximum ('{max}')."
-                raise ValidationError(
-                    tpl.format(val=value, max=self.maximum_value))
+                raise ValidationError(tpl.format(val=value, max=self.maximum_value))
         else:
             if value > self.maximum_value:
                 raise ValidationError(
-                    "'{value}' is bigger than maximum ('{max}').".format(
-                        value=value, max=self.maximum_value))
+                    "'{value}' is bigger than maximum ('{max}').".format(value=value, max=self.maximum_value)
+                )
 
-    def modify_schema(self, field_schema):
+    def modify_schema(self, field_schema: dict) -> None:
         """Modify field schema."""
-        field_schema['maximum'] = self.maximum_value
+        field_schema["maximum"] = self.maximum_value
         if self.exclusive:
-            field_schema['exclusiveMaximum'] = True
+            field_schema["exclusiveMaximum"] = True
 
 
 class Regex(object):
-
     """Validator for regular expressions."""
 
     FLAGS = {
-        'ignorecase': re.I,
-        'multiline': re.M,
+        "ignorecase": re.I,
+        "multiline": re.M,
     }
 
-    def __init__(self, pattern, **flags):
+    def __init__(self, pattern: str, **flags: Any) -> None:
         """Init.
 
         Note, that if given pattern is ECMA regex, given flags will be
@@ -106,10 +102,9 @@ class Regex(object):
             self.pattern, self.flags = result
         else:
             self.pattern = pattern
-            self.flags = [self.FLAGS[key] for key, value in flags.items()
-                          if key in self.FLAGS and value]
+            self.flags = [self.FLAGS[key] for key, value in flags.items() if key in self.FLAGS and value]
 
-    def validate(self, value):
+    def validate(self, value: str) -> None:
         """Validate value."""
         flags = self._calculate_flags()
 
@@ -120,24 +115,21 @@ class Regex(object):
 
         if not result:
             raise ValidationError(
-                'Value "{value}" did not match pattern "{pattern}".'.format(
-                    value=value, pattern=self.pattern
-                ))
+                'Value "{value}" did not match pattern "{pattern}".'.format(value=value, pattern=self.pattern)
+            )
 
-    def _calculate_flags(self):
+    def _calculate_flags(self) -> int:
         return reduce(lambda x, y: x | y, self.flags, 0)
 
-    def modify_schema(self, field_schema):
+    def modify_schema(self, field_schema: dict) -> None:
         """Modify field schema."""
-        field_schema['pattern'] = utilities.convert_python_regex_to_ecma(
-            self.pattern, self.flags)
+        field_schema["pattern"] = utilities.convert_python_regex_to_ecma(self.pattern, self.flags)
 
 
 class Length(object):
-
     """Validator for length."""
 
-    def __init__(self, minimum_value=None, maximum_value=None):
+    def __init__(self, minimum_value: int = None, maximum_value: int = None) -> None:
         """Init.
 
         Note that if no `minimum_value` neither `maximum_value` will be
@@ -148,21 +140,18 @@ class Length(object):
 
         """
         if minimum_value is None and maximum_value is None:
-            raise ValueError(
-                "Either 'minimum_value' or 'maximum_value' must be specified.")
+            raise ValueError("Either 'minimum_value' or 'maximum_value' must be specified.")
 
         self.minimum_value = minimum_value
         self.maximum_value = maximum_value
 
-    def validate(self, value):
+    def validate(self, value: Any) -> None:
         """Validate value."""
         len_ = len(value)
 
         if self.minimum_value is not None and len_ < self.minimum_value:
             tpl = "Value '{val}' length is lower than allowed minimum '{min}'."
-            raise ValidationError(tpl.format(
-                val=value, min=self.minimum_value
-            ))
+            raise ValidationError(tpl.format(val=value, min=self.minimum_value))
 
         if self.maximum_value is not None and len_ > self.maximum_value:
             raise ValidationError(
@@ -170,22 +159,22 @@ class Length(object):
                 "allowed maximum '{max}'.".format(
                     val=value,
                     max=self.maximum_value,
-                ))
+                )
+            )
 
-    def modify_schema(self, field_schema):
+    def modify_schema(self, field_schema: dict) -> None:
         """Modify field schema."""
         if self.minimum_value:
-            field_schema['minLength'] = self.minimum_value
+            field_schema["minLength"] = self.minimum_value
 
         if self.maximum_value:
-            field_schema['maxLength'] = self.maximum_value
+            field_schema["maxLength"] = self.maximum_value
 
 
 class Enum(object):
-
     """Validator for enums."""
 
-    def __init__(self, *choices):
+    def __init__(self, *choices: Any) -> None:
         """Init.
 
         :param [] choices: Valid choices for the field.
@@ -193,10 +182,10 @@ class Enum(object):
 
         self.choices = list(choices)
 
-    def validate(self, value):
+    def validate(self, value: Any) -> None:
         if value not in self.choices:
             tpl = "Value '{val}' is not a valid choice."
             raise ValidationError(tpl.format(val=value))
 
-    def modify_schema(self, field_schema):
-        field_schema['enum'] = self.choices
+    def modify_schema(self, field_schema: dict) -> None:
+        field_schema["enum"] = self.choices

@@ -3,12 +3,11 @@ tasks service
 
 Provides a management API for tasks in the system.
 """
+from typing import List, Optional, Union, Any
 import six
 from datetime import datetime
 import enum
-
 from dateutil.parser import parse as parse_datetime
-
 from clearml.backend_api.session import (
     Request,
     BatchRequest,
@@ -42,36 +41,33 @@ class MultiFieldPatternData(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, pattern=None, fields=None, **kwargs):
+    def __init__(self, pattern: Optional[str] = None, fields: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(MultiFieldPatternData, self).__init__(**kwargs)
         self.pattern = pattern
         self.fields = fields
 
     @schema_property("pattern")
-    def pattern(self):
+    def pattern(self) -> Optional[str]:
         return self._property_pattern
 
     @pattern.setter
-    def pattern(self, value):
+    def pattern(self, value: Optional[str]) -> None:
         if value is None:
             self._property_pattern = None
             return
-
         self.assert_isinstance(value, "pattern", six.string_types)
         self._property_pattern = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[List[str]]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (list, tuple))
-
         self.assert_isinstance(value, "fields", six.string_types, is_array=True)
         self._property_fields = value
 
@@ -98,34 +94,32 @@ class TaskModelItem(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, name, model, **kwargs):
+    def __init__(self, name: str, model: str, **kwargs: Any) -> None:
         super(TaskModelItem, self).__init__(**kwargs)
         self.name = name
         self.model = model
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> str:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("model")
-    def model(self):
+    def model(self) -> str:
         return self._property_model
 
     @model.setter
-    def model(self, value):
+    def model(self, value: str) -> None:
         if value is None:
             self._property_model = None
             return
-
         self.assert_isinstance(value, "model", six.string_types)
         self._property_model = value
 
@@ -163,9 +157,7 @@ class Script(NonStrictDataModel):
                 "type": ["string", "null"],
             },
             "branch": {
-                "description": (
-                    "Repository branch id If not provided and tag not provided, default repository branch is used."
-                ),
+                "description": "Repository branch id If not provided and tag not provided, default repository branch is used.",
                 "type": ["string", "null"],
             },
             "diff": {
@@ -186,9 +178,7 @@ class Script(NonStrictDataModel):
             },
             "tag": {"description": "Repository tag", "type": ["string", "null"]},
             "version_num": {
-                "description": (
-                    "Version (changeset) number. Optional (default is head version) Unused if tag is provided."
-                ),
+                "description": "Version (changeset) number. Optional (default is head version) Unused if tag is provided.",
                 "type": ["string", "null"],
             },
             "working_dir": {
@@ -201,17 +191,17 @@ class Script(NonStrictDataModel):
 
     def __init__(
         self,
-        binary="python",
-        repository=None,
-        tag=None,
-        branch=None,
-        version_num=None,
-        entry_point=None,
-        working_dir=None,
-        requirements=None,
-        diff=None,
-        **kwargs
-    ):
+        binary: Optional[str] = "python",
+        repository: Optional[str] = None,
+        tag: Optional[str] = None,
+        branch: Optional[str] = None,
+        version_num: Optional[str] = None,
+        entry_point: Optional[str] = None,
+        working_dir: Optional[str] = None,
+        requirements: Optional[dict] = None,
+        diff: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(Script, self).__init__(**kwargs)
         self.binary = binary
         self.repository = repository
@@ -224,119 +214,110 @@ class Script(NonStrictDataModel):
         self.diff = diff
 
     @schema_property("binary")
-    def binary(self):
+    def binary(self) -> Optional[str]:
         return self._property_binary
 
     @binary.setter
-    def binary(self, value):
+    def binary(self, value: Optional[str]) -> None:
         if value is None:
             self._property_binary = None
             return
-
         self.assert_isinstance(value, "binary", six.string_types)
         self._property_binary = value
 
     @schema_property("repository")
-    def repository(self):
+    def repository(self) -> Optional[str]:
         return self._property_repository
 
     @repository.setter
-    def repository(self, value):
+    def repository(self, value: Optional[str]) -> None:
         if value is None:
             self._property_repository = None
             return
-
         self.assert_isinstance(value, "repository", six.string_types)
         self._property_repository = value
 
     @schema_property("tag")
-    def tag(self):
+    def tag(self) -> Optional[str]:
         return self._property_tag
 
     @tag.setter
-    def tag(self, value):
+    def tag(self, value: Optional[str]) -> None:
         if value is None:
             self._property_tag = None
             return
-
         self.assert_isinstance(value, "tag", six.string_types)
         self._property_tag = value
 
     @schema_property("branch")
-    def branch(self):
+    def branch(self) -> Optional[str]:
         return self._property_branch
 
     @branch.setter
-    def branch(self, value):
+    def branch(self, value: Optional[str]) -> None:
         if value is None:
             self._property_branch = None
             return
-
         self.assert_isinstance(value, "branch", six.string_types)
         self._property_branch = value
 
     @schema_property("version_num")
-    def version_num(self):
+    def version_num(self) -> Optional[str]:
         return self._property_version_num
 
     @version_num.setter
-    def version_num(self, value):
+    def version_num(self, value: Optional[str]) -> None:
         if value is None:
             self._property_version_num = None
             return
-
         self.assert_isinstance(value, "version_num", six.string_types)
         self._property_version_num = value
 
     @schema_property("entry_point")
-    def entry_point(self):
+    def entry_point(self) -> Optional[str]:
         return self._property_entry_point
 
     @entry_point.setter
-    def entry_point(self, value):
+    def entry_point(self, value: Optional[str]) -> None:
         if value is None:
             self._property_entry_point = None
             return
-
         self.assert_isinstance(value, "entry_point", six.string_types)
         self._property_entry_point = value
 
     @schema_property("working_dir")
-    def working_dir(self):
+    def working_dir(self) -> Optional[str]:
         return self._property_working_dir
 
     @working_dir.setter
-    def working_dir(self, value):
+    def working_dir(self, value: Optional[str]) -> None:
         if value is None:
             self._property_working_dir = None
             return
-
         self.assert_isinstance(value, "working_dir", six.string_types)
         self._property_working_dir = value
 
     @schema_property("requirements")
-    def requirements(self):
+    def requirements(self) -> Optional[dict]:
         return self._property_requirements
 
     @requirements.setter
-    def requirements(self, value):
+    def requirements(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_requirements = None
             return
-
         self.assert_isinstance(value, "requirements", (dict,))
         self._property_requirements = value
 
     @schema_property("diff")
-    def diff(self):
+    def diff(self) -> Optional[str]:
         return self._property_diff
 
     @diff.setter
-    def diff(self, value):
+    def diff(self, value: Optional[str]) -> None:
         if value is None:
             self._property_diff = None
             return
-
         self.assert_isinstance(value, "diff", six.string_types)
         self._property_diff = value
 
@@ -369,7 +350,14 @@ class Output(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, destination=None, model=None, result=None, error=None, **kwargs):
+    def __init__(
+        self,
+        destination: Optional[str] = None,
+        model: Optional[str] = None,
+        result: Optional[str] = None,
+        error: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(Output, self).__init__(**kwargs)
         self.destination = destination
         self.model = model
@@ -377,54 +365,50 @@ class Output(NonStrictDataModel):
         self.error = error
 
     @schema_property("destination")
-    def destination(self):
+    def destination(self) -> Optional[str]:
         return self._property_destination
 
     @destination.setter
-    def destination(self, value):
+    def destination(self, value: Optional[str]) -> None:
         if value is None:
             self._property_destination = None
             return
-
         self.assert_isinstance(value, "destination", six.string_types)
         self._property_destination = value
 
     @schema_property("model")
-    def model(self):
+    def model(self) -> Optional[str]:
         return self._property_model
 
     @model.setter
-    def model(self, value):
+    def model(self, value: Optional[str]) -> None:
         if value is None:
             self._property_model = None
             return
-
         self.assert_isinstance(value, "model", six.string_types)
         self._property_model = value
 
     @schema_property("result")
-    def result(self):
+    def result(self) -> Optional[str]:
         return self._property_result
 
     @result.setter
-    def result(self, value):
+    def result(self, value: Optional[str]) -> None:
         if value is None:
             self._property_result = None
             return
-
         self.assert_isinstance(value, "result", six.string_types)
         self._property_result = value
 
     @schema_property("error")
-    def error(self):
+    def error(self) -> Optional[str]:
         return self._property_error
 
     @error.setter
-    def error(self, value):
+    def error(self, value: Optional[str]) -> None:
         if value is None:
             self._property_error = None
             return
-
         self.assert_isinstance(value, "error", six.string_types)
         self._property_error = value
 
@@ -457,48 +441,51 @@ class ArtifactTypeData(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, preview=None, content_type=None, data_hash=None, **kwargs):
+    def __init__(
+        self,
+        preview: Optional[str] = None,
+        content_type: Optional[str] = None,
+        data_hash: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(ArtifactTypeData, self).__init__(**kwargs)
         self.preview = preview
         self.content_type = content_type
         self.data_hash = data_hash
 
     @schema_property("preview")
-    def preview(self):
+    def preview(self) -> Optional[str]:
         return self._property_preview
 
     @preview.setter
-    def preview(self, value):
+    def preview(self, value: Optional[str]) -> None:
         if value is None:
             self._property_preview = None
             return
-
         self.assert_isinstance(value, "preview", six.string_types)
         self._property_preview = value
 
     @schema_property("content_type")
-    def content_type(self):
+    def content_type(self) -> Optional[str]:
         return self._property_content_type
 
     @content_type.setter
-    def content_type(self, value):
+    def content_type(self, value: Optional[str]) -> None:
         if value is None:
             self._property_content_type = None
             return
-
         self.assert_isinstance(value, "content_type", six.string_types)
         self._property_content_type = value
 
     @schema_property("data_hash")
-    def data_hash(self):
+    def data_hash(self) -> Optional[str]:
         return self._property_data_hash
 
     @data_hash.setter
-    def data_hash(self, value):
+    def data_hash(self, value: Optional[str]) -> None:
         if value is None:
             self._property_data_hash = None
             return
-
         self.assert_isinstance(value, "data_hash", six.string_types)
         self._property_data_hash = value
 
@@ -564,17 +551,17 @@ class Artifact(NonStrictDataModel):
 
     def __init__(
         self,
-        key,
-        type,
-        mode=None,
-        uri=None,
-        content_size=None,
-        hash=None,
-        timestamp=None,
-        type_data=None,
-        display_data=None,
-        **kwargs
-    ):
+        key: str,
+        type: str,
+        mode: Any = None,
+        uri: Optional[str] = None,
+        content_size: Optional[int] = None,
+        hash: Optional[str] = None,
+        timestamp: Optional[int] = None,
+        type_data: Any = None,
+        display_data: Optional[List[List[str]]] = None,
+        **kwargs: Any
+    ) -> None:
         super(Artifact, self).__init__(**kwargs)
         self.key = key
         self.type = type
@@ -587,37 +574,35 @@ class Artifact(NonStrictDataModel):
         self.display_data = display_data
 
     @schema_property("key")
-    def key(self):
+    def key(self) -> str:
         return self._property_key
 
     @key.setter
-    def key(self, value):
+    def key(self, value: str) -> None:
         if value is None:
             self._property_key = None
             return
-
         self.assert_isinstance(value, "key", six.string_types)
         self._property_key = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> str:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: str) -> None:
         if value is None:
             self._property_type = None
             return
-
         self.assert_isinstance(value, "type", six.string_types)
         self._property_type = value
 
     @schema_property("mode")
-    def mode(self):
+    def mode(self) -> Any:
         return self._property_mode
 
     @mode.setter
-    def mode(self, value):
+    def mode(self, value: Any) -> None:
         if value is None:
             self._property_mode = None
             return
@@ -631,67 +616,63 @@ class Artifact(NonStrictDataModel):
         self._property_mode = value
 
     @schema_property("uri")
-    def uri(self):
+    def uri(self) -> Optional[str]:
         return self._property_uri
 
     @uri.setter
-    def uri(self, value):
+    def uri(self, value: Optional[str]) -> None:
         if value is None:
             self._property_uri = None
             return
-
         self.assert_isinstance(value, "uri", six.string_types)
         self._property_uri = value
 
     @schema_property("content_size")
-    def content_size(self):
+    def content_size(self) -> Optional[int]:
         return self._property_content_size
 
     @content_size.setter
-    def content_size(self, value):
+    def content_size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_content_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "content_size", six.integer_types)
         self._property_content_size = value
 
     @schema_property("hash")
-    def hash(self):
+    def hash(self) -> Optional[str]:
         return self._property_hash
 
     @hash.setter
-    def hash(self, value):
+    def hash(self, value: Optional[str]) -> None:
         if value is None:
             self._property_hash = None
             return
-
         self.assert_isinstance(value, "hash", six.string_types)
         self._property_hash = value
 
     @schema_property("timestamp")
-    def timestamp(self):
+    def timestamp(self) -> Optional[int]:
         return self._property_timestamp
 
     @timestamp.setter
-    def timestamp(self, value):
+    def timestamp(self, value: Optional[int]) -> None:
         if value is None:
             self._property_timestamp = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "timestamp", six.integer_types)
         self._property_timestamp = value
 
     @schema_property("type_data")
-    def type_data(self):
+    def type_data(self) -> Any:
         return self._property_type_data
 
     @type_data.setter
-    def type_data(self, value):
+    def type_data(self, value: Any) -> None:
         if value is None:
             self._property_type_data = None
             return
@@ -702,17 +683,15 @@ class Artifact(NonStrictDataModel):
         self._property_type_data = value
 
     @schema_property("display_data")
-    def display_data(self):
+    def display_data(self) -> Optional[List[List[str]]]:
         return self._property_display_data
 
     @display_data.setter
-    def display_data(self, value):
+    def display_data(self, value: Optional[List[List[str]]]) -> None:
         if value is None:
             self._property_display_data = None
             return
-
         self.assert_isinstance(value, "display_data", (list, tuple))
-
         self.assert_isinstance(value, "display_data", (list, tuple), is_array=True)
         self._property_display_data = value
 
@@ -737,30 +716,29 @@ class ArtifactId(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, key, mode=None, **kwargs):
+    def __init__(self, key: str, mode: Any = None, **kwargs: Any) -> None:
         super(ArtifactId, self).__init__(**kwargs)
         self.key = key
         self.mode = mode
 
     @schema_property("key")
-    def key(self):
+    def key(self) -> str:
         return self._property_key
 
     @key.setter
-    def key(self, value):
+    def key(self, value: str) -> None:
         if value is None:
             self._property_key = None
             return
-
         self.assert_isinstance(value, "key", six.string_types)
         self._property_key = value
 
     @schema_property("mode")
-    def mode(self):
+    def mode(self) -> Any:
         return self._property_mode
 
     @mode.setter
-    def mode(self, value):
+    def mode(self, value: Any) -> None:
         if value is None:
             self._property_mode = None
             return
@@ -798,40 +776,38 @@ class TaskModels(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, input=None, output=None, **kwargs):
+    def __init__(self, input: Optional[List[Any]] = None, output: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(TaskModels, self).__init__(**kwargs)
         self.input = input
         self.output = output
 
     @schema_property("input")
-    def input(self):
+    def input(self) -> Optional[List[Any]]:
         return self._property_input
 
     @input.setter
-    def input(self, value):
+    def input(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_input = None
             return
-
         self.assert_isinstance(value, "input", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [TaskModelItem.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "input", TaskModelItem, is_array=True)
         self._property_input = value
 
     @schema_property("output")
-    def output(self):
+    def output(self) -> Optional[List[Any]]:
         return self._property_output
 
     @output.setter
-    def output(self, value):
+    def output(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_output = None
             return
-
         self.assert_isinstance(value, "output", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [TaskModelItem.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "output", TaskModelItem, is_array=True)
@@ -875,11 +851,7 @@ class Execution(NonStrictDataModel):
             },
             "model_labels": {
                 "additionalProperties": {"type": "integer"},
-                "description": (
-                    "Json object representing the ids of the labels in the model.\n            The keys are the layers'"
-                    " names and the values are the IDs.\n            Not applicable for Register (Import) tasks.\n     "
-                    "       Mandatory for Training tasks"
-                ),
+                "description": "Json object representing the ids of the labels in the model.\n            The keys are the layers' names and the values are the IDs.\n            Not applicable for Register (Import) tasks.\n            Mandatory for Training tasks",
                 "type": ["object", "null"],
             },
             "parameters": {
@@ -897,14 +869,14 @@ class Execution(NonStrictDataModel):
 
     def __init__(
         self,
-        queue=None,
-        parameters=None,
-        model_desc=None,
-        model_labels=None,
-        framework=None,
-        artifacts=None,
-        **kwargs
-    ):
+        queue: Optional[str] = None,
+        parameters: Optional[dict] = None,
+        model_desc: Optional[dict] = None,
+        model_labels: Optional[dict] = None,
+        framework: Optional[str] = None,
+        artifacts: Optional[List[Any]] = None,
+        **kwargs: Any
+    ) -> None:
         super(Execution, self).__init__(**kwargs)
         self.queue = queue
         self.parameters = parameters
@@ -914,82 +886,76 @@ class Execution(NonStrictDataModel):
         self.artifacts = artifacts
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> Optional[str]:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("parameters")
-    def parameters(self):
+    def parameters(self) -> Optional[dict]:
         return self._property_parameters
 
     @parameters.setter
-    def parameters(self, value):
+    def parameters(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_parameters = None
             return
-
         self.assert_isinstance(value, "parameters", (dict,))
         self._property_parameters = value
 
     @schema_property("model_desc")
-    def model_desc(self):
+    def model_desc(self) -> Optional[dict]:
         return self._property_model_desc
 
     @model_desc.setter
-    def model_desc(self, value):
+    def model_desc(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_model_desc = None
             return
-
         self.assert_isinstance(value, "model_desc", (dict,))
         self._property_model_desc = value
 
     @schema_property("model_labels")
-    def model_labels(self):
+    def model_labels(self) -> Optional[dict]:
         return self._property_model_labels
 
     @model_labels.setter
-    def model_labels(self, value):
+    def model_labels(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_model_labels = None
             return
-
         self.assert_isinstance(value, "model_labels", (dict,))
         self._property_model_labels = value
 
     @schema_property("framework")
-    def framework(self):
+    def framework(self) -> Optional[str]:
         return self._property_framework
 
     @framework.setter
-    def framework(self, value):
+    def framework(self, value: Optional[str]) -> None:
         if value is None:
             self._property_framework = None
             return
-
         self.assert_isinstance(value, "framework", six.string_types)
         self._property_framework = value
 
     @schema_property("artifacts")
-    def artifacts(self):
+    def artifacts(self) -> Optional[List[Any]]:
         return self._property_artifacts
 
     @artifacts.setter
-    def artifacts(self, value):
+    def artifacts(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_artifacts = None
             return
-
         self.assert_isinstance(value, "artifacts", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [Artifact.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "artifacts", Artifact, is_array=True)
@@ -1070,15 +1036,15 @@ class LastMetricsEvent(NonStrictDataModel):
 
     def __init__(
         self,
-        metric=None,
-        variant=None,
-        value=None,
-        min_value=None,
-        min_value_iteration=None,
-        max_value=None,
-        max_value_iteration=None,
-        **kwargs
-    ):
+        metric: Optional[str] = None,
+        variant: Optional[str] = None,
+        value: Optional[float] = None,
+        min_value: Optional[float] = None,
+        min_value_iteration: Optional[int] = None,
+        max_value: Optional[float] = None,
+        max_value_iteration: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         super(LastMetricsEvent, self).__init__(**kwargs)
         self.metric = metric
         self.variant = variant
@@ -1089,97 +1055,90 @@ class LastMetricsEvent(NonStrictDataModel):
         self.max_value_iteration = max_value_iteration
 
     @schema_property("metric")
-    def metric(self):
+    def metric(self) -> Optional[str]:
         return self._property_metric
 
     @metric.setter
-    def metric(self, value):
+    def metric(self, value: Optional[str]) -> None:
         if value is None:
             self._property_metric = None
             return
-
         self.assert_isinstance(value, "metric", six.string_types)
         self._property_metric = value
 
     @schema_property("variant")
-    def variant(self):
+    def variant(self) -> Optional[str]:
         return self._property_variant
 
     @variant.setter
-    def variant(self, value):
+    def variant(self, value: Optional[str]) -> None:
         if value is None:
             self._property_variant = None
             return
-
         self.assert_isinstance(value, "variant", six.string_types)
         self._property_variant = value
 
     @schema_property("value")
-    def value(self):
+    def value(self) -> Optional[float]:
         return self._property_value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: Optional[float]) -> None:
         if value is None:
             self._property_value = None
             return
-
         self.assert_isinstance(value, "value", six.integer_types + (float,))
         self._property_value = value
 
     @schema_property("min_value")
-    def min_value(self):
+    def min_value(self) -> Optional[float]:
         return self._property_min_value
 
     @min_value.setter
-    def min_value(self, value):
+    def min_value(self, value: Optional[float]) -> None:
         if value is None:
             self._property_min_value = None
             return
-
         self.assert_isinstance(value, "min_value", six.integer_types + (float,))
         self._property_min_value = value
 
     @schema_property("min_value_iteration")
-    def min_value_iteration(self):
+    def min_value_iteration(self) -> Optional[int]:
         return self._property_min_value_iteration
 
     @min_value_iteration.setter
-    def min_value_iteration(self, value):
+    def min_value_iteration(self, value: Optional[int]) -> None:
         if value is None:
             self._property_min_value_iteration = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "min_value_iteration", six.integer_types)
         self._property_min_value_iteration = value
 
     @schema_property("max_value")
-    def max_value(self):
+    def max_value(self) -> Optional[float]:
         return self._property_max_value
 
     @max_value.setter
-    def max_value(self, value):
+    def max_value(self, value: Optional[float]) -> None:
         if value is None:
             self._property_max_value = None
             return
-
         self.assert_isinstance(value, "max_value", six.integer_types + (float,))
         self._property_max_value = value
 
     @schema_property("max_value_iteration")
-    def max_value_iteration(self):
+    def max_value_iteration(self) -> Optional[int]:
         return self._property_max_value_iteration
 
     @max_value_iteration.setter
-    def max_value_iteration(self, value):
+    def max_value_iteration(self, value: Optional[int]) -> None:
         if value is None:
             self._property_max_value_iteration = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "max_value_iteration", six.integer_types)
         self._property_max_value_iteration = value
 
@@ -1238,7 +1197,15 @@ class ParamsItem(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, section=None, name=None, value=None, type=None, description=None, **kwargs):
+    def __init__(
+        self,
+        section: Optional[str] = None,
+        name: Optional[str] = None,
+        value: Optional[str] = None,
+        type: Optional[str] = None,
+        description: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(ParamsItem, self).__init__(**kwargs)
         self.section = section
         self.name = name
@@ -1247,67 +1214,62 @@ class ParamsItem(NonStrictDataModel):
         self.description = description
 
     @schema_property("section")
-    def section(self):
+    def section(self) -> Optional[str]:
         return self._property_section
 
     @section.setter
-    def section(self, value):
+    def section(self, value: Optional[str]) -> None:
         if value is None:
             self._property_section = None
             return
-
         self.assert_isinstance(value, "section", six.string_types)
         self._property_section = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("value")
-    def value(self):
+    def value(self) -> Optional[str]:
         return self._property_value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: Optional[str]) -> None:
         if value is None:
             self._property_value = None
             return
-
         self.assert_isinstance(value, "value", six.string_types)
         self._property_value = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Optional[str]:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Optional[str]) -> None:
         if value is None:
             self._property_type = None
             return
-
         self.assert_isinstance(value, "type", six.string_types)
         self._property_type = value
 
     @schema_property("description")
-    def description(self):
+    def description(self) -> Optional[str]:
         return self._property_description
 
     @description.setter
-    def description(self, value):
+    def description(self, value: Optional[str]) -> None:
         if value is None:
             self._property_description = None
             return
-
         self.assert_isinstance(value, "description", six.string_types)
         self._property_description = value
 
@@ -1346,7 +1308,14 @@ class ConfigurationItem(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, name=None, value=None, type=None, description=None, **kwargs):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        value: Optional[str] = None,
+        type: Optional[str] = None,
+        description: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(ConfigurationItem, self).__init__(**kwargs)
         self.name = name
         self.value = value
@@ -1354,54 +1323,50 @@ class ConfigurationItem(NonStrictDataModel):
         self.description = description
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("value")
-    def value(self):
+    def value(self) -> Optional[str]:
         return self._property_value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: Optional[str]) -> None:
         if value is None:
             self._property_value = None
             return
-
         self.assert_isinstance(value, "value", six.string_types)
         self._property_value = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Optional[str]:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Optional[str]) -> None:
         if value is None:
             self._property_type = None
             return
-
         self.assert_isinstance(value, "type", six.string_types)
         self._property_type = value
 
     @schema_property("description")
-    def description(self):
+    def description(self) -> Optional[str]:
         return self._property_description
 
     @description.setter
-    def description(self, value):
+    def description(self, value: Optional[str]) -> None:
         if value is None:
             self._property_description = None
             return
-
         self.assert_isinstance(value, "description", six.string_types)
         self._property_description = value
 
@@ -1418,10 +1383,7 @@ class ParamKey(NonStrictDataModel):
     _schema = {
         "properties": {
             "name": {
-                "description": (
-                    "Name of the parameter. If the name is ommitted then the corresponding operation is performed on"
-                    " the whole section"
-                ),
+                "description": "Name of the parameter. If the name is ommitted then the corresponding operation is performed on the whole section",
                 "type": ["string", "null"],
             },
             "section": {
@@ -1432,34 +1394,32 @@ class ParamKey(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, section=None, name=None, **kwargs):
+    def __init__(self, section: Optional[str] = None, name: Optional[str] = None, **kwargs: Any) -> None:
         super(ParamKey, self).__init__(**kwargs)
         self.section = section
         self.name = name
 
     @schema_property("section")
-    def section(self):
+    def section(self) -> Optional[str]:
         return self._property_section
 
     @section.setter
-    def section(self, value):
+    def section(self, value: Optional[str]) -> None:
         if value is None:
             self._property_section = None
             return
-
         self.assert_isinstance(value, "section", six.string_types)
         self._property_section = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
@@ -1471,13 +1431,12 @@ class SectionParams(dict, NonStrictDataModel):
     """
 
     _schema = {
-        # 'additionalProperties': {'$ref': '#/definitions/params_item'},
         "additionalProperties": True,
         "description": "Task section params",
         "type": "object",
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.assert_isinstance(args, "section_params", dict, is_array=True)
         kwargs.update(args)
         self.assert_isinstance(kwargs.values(), "params", (ParamsItem, dict), is_array=True)
@@ -1704,41 +1663,41 @@ class Task(NonStrictDataModel):
 
     def __init__(
         self,
-        id=None,
-        name=None,
-        user=None,
-        company=None,
-        type=None,
-        status=None,
-        comment=None,
-        created=None,
-        started=None,
-        completed=None,
-        active_duration=None,
-        parent=None,
-        project=None,
-        output=None,
-        execution=None,
-        container=None,
-        models=None,
-        script=None,
-        tags=None,
-        system_tags=None,
-        status_changed=None,
-        status_message=None,
-        status_reason=None,
-        published=None,
-        last_worker=None,
-        last_worker_report=None,
-        last_update=None,
-        last_change=None,
-        last_iteration=None,
-        last_metrics=None,
-        hyperparams=None,
-        configuration=None,
-        runtime=None,
-        **kwargs
-    ):
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        user: Optional[str] = None,
+        company: Optional[str] = None,
+        type: Any = None,
+        status: Any = None,
+        comment: Optional[str] = None,
+        created: Optional[str] = None,
+        started: Optional[str] = None,
+        completed: Optional[str] = None,
+        active_duration: Optional[int] = None,
+        parent: Optional[str] = None,
+        project: Optional[str] = None,
+        output: Any = None,
+        execution: Any = None,
+        container: Optional[dict] = None,
+        models: Any = None,
+        script: Any = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        status_changed: Optional[str] = None,
+        status_message: Optional[str] = None,
+        status_reason: Optional[str] = None,
+        published: Optional[str] = None,
+        last_worker: Optional[str] = None,
+        last_worker_report: Optional[str] = None,
+        last_update: Optional[str] = None,
+        last_change: Optional[str] = None,
+        last_iteration: Optional[int] = None,
+        last_metrics: Optional[dict] = None,
+        hyperparams: Optional[dict] = None,
+        configuration: Optional[dict] = None,
+        runtime: Optional[dict] = None,
+        **kwargs: Any
+    ) -> None:
         super(Task, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -1775,63 +1734,59 @@ class Task(NonStrictDataModel):
         self.runtime = runtime
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("user")
-    def user(self):
+    def user(self) -> Optional[str]:
         return self._property_user
 
     @user.setter
-    def user(self, value):
+    def user(self, value: Optional[str]) -> None:
         if value is None:
             self._property_user = None
             return
-
         self.assert_isinstance(value, "user", six.string_types)
         self._property_user = value
 
     @schema_property("company")
-    def company(self):
+    def company(self) -> Optional[str]:
         return self._property_company
 
     @company.setter
-    def company(self, value):
+    def company(self, value: Optional[str]) -> None:
         if value is None:
             self._property_company = None
             return
-
         self.assert_isinstance(value, "company", six.string_types)
         self._property_company = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Any) -> None:
         if value is None:
             self._property_type = None
             return
@@ -1845,11 +1800,11 @@ class Task(NonStrictDataModel):
         self._property_type = value
 
     @schema_property("status")
-    def status(self):
+    def status(self) -> Any:
         return self._property_status
 
     @status.setter
-    def status(self, value):
+    def status(self, value: Any) -> None:
         if value is None:
             self._property_status = None
             return
@@ -1863,110 +1818,103 @@ class Task(NonStrictDataModel):
         self._property_status = value
 
     @schema_property("comment")
-    def comment(self):
+    def comment(self) -> Optional[str]:
         return self._property_comment
 
     @comment.setter
-    def comment(self, value):
+    def comment(self, value: Optional[str]) -> None:
         if value is None:
             self._property_comment = None
             return
-
         self.assert_isinstance(value, "comment", six.string_types)
         self._property_comment = value
 
     @schema_property("created")
-    def created(self):
+    def created(self) -> Optional[str]:
         return self._property_created
 
     @created.setter
-    def created(self, value):
+    def created(self, value: Optional[str]) -> None:
         if value is None:
             self._property_created = None
             return
-
         self.assert_isinstance(value, "created", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_created = value
 
     @schema_property("started")
-    def started(self):
+    def started(self) -> Optional[str]:
         return self._property_started
 
     @started.setter
-    def started(self, value):
+    def started(self, value: Optional[str]) -> None:
         if value is None:
             self._property_started = None
             return
-
         self.assert_isinstance(value, "started", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_started = value
 
     @schema_property("completed")
-    def completed(self):
+    def completed(self) -> Optional[str]:
         return self._property_completed
 
     @completed.setter
-    def completed(self, value):
+    def completed(self, value: Optional[str]) -> None:
         if value is None:
             self._property_completed = None
             return
-
         self.assert_isinstance(value, "completed", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_completed = value
 
     @schema_property("active_duration")
-    def active_duration(self):
+    def active_duration(self) -> Optional[int]:
         return self._property_active_duration
 
     @active_duration.setter
-    def active_duration(self, value):
+    def active_duration(self, value: Optional[int]) -> None:
         if value is None:
             self._property_active_duration = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "active_duration", six.integer_types)
         self._property_active_duration = value
 
     @schema_property("parent")
-    def parent(self):
+    def parent(self) -> Optional[str]:
         return self._property_parent
 
     @parent.setter
-    def parent(self, value):
+    def parent(self, value: Optional[str]) -> None:
         if value is None:
             self._property_parent = None
             return
-
         self.assert_isinstance(value, "parent", six.string_types)
         self._property_parent = value
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Optional[str]:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("output")
-    def output(self):
+    def output(self) -> Any:
         return self._property_output
 
     @output.setter
-    def output(self, value):
+    def output(self, value: Any) -> None:
         if value is None:
             self._property_output = None
             return
@@ -1977,11 +1925,11 @@ class Task(NonStrictDataModel):
         self._property_output = value
 
     @schema_property("execution")
-    def execution(self):
+    def execution(self) -> Any:
         return self._property_execution
 
     @execution.setter
-    def execution(self, value):
+    def execution(self, value: Any) -> None:
         if value is None:
             self._property_execution = None
             return
@@ -1992,24 +1940,23 @@ class Task(NonStrictDataModel):
         self._property_execution = value
 
     @schema_property("container")
-    def container(self):
+    def container(self) -> Optional[dict]:
         return self._property_container
 
     @container.setter
-    def container(self, value):
+    def container(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_container = None
             return
-
         self.assert_isinstance(value, "container", (dict,))
         self._property_container = value
 
     @schema_property("models")
-    def models(self):
+    def models(self) -> Any:
         return self._property_models
 
     @models.setter
-    def models(self, value):
+    def models(self, value: Any) -> None:
         if value is None:
             self._property_models = None
             return
@@ -2020,11 +1967,11 @@ class Task(NonStrictDataModel):
         self._property_models = value
 
     @schema_property("script")
-    def script(self):
+    def script(self) -> Any:
         return self._property_script
 
     @script.setter
-    def script(self, value):
+    def script(self, value: Any) -> None:
         if value is None:
             self._property_script = None
             return
@@ -2035,204 +1982,187 @@ class Task(NonStrictDataModel):
         self._property_script = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("status_changed")
-    def status_changed(self):
+    def status_changed(self) -> Optional[str]:
         return self._property_status_changed
 
     @status_changed.setter
-    def status_changed(self, value):
+    def status_changed(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_changed = None
             return
-
         self.assert_isinstance(value, "status_changed", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_status_changed = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("published")
-    def published(self):
+    def published(self) -> Optional[str]:
         return self._property_published
 
     @published.setter
-    def published(self, value):
+    def published(self, value: Optional[str]) -> None:
         if value is None:
             self._property_published = None
             return
-
         self.assert_isinstance(value, "published", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_published = value
 
     @schema_property("last_worker")
-    def last_worker(self):
+    def last_worker(self) -> Optional[str]:
         return self._property_last_worker
 
     @last_worker.setter
-    def last_worker(self, value):
+    def last_worker(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_worker = None
             return
-
         self.assert_isinstance(value, "last_worker", six.string_types)
         self._property_last_worker = value
 
     @schema_property("last_worker_report")
-    def last_worker_report(self):
+    def last_worker_report(self) -> Optional[str]:
         return self._property_last_worker_report
 
     @last_worker_report.setter
-    def last_worker_report(self, value):
+    def last_worker_report(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_worker_report = None
             return
-
         self.assert_isinstance(value, "last_worker_report", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_last_worker_report = value
 
     @schema_property("last_update")
-    def last_update(self):
+    def last_update(self) -> Optional[str]:
         return self._property_last_update
 
     @last_update.setter
-    def last_update(self, value):
+    def last_update(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_update = None
             return
-
         self.assert_isinstance(value, "last_update", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_last_update = value
 
     @schema_property("last_change")
-    def last_change(self):
+    def last_change(self) -> Optional[str]:
         return self._property_last_change
 
     @last_change.setter
-    def last_change(self, value):
+    def last_change(self, value: Optional[str]) -> None:
         if value is None:
             self._property_last_change = None
             return
-
         self.assert_isinstance(value, "last_change", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_last_change = value
 
     @schema_property("last_iteration")
-    def last_iteration(self):
+    def last_iteration(self) -> Optional[int]:
         return self._property_last_iteration
 
     @last_iteration.setter
-    def last_iteration(self, value):
+    def last_iteration(self, value: Optional[int]) -> None:
         if value is None:
             self._property_last_iteration = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "last_iteration", six.integer_types)
         self._property_last_iteration = value
 
     @schema_property("last_metrics")
-    def last_metrics(self):
+    def last_metrics(self) -> Optional[dict]:
         return self._property_last_metrics
 
     @last_metrics.setter
-    def last_metrics(self, value):
+    def last_metrics(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_last_metrics = None
             return
-
         self.assert_isinstance(value, "last_metrics", (dict,))
         self._property_last_metrics = value
 
     @schema_property("hyperparams")
-    def hyperparams(self):
+    def hyperparams(self) -> Optional[dict]:
         return self._property_hyperparams
 
     @hyperparams.setter
-    def hyperparams(self, value):
+    def hyperparams(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_hyperparams = None
             return
-
         self.assert_isinstance(value, "hyperparams", dict)
         self.assert_isinstance(value.keys(), "hyperparams_keys", six.string_types, is_array=True)
         self.assert_isinstance(value.values(), "hyperparams_values", (SectionParams, dict), is_array=True)
-        value = dict((k, SectionParams(**v) if isinstance(v, dict) else v) for k, v in value.items())
-
+        value = dict(((k, SectionParams(**v) if isinstance(v, dict) else v) for (k, v) in value.items()))
         self._property_hyperparams = value
 
     @schema_property("configuration")
-    def configuration(self):
+    def configuration(self) -> Optional[dict]:
         return self._property_configuration
 
     @configuration.setter
-    def configuration(self, value):
+    def configuration(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_configuration = None
             return
-
         self.assert_isinstance(value, "configuration", dict)
         self.assert_isinstance(value.keys(), "configuration_keys", six.string_types, is_array=True)
         self.assert_isinstance(
@@ -2241,21 +2171,18 @@ class Task(NonStrictDataModel):
             (ConfigurationItem, dict),
             is_array=True,
         )
-
-        value = dict((k, ConfigurationItem(**v) if isinstance(v, dict) else v) for k, v in value.items())
-
+        value = dict(((k, ConfigurationItem(**v) if isinstance(v, dict) else v) for (k, v) in value.items()))
         self._property_configuration = value
 
     @schema_property("runtime")
-    def runtime(self):
+    def runtime(self) -> Optional[dict]:
         return self._property_runtime
 
     @runtime.setter
-    def runtime(self, value):
+    def runtime(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_runtime = None
             return
-
         self.assert_isinstance(value, "runtime", (dict,))
         self._property_runtime = value
 
@@ -2279,54 +2206,54 @@ class TaskUrls(NonStrictDataModel):
         "type": "object",
     }
 
-    def __init__(self, model_urls=None, event_urls=None, artifact_urls=None, **kwargs):
+    def __init__(
+        self,
+        model_urls: Optional[List[str]] = None,
+        event_urls: Optional[List[str]] = None,
+        artifact_urls: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(TaskUrls, self).__init__(**kwargs)
         self.model_urls = model_urls
         self.event_urls = event_urls
         self.artifact_urls = artifact_urls
 
     @schema_property("model_urls")
-    def model_urls(self):
+    def model_urls(self) -> Optional[List[str]]:
         return self._property_model_urls
 
     @model_urls.setter
-    def model_urls(self, value):
+    def model_urls(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_model_urls = None
             return
-
         self.assert_isinstance(value, "model_urls", (list, tuple))
-
         self.assert_isinstance(value, "model_urls", six.string_types, is_array=True)
         self._property_model_urls = value
 
     @schema_property("event_urls")
-    def event_urls(self):
+    def event_urls(self) -> Optional[List[str]]:
         return self._property_event_urls
 
     @event_urls.setter
-    def event_urls(self, value):
+    def event_urls(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_event_urls = None
             return
-
         self.assert_isinstance(value, "event_urls", (list, tuple))
-
         self.assert_isinstance(value, "event_urls", six.string_types, is_array=True)
         self._property_event_urls = value
 
     @schema_property("artifact_urls")
-    def artifact_urls(self):
+    def artifact_urls(self) -> Optional[List[str]]:
         return self._property_artifact_urls
 
     @artifact_urls.setter
-    def artifact_urls(self, value):
+    def artifact_urls(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_artifact_urls = None
             return
-
         self.assert_isinstance(value, "artifact_urls", (list, tuple))
-
         self.assert_isinstance(value, "artifact_urls", six.string_types, is_array=True)
         self._property_artifact_urls = value
 
@@ -2373,10 +2300,7 @@ class AddOrUpdateArtifactsRequest(Request):
                         "description": "Epoch time when artifact was created",
                         "type": "integer",
                     },
-                    "type": {
-                        "description": "System defined type",
-                        "type": "string",
-                    },
+                    "type": {"description": "System defined type", "type": "string"},
                     "type_data": {
                         "$ref": "#/definitions/artifact_type_data",
                         "description": "Additional fields defined by the system",
@@ -2416,10 +2340,7 @@ class AddOrUpdateArtifactsRequest(Request):
                 "type": "array",
             },
             "force": {
-                "description": (
-                    "If set to True then both new and running task artifacts can be edited. Otherwise only the new task"
-                    " ones. Default is False"
-                ),
+                "description": "If set to True then both new and running task artifacts can be edited. Otherwise only the new task ones. Default is False",
                 "type": "boolean",
             },
             "task": {"description": "Task ID", "type": "string"},
@@ -2428,52 +2349,49 @@ class AddOrUpdateArtifactsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, artifacts, force=None, **kwargs):
+    def __init__(self, task: str, artifacts: List[Any], force: Optional[bool] = None, **kwargs: Any) -> None:
         super(AddOrUpdateArtifactsRequest, self).__init__(**kwargs)
         self.task = task
         self.artifacts = artifacts
         self.force = force
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("artifacts")
-    def artifacts(self):
+    def artifacts(self) -> List[Any]:
         return self._property_artifacts
 
     @artifacts.setter
-    def artifacts(self, value):
+    def artifacts(self, value: List[Any]) -> None:
         if value is None:
             self._property_artifacts = None
             return
-
         self.assert_isinstance(value, "artifacts", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [Artifact.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "artifacts", Artifact, is_array=True)
         self._property_artifacts = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -2489,7 +2407,6 @@ class AddOrUpdateArtifactsResponse(Response):
     _service = "tasks"
     _action = "add_or_update_artifacts"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2501,22 +2418,21 @@ class AddOrUpdateArtifactsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(AddOrUpdateArtifactsResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -2559,7 +2475,9 @@ class AddOrUpdateModelRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, name, model, type, iteration=None, **kwargs):
+    def __init__(
+        self, task: str, name: str, model: str, type: Any, iteration: Optional[int] = None, **kwargs: Any
+    ) -> None:
         super(AddOrUpdateModelRequest, self).__init__(**kwargs)
         self.task = task
         self.name = name
@@ -2568,50 +2486,47 @@ class AddOrUpdateModelRequest(Request):
         self.iteration = iteration
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> str:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("model")
-    def model(self):
+    def model(self) -> str:
         return self._property_model
 
     @model.setter
-    def model(self, value):
+    def model(self, value: str) -> None:
         if value is None:
             self._property_model = None
             return
-
         self.assert_isinstance(value, "model", six.string_types)
         self._property_model = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Any) -> None:
         if value is None:
             self._property_type = None
             return
@@ -2625,17 +2540,16 @@ class AddOrUpdateModelRequest(Request):
         self._property_type = value
 
     @schema_property("iteration")
-    def iteration(self):
+    def iteration(self) -> Optional[int]:
         return self._property_iteration
 
     @iteration.setter
-    def iteration(self, value):
+    def iteration(self, value: Optional[int]) -> None:
         if value is None:
             self._property_iteration = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "iteration", six.integer_types)
         self._property_iteration = value
 
@@ -2651,7 +2565,6 @@ class AddOrUpdateModelResponse(Response):
     _service = "tasks"
     _action = "add_or_update_model"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2664,22 +2577,21 @@ class AddOrUpdateModelResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(AddOrUpdateModelResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -2722,50 +2634,48 @@ class ArchiveRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, tasks, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self, tasks: List[str], status_reason: Optional[str] = None, status_message: Optional[str] = None, **kwargs: Any
+    ) -> None:
         super(ArchiveRequest, self).__init__(**kwargs)
         self.tasks = tasks
         self.status_reason = status_reason
         self.status_message = status_message
 
     @schema_property("tasks")
-    def tasks(self):
+    def tasks(self) -> List[str]:
         return self._property_tasks
 
     @tasks.setter
-    def tasks(self, value):
+    def tasks(self, value: List[str]) -> None:
         if value is None:
             self._property_tasks = None
             return
-
         self.assert_isinstance(value, "tasks", (list, tuple))
-
         self.assert_isinstance(value, "tasks", six.string_types, is_array=True)
         self._property_tasks = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -2781,7 +2691,6 @@ class ArchiveResponse(Response):
     _service = "tasks"
     _action = "archive"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2793,22 +2702,21 @@ class ArchiveResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, archived=None, **kwargs):
+    def __init__(self, archived: Optional[int] = None, **kwargs: Any) -> None:
         super(ArchiveResponse, self).__init__(**kwargs)
         self.archived = archived
 
     @schema_property("archived")
-    def archived(self):
+    def archived(self) -> Optional[int]:
         return self._property_archived
 
     @archived.setter
-    def archived(self, value):
+    def archived(self, value: Optional[int]) -> None:
         if value is None:
             self._property_archived = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "archived", six.integer_types)
         self._property_archived = value
 
@@ -2849,50 +2757,48 @@ class ArchiveManyRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, ids, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self, ids: List[str], status_reason: Optional[str] = None, status_message: Optional[str] = None, **kwargs: Any
+    ) -> None:
         super(ArchiveManyRequest, self).__init__(**kwargs)
         self.ids = ids
         self.status_reason = status_reason
         self.status_message = status_message
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -2910,7 +2816,6 @@ class ArchiveManyResponse(Response):
     _service = "tasks"
     _action = "archive_many"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -2961,38 +2866,36 @@ class ArchiveManyResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, succeeded=None, failed=None, **kwargs):
+    def __init__(
+        self, succeeded: Optional[List[dict]] = None, failed: Optional[List[dict]] = None, **kwargs: Any
+    ) -> None:
         super(ArchiveManyResponse, self).__init__(**kwargs)
         self.succeeded = succeeded
         self.failed = failed
 
     @schema_property("succeeded")
-    def succeeded(self):
+    def succeeded(self) -> Optional[List[dict]]:
         return self._property_succeeded
 
     @succeeded.setter
-    def succeeded(self, value):
+    def succeeded(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_succeeded = None
             return
-
         self.assert_isinstance(value, "succeeded", (list, tuple))
-
         self.assert_isinstance(value, "succeeded", (dict,), is_array=True)
         self._property_succeeded = value
 
     @schema_property("failed")
-    def failed(self):
+    def failed(self) -> Optional[List[dict]]:
         return self._property_failed
 
     @failed.setter
-    def failed(self, value):
+    def failed(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_failed = None
             return
-
         self.assert_isinstance(value, "failed", (list, tuple))
-
         self.assert_isinstance(value, "failed", (dict,), is_array=True)
         self._property_failed = value
 
@@ -3074,10 +2977,7 @@ class CloneRequest(Request):
                         "description": "Epoch time when artifact was created",
                         "type": "integer",
                     },
-                    "type": {
-                        "description": "System defined type",
-                        "type": "string",
-                    },
+                    "type": {"description": "System defined type", "type": "string"},
                     "type_data": {
                         "$ref": "#/definitions/artifact_type_data",
                         "description": "Additional fields defined by the system",
@@ -3138,9 +3038,7 @@ class CloneRequest(Request):
                         "type": ["array", "null"],
                     },
                     "framework": {
-                        "description": (
-                            "Framework related to the task. Case insensitive. Mandatory for Training tasks. "
-                        ),
+                        "description": "Framework related to the task. Case insensitive. Mandatory for Training tasks. ",
                         "type": ["string", "null"],
                     },
                     "model_desc": {
@@ -3150,11 +3048,7 @@ class CloneRequest(Request):
                     },
                     "model_labels": {
                         "additionalProperties": {"type": "integer"},
-                        "description": (
-                            "Json object representing the ids of the labels in the model.\n            The keys are the"
-                            " layers' names and the values are the IDs.\n            Not applicable for Register"
-                            " (Import) tasks.\n            Mandatory for Training tasks"
-                        ),
+                        "description": "Json object representing the ids of the labels in the model.\n            The keys are the layers' names and the values are the IDs.\n            Not applicable for Register (Import) tasks.\n            Mandatory for Training tasks",
                         "type": ["object", "null"],
                     },
                     "parameters": {
@@ -3202,10 +3096,7 @@ class CloneRequest(Request):
             "task_model_item": {
                 "properties": {
                     "model": {"description": "The model ID", "type": "string"},
-                    "name": {
-                        "description": "The task model name",
-                        "type": "string",
-                    },
+                    "name": {"description": "The task model name", "type": "string"},
                 },
                 "required": ["name", "model"],
                 "type": "object",
@@ -3214,16 +3105,10 @@ class CloneRequest(Request):
         "properties": {
             "execution_overrides": {
                 "$ref": "#/definitions/execution",
-                "description": (
-                    "The execution params for the cloned task. The params not specified are taken from the original "
-                    "task"
-                ),
+                "description": "The execution params for the cloned task. The params not specified are taken from the original task",
             },
             "new_project_name": {
-                "description": (
-                    "Clone task to a new project by this name (only if `new_task_project` is not provided). If a"
-                    " project by this name already exists, task will be cloned to existing project."
-                ),
+                "description": "Clone task to a new project by this name (only if `new_task_project` is not provided). If a project by this name already exists, task will be cloned to existing project.",
                 "type": "string",
             },
             "new_task_comment": {
@@ -3237,10 +3122,7 @@ class CloneRequest(Request):
             },
             "new_task_container": {
                 "additionalProperties": {"type": ["string", "null"]},
-                "description": (
-                    "The docker container properties for the new task. If not provided then taken from the "
-                    "original task"
-                ),
+                "description": "The docker container properties for the new task. If not provided then taken from the original task",
                 "type": "object",
             },
             "new_task_hyperparams": {
@@ -3249,9 +3131,7 @@ class CloneRequest(Request):
                 "type": "object",
             },
             "new_task_input_models": {
-                "description": (
-                    "The list of input models for the cloned task. If not specifed then copied from the original task"
-                ),
+                "description": "The list of input models for the cloned task. If not specifed then copied from the original task",
                 "items": {"$ref": "#/definitions/task_model_item"},
                 "type": "array",
             },
@@ -3273,18 +3153,13 @@ class CloneRequest(Request):
                 "type": "array",
             },
             "new_task_tags": {
-                "description": (
-                    "The user-defined tags of the cloned task. If not provided then taken from the original task"
-                ),
+                "description": "The user-defined tags of the cloned task. If not provided then taken from the original task",
                 "items": {"type": "string"},
                 "type": "array",
             },
             "task": {"description": "ID of the task", "type": "string"},
             "validate_references": {
-                "description": (
-                    "If set to 'false' then the task fields that are copied from the original task are not validated."
-                    " The default is false."
-                ),
+                "description": "If set to 'false' then the task fields that are copied from the original task are not validated. The default is false.",
                 "type": "boolean",
             },
         },
@@ -3294,22 +3169,22 @@ class CloneRequest(Request):
 
     def __init__(
         self,
-        task,
-        new_task_name=None,
-        new_task_comment=None,
-        new_task_tags=None,
-        new_task_system_tags=None,
-        new_task_parent=None,
-        new_task_project=None,
-        new_task_hyperparams=None,
-        new_task_configuration=None,
-        execution_overrides=None,
-        validate_references=None,
-        new_project_name=None,
-        new_task_input_models=None,
-        new_task_container=None,
-        **kwargs
-    ):
+        task: str,
+        new_task_name: Optional[str] = None,
+        new_task_comment: Optional[str] = None,
+        new_task_tags: Optional[List[str]] = None,
+        new_task_system_tags: Optional[List[str]] = None,
+        new_task_parent: Optional[str] = None,
+        new_task_project: Optional[str] = None,
+        new_task_hyperparams: Optional[dict] = None,
+        new_task_configuration: Optional[dict] = None,
+        execution_overrides: Any = None,
+        validate_references: Optional[bool] = None,
+        new_project_name: Optional[str] = None,
+        new_task_input_models: Optional[List[Any]] = None,
+        new_task_container: Optional[dict] = None,
+        **kwargs: Any
+    ) -> None:
         super(CloneRequest, self).__init__(**kwargs)
         self.task = task
         self.new_task_name = new_task_name
@@ -3327,132 +3202,121 @@ class CloneRequest(Request):
         self.new_task_container = new_task_container
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("new_task_name")
-    def new_task_name(self):
+    def new_task_name(self) -> Optional[str]:
         return self._property_new_task_name
 
     @new_task_name.setter
-    def new_task_name(self, value):
+    def new_task_name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_new_task_name = None
             return
-
         self.assert_isinstance(value, "new_task_name", six.string_types)
         self._property_new_task_name = value
 
     @schema_property("new_task_comment")
-    def new_task_comment(self):
+    def new_task_comment(self) -> Optional[str]:
         return self._property_new_task_comment
 
     @new_task_comment.setter
-    def new_task_comment(self, value):
+    def new_task_comment(self, value: Optional[str]) -> None:
         if value is None:
             self._property_new_task_comment = None
             return
-
         self.assert_isinstance(value, "new_task_comment", six.string_types)
         self._property_new_task_comment = value
 
     @schema_property("new_task_tags")
-    def new_task_tags(self):
+    def new_task_tags(self) -> Optional[List[str]]:
         return self._property_new_task_tags
 
     @new_task_tags.setter
-    def new_task_tags(self, value):
+    def new_task_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_new_task_tags = None
             return
-
         self.assert_isinstance(value, "new_task_tags", (list, tuple))
-
         self.assert_isinstance(value, "new_task_tags", six.string_types, is_array=True)
         self._property_new_task_tags = value
 
     @schema_property("new_task_system_tags")
-    def new_task_system_tags(self):
+    def new_task_system_tags(self) -> Optional[List[str]]:
         return self._property_new_task_system_tags
 
     @new_task_system_tags.setter
-    def new_task_system_tags(self, value):
+    def new_task_system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_new_task_system_tags = None
             return
-
         self.assert_isinstance(value, "new_task_system_tags", (list, tuple))
-
         self.assert_isinstance(value, "new_task_system_tags", six.string_types, is_array=True)
         self._property_new_task_system_tags = value
 
     @schema_property("new_task_parent")
-    def new_task_parent(self):
+    def new_task_parent(self) -> Optional[str]:
         return self._property_new_task_parent
 
     @new_task_parent.setter
-    def new_task_parent(self, value):
+    def new_task_parent(self, value: Optional[str]) -> None:
         if value is None:
             self._property_new_task_parent = None
             return
-
         self.assert_isinstance(value, "new_task_parent", six.string_types)
         self._property_new_task_parent = value
 
     @schema_property("new_task_project")
-    def new_task_project(self):
+    def new_task_project(self) -> Optional[str]:
         return self._property_new_task_project
 
     @new_task_project.setter
-    def new_task_project(self, value):
+    def new_task_project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_new_task_project = None
             return
-
         self.assert_isinstance(value, "new_task_project", six.string_types)
         self._property_new_task_project = value
 
     @schema_property("new_task_hyperparams")
-    def new_task_hyperparams(self):
+    def new_task_hyperparams(self) -> Optional[dict]:
         return self._property_new_task_hyperparams
 
     @new_task_hyperparams.setter
-    def new_task_hyperparams(self, value):
+    def new_task_hyperparams(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_new_task_hyperparams = None
             return
-
         self.assert_isinstance(value, "new_task_hyperparams", (dict,))
         self._property_new_task_hyperparams = value
 
     @schema_property("new_task_configuration")
-    def new_task_configuration(self):
+    def new_task_configuration(self) -> Optional[dict]:
         return self._property_new_task_configuration
 
     @new_task_configuration.setter
-    def new_task_configuration(self, value):
+    def new_task_configuration(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_new_task_configuration = None
             return
-
         self.assert_isinstance(value, "new_task_configuration", (dict,))
         self._property_new_task_configuration = value
 
     @schema_property("execution_overrides")
-    def execution_overrides(self):
+    def execution_overrides(self) -> Any:
         return self._property_execution_overrides
 
     @execution_overrides.setter
-    def execution_overrides(self, value):
+    def execution_overrides(self, value: Any) -> None:
         if value is None:
             self._property_execution_overrides = None
             return
@@ -3463,58 +3327,54 @@ class CloneRequest(Request):
         self._property_execution_overrides = value
 
     @schema_property("validate_references")
-    def validate_references(self):
+    def validate_references(self) -> Optional[bool]:
         return self._property_validate_references
 
     @validate_references.setter
-    def validate_references(self, value):
+    def validate_references(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_validate_references = None
             return
-
         self.assert_isinstance(value, "validate_references", (bool,))
         self._property_validate_references = value
 
     @schema_property("new_project_name")
-    def new_project_name(self):
+    def new_project_name(self) -> Optional[str]:
         return self._property_new_project_name
 
     @new_project_name.setter
-    def new_project_name(self, value):
+    def new_project_name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_new_project_name = None
             return
-
         self.assert_isinstance(value, "new_project_name", six.string_types)
         self._property_new_project_name = value
 
     @schema_property("new_task_input_models")
-    def new_task_input_models(self):
+    def new_task_input_models(self) -> Optional[List[Any]]:
         return self._property_new_task_input_models
 
     @new_task_input_models.setter
-    def new_task_input_models(self, value):
+    def new_task_input_models(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_new_task_input_models = None
             return
-
         self.assert_isinstance(value, "new_task_input_models", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [TaskModelItem.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "new_task_input_models", TaskModelItem, is_array=True)
         self._property_new_task_input_models = value
 
     @schema_property("new_task_container")
-    def new_task_container(self):
+    def new_task_container(self) -> Optional[dict]:
         return self._property_new_task_container
 
     @new_task_container.setter
-    def new_task_container(self, value):
+    def new_task_container(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_new_task_container = None
             return
-
         self.assert_isinstance(value, "new_task_container", (dict,))
         self._property_new_task_container = value
 
@@ -3533,7 +3393,6 @@ class CloneResponse(Response):
     _service = "tasks"
     _action = "clone"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -3556,34 +3415,32 @@ class CloneResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, id=None, new_project=None, **kwargs):
+    def __init__(self, id: Optional[str] = None, new_project: Optional[dict] = None, **kwargs: Any) -> None:
         super(CloneResponse, self).__init__(**kwargs)
         self.id = id
         self.new_project = new_project
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
     @schema_property("new_project")
-    def new_project(self):
+    def new_project(self) -> Optional[dict]:
         return self._property_new_project
 
     @new_project.setter
-    def new_project(self, value):
+    def new_project(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_new_project = None
             return
-
         self.assert_isinstance(value, "new_project", (dict,))
         self._property_new_project = value
 
@@ -3627,7 +3484,14 @@ class CloseRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, force=False, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        force: Optional[bool] = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(CloseRequest, self).__init__(**kwargs)
         self.force = force
         self.task = task
@@ -3635,54 +3499,50 @@ class CloseRequest(Request):
         self.status_message = status_message
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -3700,7 +3560,6 @@ class CloseResponse(Response):
     _service = "tasks"
     _action = "close"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -3718,36 +3577,34 @@ class CloseResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(CloseResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -3800,7 +3657,15 @@ class CompletedRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, force=False, status_reason=None, status_message=None, publish=False, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        force: Optional[bool] = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        publish: Optional[bool] = False,
+        **kwargs: Any
+    ) -> None:
         super(CompletedRequest, self).__init__(**kwargs)
         self.force = force
         self.task = task
@@ -3809,67 +3674,62 @@ class CompletedRequest(Request):
         self.publish = publish
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
     @schema_property("publish")
-    def publish(self):
+    def publish(self) -> Optional[bool]:
         return self._property_publish
 
     @publish.setter
-    def publish(self, value):
+    def publish(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_publish = None
             return
-
         self.assert_isinstance(value, "publish", (bool,))
         self._property_publish = value
 
@@ -3889,7 +3749,6 @@ class CompletedResponse(Response):
     _service = "tasks"
     _action = "completed"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -3912,52 +3771,55 @@ class CompletedResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, published=None, **kwargs):
+    def __init__(
+        self,
+        updated: Optional[int] = None,
+        fields: Optional[dict] = None,
+        published: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         super(CompletedResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
         self.published = published
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
     @schema_property("published")
-    def published(self):
+    def published(self) -> Optional[int]:
         return self._property_published
 
     @published.setter
-    def published(self, value):
+    def published(self, value: Optional[int]) -> None:
         if value is None:
             self._property_published = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "published", six.integer_types)
         self._property_published = value
 
@@ -4028,10 +3890,7 @@ class CreateRequest(Request):
                         "description": "Epoch time when artifact was created",
                         "type": "integer",
                     },
-                    "type": {
-                        "description": "System defined type",
-                        "type": "string",
-                    },
+                    "type": {"description": "System defined type", "type": "string"},
                     "type_data": {
                         "$ref": "#/definitions/artifact_type_data",
                         "description": "Additional fields defined by the system",
@@ -4092,9 +3951,7 @@ class CreateRequest(Request):
                         "type": ["array", "null"],
                     },
                     "framework": {
-                        "description": (
-                            "Framework related to the task. Case insensitive. Mandatory for Training tasks. "
-                        ),
+                        "description": "Framework related to the task. Case insensitive. Mandatory for Training tasks. ",
                         "type": ["string", "null"],
                     },
                     "model_desc": {
@@ -4104,11 +3961,7 @@ class CreateRequest(Request):
                     },
                     "model_labels": {
                         "additionalProperties": {"type": "integer"},
-                        "description": (
-                            "Json object representing the ids of the labels in the model.\n            The keys are the"
-                            " layers' names and the values are the IDs.\n            Not applicable for Register"
-                            " (Import) tasks.\n            Mandatory for Training tasks"
-                        ),
+                        "description": "Json object representing the ids of the labels in the model.\n            The keys are the layers' names and the values are the IDs.\n            Not applicable for Register (Import) tasks.\n            Mandatory for Training tasks",
                         "type": ["object", "null"],
                     },
                     "parameters": {
@@ -4156,10 +4009,7 @@ class CreateRequest(Request):
                         "type": ["string", "null"],
                     },
                     "branch": {
-                        "description": (
-                            "Repository branch id If not provided and tag not provided, default repository branch "
-                            "is used."
-                        ),
+                        "description": "Repository branch id If not provided and tag not provided, default repository branch is used.",
                         "type": ["string", "null"],
                     },
                     "diff": {
@@ -4183,15 +4033,11 @@ class CreateRequest(Request):
                         "type": ["string", "null"],
                     },
                     "version_num": {
-                        "description": (
-                            "Version (changeset) number. Optional (default is head version) Unused if tag is provided."
-                        ),
+                        "description": "Version (changeset) number. Optional (default is head version) Unused if tag is provided.",
                         "type": ["string", "null"],
                     },
                     "working_dir": {
-                        "description": (
-                            "Path to the folder from which to run the script Default - root folder of repository"
-                        ),
+                        "description": "Path to the folder from which to run the script Default - root folder of repository",
                         "type": ["string", "null"],
                     },
                 },
@@ -4205,10 +4051,7 @@ class CreateRequest(Request):
             "task_model_item": {
                 "properties": {
                     "model": {"description": "The model ID", "type": "string"},
-                    "name": {
-                        "description": "The task model name",
-                        "type": "string",
-                    },
+                    "name": {"description": "The task model name", "type": "string"},
                 },
                 "required": ["name", "model"],
                 "type": "object",
@@ -4308,23 +4151,23 @@ class CreateRequest(Request):
 
     def __init__(
         self,
-        name,
-        type,
-        tags=None,
-        system_tags=None,
-        comment=None,
-        parent=None,
-        project=None,
-        input=None,
-        output_dest=None,
-        execution=None,
-        script=None,
-        hyperparams=None,
-        configuration=None,
-        models=None,
-        container=None,
-        **kwargs
-    ):
+        name: str,
+        type: Any,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        comment: Optional[str] = None,
+        parent: Optional[str] = None,
+        project: Optional[str] = None,
+        input: Any = None,
+        output_dest: Optional[str] = None,
+        execution: Any = None,
+        script: Any = None,
+        hyperparams: Optional[dict] = None,
+        configuration: Optional[dict] = None,
+        models: Any = None,
+        container: Optional[dict] = None,
+        **kwargs: Any
+    ) -> None:
         super(CreateRequest, self).__init__(**kwargs)
         self.name = name
         self.tags = tags
@@ -4343,54 +4186,49 @@ class CreateRequest(Request):
         self.container = container
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> str:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Any) -> None:
         if value is None:
             self._property_type = None
             return
@@ -4404,71 +4242,67 @@ class CreateRequest(Request):
         self._property_type = value
 
     @schema_property("comment")
-    def comment(self):
+    def comment(self) -> Optional[str]:
         return self._property_comment
 
     @comment.setter
-    def comment(self, value):
+    def comment(self, value: Optional[str]) -> None:
         if value is None:
             self._property_comment = None
             return
-
         self.assert_isinstance(value, "comment", six.string_types)
         self._property_comment = value
 
     @schema_property("parent")
-    def parent(self):
+    def parent(self) -> Optional[str]:
         return self._property_parent
 
     @parent.setter
-    def parent(self, value):
+    def parent(self, value: Optional[str]) -> None:
         if value is None:
             self._property_parent = None
             return
-
         self.assert_isinstance(value, "parent", six.string_types)
         self._property_parent = value
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Optional[str]:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("input")
-    def input(self):
+    def input(self) -> Any:
         return self._property_input
 
     @input.setter
-    def input(self, value):
+    def input(self, value: Any) -> None:
         self._property_input = value
 
     @schema_property("output_dest")
-    def output_dest(self):
+    def output_dest(self) -> Optional[str]:
         return self._property_output_dest
 
     @output_dest.setter
-    def output_dest(self, value):
+    def output_dest(self, value: Optional[str]) -> None:
         if value is None:
             self._property_output_dest = None
             return
-
         self.assert_isinstance(value, "output_dest", six.string_types)
         self._property_output_dest = value
 
     @schema_property("execution")
-    def execution(self):
+    def execution(self) -> Any:
         return self._property_execution
 
     @execution.setter
-    def execution(self, value):
+    def execution(self, value: Any) -> None:
         if value is None:
             self._property_execution = None
             return
@@ -4479,11 +4313,11 @@ class CreateRequest(Request):
         self._property_execution = value
 
     @schema_property("script")
-    def script(self):
+    def script(self) -> Any:
         return self._property_script
 
     @script.setter
-    def script(self, value):
+    def script(self, value: Any) -> None:
         if value is None:
             self._property_script = None
             return
@@ -4494,32 +4328,29 @@ class CreateRequest(Request):
         self._property_script = value
 
     @schema_property("hyperparams")
-    def hyperparams(self):
+    def hyperparams(self) -> Optional[dict]:
         return self._property_hyperparams
 
     @hyperparams.setter
-    def hyperparams(self, value):
+    def hyperparams(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_hyperparams = None
             return
-
         self.assert_isinstance(value, "hyperparams", dict)
         self.assert_isinstance(value.keys(), "hyperparams_keys", six.string_types, is_array=True)
         self.assert_isinstance(value.values(), "hyperparams_values", (SectionParams, dict), is_array=True)
-        value = dict((k, SectionParams(**v) if isinstance(v, dict) else v) for k, v in value.items())
-
+        value = dict(((k, SectionParams(**v) if isinstance(v, dict) else v) for (k, v) in value.items()))
         self._property_hyperparams = value
 
     @schema_property("configuration")
-    def configuration(self):
+    def configuration(self) -> Optional[dict]:
         return self._property_configuration
 
     @configuration.setter
-    def configuration(self, value):
+    def configuration(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_configuration = None
             return
-
         self.assert_isinstance(value, "configuration", dict)
         self.assert_isinstance(value.keys(), "configuration_keys", six.string_types, is_array=True)
         self.assert_isinstance(
@@ -4528,17 +4359,15 @@ class CreateRequest(Request):
             (ConfigurationItem, dict),
             is_array=True,
         )
-
-        value = dict((k, ConfigurationItem(**v) if isinstance(v, dict) else v) for k, v in value.items())
-
+        value = dict(((k, ConfigurationItem(**v) if isinstance(v, dict) else v) for (k, v) in value.items()))
         self._property_configuration = value
 
     @schema_property("models")
-    def models(self):
+    def models(self) -> Any:
         return self._property_models
 
     @models.setter
-    def models(self, value):
+    def models(self, value: Any) -> None:
         if value is None:
             self._property_models = None
             return
@@ -4549,15 +4378,14 @@ class CreateRequest(Request):
         self._property_models = value
 
     @schema_property("container")
-    def container(self):
+    def container(self) -> Optional[dict]:
         return self._property_container
 
     @container.setter
-    def container(self, value):
+    def container(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_container = None
             return
-
         self.assert_isinstance(value, "container", (dict,))
         self._property_container = value
 
@@ -4573,27 +4401,25 @@ class CreateResponse(Response):
     _service = "tasks"
     _action = "create"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {"id": {"description": "ID of the task", "type": ["string", "null"]}},
         "type": "object",
     }
 
-    def __init__(self, id=None, **kwargs):
+    def __init__(self, id: Optional[str] = None, **kwargs: Any) -> None:
         super(CreateResponse, self).__init__(**kwargs)
         self.id = id
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
@@ -4637,17 +4463,11 @@ class DeleteRequest(Request):
         "properties": {
             "delete_external_artifacts": {
                 "default": True,
-                "description": (
-                    "If set to 'true' then BE will try to delete the extenal artifacts associated with the task from"
-                    " the fileserver (if configured to do so)"
-                ),
+                "description": "If set to 'true' then BE will try to delete the extenal artifacts associated with the task from the fileserver (if configured to do so)",
                 "type": "boolean",
             },
             "delete_output_models": {
-                "description": (
-                    "If set to 'true' then delete output models of this task that are not referenced by other tasks."
-                    " Default value is 'true'"
-                ),
+                "description": "If set to 'true' then delete output models of this task that are not referenced by other tasks. Default value is 'true'",
                 "type": "boolean",
             },
             "force": {
@@ -4657,17 +4477,11 @@ class DeleteRequest(Request):
             },
             "move_to_trash": {
                 "default": False,
-                "description": (
-                    "Move task to trash instead of deleting it. For internal use only, tasks in the trash are not"
-                    " visible from the API and cannot be restored!"
-                ),
+                "description": "Move task to trash instead of deleting it. For internal use only, tasks in the trash are not visible from the API and cannot be restored!",
                 "type": ["boolean", "null"],
             },
             "return_file_urls": {
-                "description": (
-                    "If set to 'true' then return the urls of the files that were uploaded by this task. Default "
-                    "value is 'false'"
-                ),
+                "description": "If set to 'true' then return the urls of the files that were uploaded by this task. Default value is 'false'",
                 "type": "boolean",
             },
             "status_message": {
@@ -4686,16 +4500,16 @@ class DeleteRequest(Request):
 
     def __init__(
         self,
-        task,
-        move_to_trash=False,
-        force=False,
-        status_reason=None,
-        status_message=None,
-        return_file_urls=None,
-        delete_output_models=None,
-        delete_external_artifacts=True,
-        **kwargs
-    ):
+        task: str,
+        move_to_trash: Optional[bool] = False,
+        force: Optional[bool] = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        return_file_urls: Optional[bool] = None,
+        delete_output_models: Optional[bool] = None,
+        delete_external_artifacts: Optional[bool] = True,
+        **kwargs: Any
+    ) -> None:
         super(DeleteRequest, self).__init__(**kwargs)
         self.move_to_trash = move_to_trash
         self.force = force
@@ -4707,106 +4521,98 @@ class DeleteRequest(Request):
         self.delete_external_artifacts = delete_external_artifacts
 
     @schema_property("move_to_trash")
-    def move_to_trash(self):
+    def move_to_trash(self) -> Optional[bool]:
         return self._property_move_to_trash
 
     @move_to_trash.setter
-    def move_to_trash(self, value):
+    def move_to_trash(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_move_to_trash = None
             return
-
         self.assert_isinstance(value, "move_to_trash", (bool,))
         self._property_move_to_trash = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
     @schema_property("return_file_urls")
-    def return_file_urls(self):
+    def return_file_urls(self) -> Optional[bool]:
         return self._property_return_file_urls
 
     @return_file_urls.setter
-    def return_file_urls(self, value):
+    def return_file_urls(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_return_file_urls = None
             return
-
         self.assert_isinstance(value, "return_file_urls", (bool,))
         self._property_return_file_urls = value
 
     @schema_property("delete_output_models")
-    def delete_output_models(self):
+    def delete_output_models(self) -> Optional[bool]:
         return self._property_delete_output_models
 
     @delete_output_models.setter
-    def delete_output_models(self, value):
+    def delete_output_models(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_output_models = None
             return
-
         self.assert_isinstance(value, "delete_output_models", (bool,))
         self._property_delete_output_models = value
 
     @schema_property("delete_external_artifacts")
-    def delete_external_artifacts(self):
+    def delete_external_artifacts(self) -> Optional[bool]:
         return self._property_delete_external_artifacts
 
     @delete_external_artifacts.setter
-    def delete_external_artifacts(self, value):
+    def delete_external_artifacts(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_external_artifacts = None
             return
-
         self.assert_isinstance(value, "delete_external_artifacts", (bool,))
         self._property_delete_external_artifacts = value
 
@@ -4832,7 +4638,6 @@ class DeleteResponse(Response):
     _service = "tasks"
     _action = "delete"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "task_urls": {
@@ -4872,17 +4677,22 @@ class DeleteResponse(Response):
                 "type": ["integer", "null"],
             },
             "urls": {
-                "description": (
-                    "The urls of the files that were uploaded by this task. Returned if the 'return_file_urls' was set"
-                    " to 'true'"
-                ),
+                "description": "The urls of the files that were uploaded by this task. Returned if the 'return_file_urls' was set to 'true'",
                 "oneOf": [{"$ref": "#/definitions/task_urls"}, {"type": "null"}],
             },
         },
         "type": "object",
     }
 
-    def __init__(self, deleted=None, updated_children=None, updated_models=None, events=None, urls=None, **kwargs):
+    def __init__(
+        self,
+        deleted: Optional[bool] = None,
+        updated_children: Optional[int] = None,
+        updated_models: Optional[int] = None,
+        events: Optional[dict] = None,
+        urls: Any = None,
+        **kwargs: Any
+    ) -> None:
         super(DeleteResponse, self).__init__(**kwargs)
         self.deleted = deleted
         self.updated_children = updated_children
@@ -4891,67 +4701,63 @@ class DeleteResponse(Response):
         self.urls = urls
 
     @schema_property("deleted")
-    def deleted(self):
+    def deleted(self) -> Optional[bool]:
         return self._property_deleted
 
     @deleted.setter
-    def deleted(self, value):
+    def deleted(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_deleted = None
             return
-
         self.assert_isinstance(value, "deleted", (bool,))
         self._property_deleted = value
 
     @schema_property("updated_children")
-    def updated_children(self):
+    def updated_children(self) -> Optional[int]:
         return self._property_updated_children
 
     @updated_children.setter
-    def updated_children(self, value):
+    def updated_children(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated_children = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated_children", six.integer_types)
         self._property_updated_children = value
 
     @schema_property("updated_models")
-    def updated_models(self):
+    def updated_models(self) -> Optional[int]:
         return self._property_updated_models
 
     @updated_models.setter
-    def updated_models(self, value):
+    def updated_models(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated_models = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated_models", six.integer_types)
         self._property_updated_models = value
 
     @schema_property("events")
-    def events(self):
+    def events(self) -> Optional[dict]:
         return self._property_events
 
     @events.setter
-    def events(self, value):
+    def events(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_events = None
             return
-
         self.assert_isinstance(value, "events", (dict,))
         self._property_events = value
 
     @schema_property("urls")
-    def urls(self):
+    def urls(self) -> Any:
         return self._property_urls
 
     @urls.setter
-    def urls(self, value):
+    def urls(self, value: Any) -> None:
         if value is None:
             self._property_urls = None
             return
@@ -5004,10 +4810,7 @@ class DeleteArtifactsRequest(Request):
                 "type": "array",
             },
             "force": {
-                "description": (
-                    "If set to True then both new and running task artifacts can be deleted. Otherwise only the new"
-                    " task ones. Default is False"
-                ),
+                "description": "If set to True then both new and running task artifacts can be deleted. Otherwise only the new task ones. Default is False",
                 "type": "boolean",
             },
             "task": {"description": "Task ID", "type": "string"},
@@ -5016,52 +4819,49 @@ class DeleteArtifactsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, artifacts, force=None, **kwargs):
+    def __init__(self, task: str, artifacts: List[Any], force: Optional[bool] = None, **kwargs: Any) -> None:
         super(DeleteArtifactsRequest, self).__init__(**kwargs)
         self.task = task
         self.artifacts = artifacts
         self.force = force
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("artifacts")
-    def artifacts(self):
+    def artifacts(self) -> List[Any]:
         return self._property_artifacts
 
     @artifacts.setter
-    def artifacts(self, value):
+    def artifacts(self, value: List[Any]) -> None:
         if value is None:
             self._property_artifacts = None
             return
-
         self.assert_isinstance(value, "artifacts", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [ArtifactId.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "artifacts", ArtifactId, is_array=True)
         self._property_artifacts = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -5077,7 +4877,6 @@ class DeleteArtifactsResponse(Response):
     _service = "tasks"
     _action = "delete_artifacts"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -5089,22 +4888,21 @@ class DeleteArtifactsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, deleted=None, **kwargs):
+    def __init__(self, deleted: Optional[int] = None, **kwargs: Any) -> None:
         super(DeleteArtifactsResponse, self).__init__(**kwargs)
         self.deleted = deleted
 
     @schema_property("deleted")
-    def deleted(self):
+    def deleted(self) -> Optional[int]:
         return self._property_deleted
 
     @deleted.setter
-    def deleted(self, value):
+    def deleted(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted", six.integer_types)
         self._property_deleted = value
 
@@ -5134,10 +4932,7 @@ class DeleteConfigurationRequest(Request):
                 "type": "array",
             },
             "force": {
-                "description": (
-                    "If set to True then both new and running task configuration can be deleted. Otherwise only the new"
-                    " task ones. Default is False"
-                ),
+                "description": "If set to True then both new and running task configuration can be deleted. Otherwise only the new task ones. Default is False",
                 "type": "boolean",
             },
             "task": {"description": "Task ID", "type": "string"},
@@ -5146,35 +4941,33 @@ class DeleteConfigurationRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, configuration, force=None, **kwargs):
+    def __init__(self, task: str, configuration: List[str], force: Optional[bool] = None, **kwargs: Any) -> None:
         super(DeleteConfigurationRequest, self).__init__(**kwargs)
         self.task = task
         self.configuration = configuration
         self.force = force
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("configuration")
-    def configuration(self):
+    def configuration(self) -> List[str]:
         return self._property_configuration
 
     @configuration.setter
-    def configuration(self, value):
+    def configuration(self, value: List[str]) -> None:
         if value is None:
             self._property_configuration = None
             return
-
         self.assert_isinstance(value, "configuration", dict)
         self.assert_isinstance(value.keys(), "configuration_keys", six.string_types, is_array=True)
         self.assert_isinstance(
@@ -5183,21 +4976,18 @@ class DeleteConfigurationRequest(Request):
             (ConfigurationItem, dict),
             is_array=True,
         )
-
-        value = dict((k, ConfigurationItem(**v) if isinstance(v, dict) else v) for k, v in value.items())
-
+        value = dict(((k, ConfigurationItem(**v) if isinstance(v, dict) else v) for (k, v) in value.items()))
         self._property_configuration = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -5213,7 +5003,6 @@ class DeleteConfigurationResponse(Response):
     _service = "tasks"
     _action = "delete_configuration"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -5225,22 +5014,21 @@ class DeleteConfigurationResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, deleted=None, **kwargs):
+    def __init__(self, deleted: Optional[int] = None, **kwargs: Any) -> None:
         super(DeleteConfigurationResponse, self).__init__(**kwargs)
         self.deleted = deleted
 
     @schema_property("deleted")
-    def deleted(self):
+    def deleted(self) -> Optional[int]:
         return self._property_deleted
 
     @deleted.setter
-    def deleted(self, value):
+    def deleted(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted", six.integer_types)
         self._property_deleted = value
 
@@ -5267,10 +5055,7 @@ class DeleteHyperParamsRequest(Request):
             "param_key": {
                 "properties": {
                     "name": {
-                        "description": (
-                            "Name of the parameter. If the name is ommitted then the corresponding operation is"
-                            " performed on the whole section"
-                        ),
+                        "description": "Name of the parameter. If the name is ommitted then the corresponding operation is performed on the whole section",
                         "type": ["string", "null"],
                     },
                     "section": {
@@ -5283,17 +5068,11 @@ class DeleteHyperParamsRequest(Request):
         },
         "properties": {
             "force": {
-                "description": (
-                    "If set to True then both new and running task hyper params can be deleted. Otherwise only the new"
-                    " task ones. Default is False"
-                ),
+                "description": "If set to True then both new and running task hyper params can be deleted. Otherwise only the new task ones. Default is False",
                 "type": "boolean",
             },
             "hyperparams": {
-                "description": (
-                    "List of hyper parameters to delete. In case a parameter with an empty name is passed all the"
-                    " section will be deleted"
-                ),
+                "description": "List of hyper parameters to delete. In case a parameter with an empty name is passed all the section will be deleted",
                 "items": {"$ref": "#/definitions/param_key"},
                 "type": "array",
             },
@@ -5303,50 +5082,46 @@ class DeleteHyperParamsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, hyperparams, force=None, **kwargs):
+    def __init__(self, task: str, hyperparams: List[Any], force: Optional[bool] = None, **kwargs: Any) -> None:
         super(DeleteHyperParamsRequest, self).__init__(**kwargs)
         self.task = task
         self.hyperparams = hyperparams
         self.force = force
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("hyperparams")
-    def hyperparams(self):
+    def hyperparams(self) -> List[Any]:
         return self._property_hyperparams
 
     @hyperparams.setter
-    def hyperparams(self, value):
+    def hyperparams(self, value: List[Any]) -> None:
         if value is None:
             self._property_hyperparams = None
             return
-
         self.assert_isinstance(value, "hyperparams", (ParamKey, dict), is_array=True)
-        value = [(ParamKey(**v) if isinstance(v, dict) else v) for v in value]
-
+        value = [ParamKey(**v) if isinstance(v, dict) else v for v in value]
         self._property_hyperparams = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -5362,7 +5137,6 @@ class DeleteHyperParamsResponse(Response):
     _service = "tasks"
     _action = "delete_hyper_params"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -5374,22 +5148,21 @@ class DeleteHyperParamsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, deleted=None, **kwargs):
+    def __init__(self, deleted: Optional[int] = None, **kwargs: Any) -> None:
         super(DeleteHyperParamsResponse, self).__init__(**kwargs)
         self.deleted = deleted
 
     @schema_property("deleted")
-    def deleted(self):
+    def deleted(self) -> Optional[int]:
         return self._property_deleted
 
     @deleted.setter
-    def deleted(self, value):
+    def deleted(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted", six.integer_types)
         self._property_deleted = value
 
@@ -5426,17 +5199,11 @@ class DeleteManyRequest(Request):
         "properties": {
             "delete_external_artifacts": {
                 "default": True,
-                "description": (
-                    "If set to 'true' then BE will try to delete the extenal artifacts associated with the tasks from"
-                    " the fileserver (if configured to do so)"
-                ),
+                "description": "If set to 'true' then BE will try to delete the extenal artifacts associated with the tasks from the fileserver (if configured to do so)",
                 "type": "boolean",
             },
             "delete_output_models": {
-                "description": (
-                    "If set to 'true' then delete output models of the tasks that are not referenced by other tasks."
-                    " Default value is 'true'"
-                ),
+                "description": "If set to 'true' then delete output models of the tasks that are not referenced by other tasks. Default value is 'true'",
                 "type": "boolean",
             },
             "force": {
@@ -5451,17 +5218,11 @@ class DeleteManyRequest(Request):
             },
             "move_to_trash": {
                 "default": False,
-                "description": (
-                    "Move task to trash instead of deleting it. For internal use only, tasks in the trash are not"
-                    " visible from the API and cannot be restored!"
-                ),
+                "description": "Move task to trash instead of deleting it. For internal use only, tasks in the trash are not visible from the API and cannot be restored!",
                 "type": "boolean",
             },
             "return_file_urls": {
-                "description": (
-                    "If set to 'true' then return the urls of the files that were uploaded by the tasks. Default "
-                    "value is 'false'"
-                ),
+                "description": "If set to 'true' then return the urls of the files that were uploaded by the tasks. Default value is 'false'",
                 "type": "boolean",
             },
         },
@@ -5471,14 +5232,14 @@ class DeleteManyRequest(Request):
 
     def __init__(
         self,
-        ids,
-        move_to_trash=False,
-        force=False,
-        return_file_urls=None,
-        delete_output_models=None,
-        delete_external_artifacts=True,
-        **kwargs
-    ):
+        ids: List[str],
+        move_to_trash: Optional[bool] = False,
+        force: Optional[bool] = False,
+        return_file_urls: Optional[bool] = None,
+        delete_output_models: Optional[bool] = None,
+        delete_external_artifacts: Optional[bool] = True,
+        **kwargs: Any
+    ) -> None:
         super(DeleteManyRequest, self).__init__(**kwargs)
         self.ids = ids
         self.move_to_trash = move_to_trash
@@ -5488,82 +5249,75 @@ class DeleteManyRequest(Request):
         self.delete_external_artifacts = delete_external_artifacts
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("move_to_trash")
-    def move_to_trash(self):
+    def move_to_trash(self) -> Optional[bool]:
         return self._property_move_to_trash
 
     @move_to_trash.setter
-    def move_to_trash(self, value):
+    def move_to_trash(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_move_to_trash = None
             return
-
         self.assert_isinstance(value, "move_to_trash", (bool,))
         self._property_move_to_trash = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("return_file_urls")
-    def return_file_urls(self):
+    def return_file_urls(self) -> Optional[bool]:
         return self._property_return_file_urls
 
     @return_file_urls.setter
-    def return_file_urls(self, value):
+    def return_file_urls(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_return_file_urls = None
             return
-
         self.assert_isinstance(value, "return_file_urls", (bool,))
         self._property_return_file_urls = value
 
     @schema_property("delete_output_models")
-    def delete_output_models(self):
+    def delete_output_models(self) -> Optional[bool]:
         return self._property_delete_output_models
 
     @delete_output_models.setter
-    def delete_output_models(self, value):
+    def delete_output_models(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_output_models = None
             return
-
         self.assert_isinstance(value, "delete_output_models", (bool,))
         self._property_delete_output_models = value
 
     @schema_property("delete_external_artifacts")
-    def delete_external_artifacts(self):
+    def delete_external_artifacts(self) -> Optional[bool]:
         return self._property_delete_external_artifacts
 
     @delete_external_artifacts.setter
-    def delete_external_artifacts(self, value):
+    def delete_external_artifacts(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_external_artifacts = None
             return
-
         self.assert_isinstance(value, "delete_external_artifacts", (bool,))
         self._property_delete_external_artifacts = value
 
@@ -5581,7 +5335,6 @@ class DeleteManyResponse(Response):
     _service = "tasks"
     _action = "delete_many"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "task_urls": {
@@ -5655,10 +5408,7 @@ class DeleteManyResponse(Response):
                         },
                         "urls": {
                             "$ref": "#/definitions/task_urls",
-                            "description": (
-                                "The urls of the files that were uploaded by the task. Returned if the"
-                                " 'return_file_urls' was set to 'true'"
-                            ),
+                            "description": "The urls of the files that were uploaded by the task. Returned if the 'return_file_urls' was set to 'true'",
                         },
                     },
                     "type": "object",
@@ -5669,38 +5419,36 @@ class DeleteManyResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, succeeded=None, failed=None, **kwargs):
+    def __init__(
+        self, succeeded: Optional[List[dict]] = None, failed: Optional[List[dict]] = None, **kwargs: Any
+    ) -> None:
         super(DeleteManyResponse, self).__init__(**kwargs)
         self.succeeded = succeeded
         self.failed = failed
 
     @schema_property("succeeded")
-    def succeeded(self):
+    def succeeded(self) -> Optional[List[dict]]:
         return self._property_succeeded
 
     @succeeded.setter
-    def succeeded(self, value):
+    def succeeded(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_succeeded = None
             return
-
         self.assert_isinstance(value, "succeeded", (list, tuple))
-
         self.assert_isinstance(value, "succeeded", (dict,), is_array=True)
         self._property_succeeded = value
 
     @schema_property("failed")
-    def failed(self):
+    def failed(self) -> Optional[List[dict]]:
         return self._property_failed
 
     @failed.setter
-    def failed(self, value):
+    def failed(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_failed = None
             return
-
         self.assert_isinstance(value, "failed", (list, tuple))
-
         self.assert_isinstance(value, "failed", (dict,), is_array=True)
         self._property_failed = value
 
@@ -5745,36 +5493,33 @@ class DeleteModelsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, models, **kwargs):
+    def __init__(self, task: str, models: List[dict], **kwargs: Any) -> None:
         super(DeleteModelsRequest, self).__init__(**kwargs)
         self.task = task
         self.models = models
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("models")
-    def models(self):
+    def models(self) -> List[dict]:
         return self._property_models
 
     @models.setter
-    def models(self, value):
+    def models(self, value: List[dict]) -> None:
         if value is None:
             self._property_models = None
             return
-
         self.assert_isinstance(value, "models", (list, tuple))
-
         self.assert_isinstance(value, "models", (dict,), is_array=True)
         self._property_models = value
 
@@ -5790,7 +5535,6 @@ class DeleteModelsResponse(Response):
     _service = "tasks"
     _action = "delete_models"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -5803,22 +5547,21 @@ class DeleteModelsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(DeleteModelsResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -5856,48 +5599,47 @@ class DequeueRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self, task: str, status_reason: Optional[str] = None, status_message: Optional[str] = None, **kwargs: Any
+    ) -> None:
         super(DequeueRequest, self).__init__(**kwargs)
         self.task = task
         self.status_reason = status_reason
         self.status_message = status_message
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -5917,7 +5659,6 @@ class DequeueResponse(Response):
     _service = "tasks"
     _action = "dequeue"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -5940,52 +5681,55 @@ class DequeueResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, dequeued=None, **kwargs):
+    def __init__(
+        self,
+        updated: Optional[int] = None,
+        fields: Optional[dict] = None,
+        dequeued: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         super(DequeueResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
         self.dequeued = dequeued
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
     @schema_property("dequeued")
-    def dequeued(self):
+    def dequeued(self) -> Optional[int]:
         return self._property_dequeued
 
     @dequeued.setter
-    def dequeued(self, value):
+    def dequeued(self, value: Optional[int]) -> None:
         if value is None:
             self._property_dequeued = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "dequeued", six.integer_types)
         self._property_dequeued = value
 
@@ -6026,50 +5770,48 @@ class DequeueManyRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, ids, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self, ids: List[str], status_reason: Optional[str] = None, status_message: Optional[str] = None, **kwargs: Any
+    ) -> None:
         super(DequeueManyRequest, self).__init__(**kwargs)
         self.ids = ids
         self.status_reason = status_reason
         self.status_message = status_message
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -6087,7 +5829,6 @@ class DequeueManyResponse(Response):
     _service = "tasks"
     _action = "dequeue_many"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -6148,38 +5889,36 @@ class DequeueManyResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, succeeded=None, failed=None, **kwargs):
+    def __init__(
+        self, succeeded: Optional[List[dict]] = None, failed: Optional[List[dict]] = None, **kwargs: Any
+    ) -> None:
         super(DequeueManyResponse, self).__init__(**kwargs)
         self.succeeded = succeeded
         self.failed = failed
 
     @schema_property("succeeded")
-    def succeeded(self):
+    def succeeded(self) -> Optional[List[dict]]:
         return self._property_succeeded
 
     @succeeded.setter
-    def succeeded(self, value):
+    def succeeded(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_succeeded = None
             return
-
         self.assert_isinstance(value, "succeeded", (list, tuple))
-
         self.assert_isinstance(value, "succeeded", (dict,), is_array=True)
         self._property_succeeded = value
 
     @schema_property("failed")
-    def failed(self):
+    def failed(self) -> Optional[List[dict]]:
         return self._property_failed
 
     @failed.setter
-    def failed(self, value):
+    def failed(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_failed = None
             return
-
         self.assert_isinstance(value, "failed", (list, tuple))
-
         self.assert_isinstance(value, "failed", (dict,), is_array=True)
         self._property_failed = value
 
@@ -6256,10 +5995,7 @@ class EditRequest(Request):
                         "description": "Epoch time when artifact was created",
                         "type": "integer",
                     },
-                    "type": {
-                        "description": "System defined type",
-                        "type": "string",
-                    },
+                    "type": {"description": "System defined type", "type": "string"},
                     "type_data": {
                         "$ref": "#/definitions/artifact_type_data",
                         "description": "Additional fields defined by the system",
@@ -6320,9 +6056,7 @@ class EditRequest(Request):
                         "type": ["array", "null"],
                     },
                     "framework": {
-                        "description": (
-                            "Framework related to the task. Case insensitive. Mandatory for Training tasks. "
-                        ),
+                        "description": "Framework related to the task. Case insensitive. Mandatory for Training tasks. ",
                         "type": ["string", "null"],
                     },
                     "model_desc": {
@@ -6332,11 +6066,7 @@ class EditRequest(Request):
                     },
                     "model_labels": {
                         "additionalProperties": {"type": "integer"},
-                        "description": (
-                            "Json object representing the ids of the labels in the model.\n            The keys are the"
-                            " layers' names and the values are the IDs.\n            Not applicable for Register"
-                            " (Import) tasks.\n            Mandatory for Training tasks"
-                        ),
+                        "description": "Json object representing the ids of the labels in the model.\n            The keys are the layers' names and the values are the IDs.\n            Not applicable for Register (Import) tasks.\n            Mandatory for Training tasks",
                         "type": ["object", "null"],
                     },
                     "parameters": {
@@ -6384,10 +6114,7 @@ class EditRequest(Request):
                         "type": ["string", "null"],
                     },
                     "branch": {
-                        "description": (
-                            "Repository branch id If not provided and tag not provided, default repository branch "
-                            "is used."
-                        ),
+                        "description": "Repository branch id If not provided and tag not provided, default repository branch is used.",
                         "type": ["string", "null"],
                     },
                     "diff": {
@@ -6411,15 +6138,11 @@ class EditRequest(Request):
                         "type": ["string", "null"],
                     },
                     "version_num": {
-                        "description": (
-                            "Version (changeset) number. Optional (default is head version) Unused if tag is provided."
-                        ),
+                        "description": "Version (changeset) number. Optional (default is head version) Unused if tag is provided.",
                         "type": ["string", "null"],
                     },
                     "working_dir": {
-                        "description": (
-                            "Path to the folder from which to run the script Default - root folder of repository"
-                        ),
+                        "description": "Path to the folder from which to run the script Default - root folder of repository",
                         "type": ["string", "null"],
                     },
                 },
@@ -6433,10 +6156,7 @@ class EditRequest(Request):
             "task_model_item": {
                 "properties": {
                     "model": {"description": "The model ID", "type": "string"},
-                    "name": {
-                        "description": "The task model name",
-                        "type": "string",
-                    },
+                    "name": {"description": "The task model name", "type": "string"},
                 },
                 "required": ["name", "model"],
                 "type": "object",
@@ -6547,25 +6267,25 @@ class EditRequest(Request):
 
     def __init__(
         self,
-        task,
-        force=False,
-        name=None,
-        tags=None,
-        system_tags=None,
-        type=None,
-        comment=None,
-        parent=None,
-        project=None,
-        output_dest=None,
-        execution=None,
-        script=None,
-        hyperparams=None,
-        configuration=None,
-        models=None,
-        container=None,
-        runtime=None,
-        **kwargs
-    ):
+        task: str,
+        force: Optional[bool] = False,
+        name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        type: Any = None,
+        comment: Optional[str] = None,
+        parent: Optional[str] = None,
+        project: Optional[str] = None,
+        output_dest: Optional[str] = None,
+        execution: Any = None,
+        script: Any = None,
+        hyperparams: Optional[dict] = None,
+        configuration: Optional[dict] = None,
+        models: Any = None,
+        container: Optional[dict] = None,
+        runtime: Optional[dict] = None,
+        **kwargs: Any
+    ) -> None:
         super(EditRequest, self).__init__(**kwargs)
         self.task = task
         self.force = force
@@ -6586,80 +6306,73 @@ class EditRequest(Request):
         self.runtime = runtime
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Any) -> None:
         if value is None:
             self._property_type = None
             return
@@ -6673,63 +6386,59 @@ class EditRequest(Request):
         self._property_type = value
 
     @schema_property("comment")
-    def comment(self):
+    def comment(self) -> Optional[str]:
         return self._property_comment
 
     @comment.setter
-    def comment(self, value):
+    def comment(self, value: Optional[str]) -> None:
         if value is None:
             self._property_comment = None
             return
-
         self.assert_isinstance(value, "comment", six.string_types)
         self._property_comment = value
 
     @schema_property("parent")
-    def parent(self):
+    def parent(self) -> Optional[str]:
         return self._property_parent
 
     @parent.setter
-    def parent(self, value):
+    def parent(self, value: Optional[str]) -> None:
         if value is None:
             self._property_parent = None
             return
-
         self.assert_isinstance(value, "parent", six.string_types)
         self._property_parent = value
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Optional[str]:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("output_dest")
-    def output_dest(self):
+    def output_dest(self) -> Optional[str]:
         return self._property_output_dest
 
     @output_dest.setter
-    def output_dest(self, value):
+    def output_dest(self, value: Optional[str]) -> None:
         if value is None:
             self._property_output_dest = None
             return
-
         self.assert_isinstance(value, "output_dest", six.string_types)
         self._property_output_dest = value
 
     @schema_property("execution")
-    def execution(self):
+    def execution(self) -> Any:
         return self._property_execution
 
     @execution.setter
-    def execution(self, value):
+    def execution(self, value: Any) -> None:
         if value is None:
             self._property_execution = None
             return
@@ -6740,11 +6449,11 @@ class EditRequest(Request):
         self._property_execution = value
 
     @schema_property("script")
-    def script(self):
+    def script(self) -> Any:
         return self._property_script
 
     @script.setter
-    def script(self, value):
+    def script(self, value: Any) -> None:
         if value is None:
             self._property_script = None
             return
@@ -6755,32 +6464,29 @@ class EditRequest(Request):
         self._property_script = value
 
     @schema_property("hyperparams")
-    def hyperparams(self):
+    def hyperparams(self) -> Optional[dict]:
         return self._property_hyperparams
 
     @hyperparams.setter
-    def hyperparams(self, value):
+    def hyperparams(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_hyperparams = None
             return
-
         self.assert_isinstance(value, "hyperparams", dict)
         self.assert_isinstance(value.keys(), "hyperparams_keys", six.string_types, is_array=True)
         self.assert_isinstance(value.values(), "hyperparams_values", (SectionParams, dict), is_array=True)
-        value = dict((k, SectionParams(**v) if isinstance(v, dict) else v) for k, v in value.items())
-
+        value = dict(((k, SectionParams(**v) if isinstance(v, dict) else v) for (k, v) in value.items()))
         self._property_hyperparams = value
 
     @schema_property("configuration")
-    def configuration(self):
+    def configuration(self) -> Optional[dict]:
         return self._property_configuration
 
     @configuration.setter
-    def configuration(self, value):
+    def configuration(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_configuration = None
             return
-
         self.assert_isinstance(value, "configuration", dict)
         self.assert_isinstance(value.keys(), "configuration_keys", six.string_types, is_array=True)
         self.assert_isinstance(
@@ -6789,17 +6495,15 @@ class EditRequest(Request):
             (ConfigurationItem, dict),
             is_array=True,
         )
-
-        value = dict((k, ConfigurationItem(**v) if isinstance(v, dict) else v) for k, v in value.items())
-
+        value = dict(((k, ConfigurationItem(**v) if isinstance(v, dict) else v) for (k, v) in value.items()))
         self._property_configuration = value
 
     @schema_property("models")
-    def models(self):
+    def models(self) -> Any:
         return self._property_models
 
     @models.setter
-    def models(self, value):
+    def models(self, value: Any) -> None:
         if value is None:
             self._property_models = None
             return
@@ -6810,28 +6514,26 @@ class EditRequest(Request):
         self._property_models = value
 
     @schema_property("container")
-    def container(self):
+    def container(self) -> Optional[dict]:
         return self._property_container
 
     @container.setter
-    def container(self, value):
+    def container(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_container = None
             return
-
         self.assert_isinstance(value, "container", (dict,))
         self._property_container = value
 
     @schema_property("runtime")
-    def runtime(self):
+    def runtime(self) -> Optional[dict]:
         return self._property_runtime
 
     @runtime.setter
-    def runtime(self, value):
+    def runtime(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_runtime = None
             return
-
         self.assert_isinstance(value, "runtime", (dict,))
         self._property_runtime = value
 
@@ -6849,7 +6551,6 @@ class EditResponse(Response):
     _service = "tasks"
     _action = "edit"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -6867,36 +6568,34 @@ class EditResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(EditResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -6948,24 +6647,16 @@ class EditConfigurationRequest(Request):
         },
         "properties": {
             "configuration": {
-                "description": (
-                    "Task configuration items. The new ones will be added and the already existing ones will be updated"
-                ),
+                "description": "Task configuration items. The new ones will be added and the already existing ones will be updated",
                 "items": {"$ref": "#/definitions/configuration_item"},
                 "type": "array",
             },
             "force": {
-                "description": (
-                    "If set to True then both new and running task configuration can be edited. Otherwise only the new"
-                    " task ones. Default is False"
-                ),
+                "description": "If set to True then both new and running task configuration can be edited. Otherwise only the new task ones. Default is False",
                 "type": "boolean",
             },
             "replace_configuration": {
-                "description": (
-                    "If set then the all the configuration items will be replaced with the provided ones. Otherwise"
-                    " only the provided configuration items will be updated or added"
-                ),
+                "description": "If set then the all the configuration items will be replaced with the provided ones. Otherwise only the provided configuration items will be updated or added",
                 "type": "boolean",
             },
             "task": {"description": "Task ID", "type": "string"},
@@ -6974,7 +6665,14 @@ class EditConfigurationRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, configuration, replace_configuration=None, force=None, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        configuration: List[Any],
+        replace_configuration: Optional[bool] = None,
+        force: Optional[bool] = None,
+        **kwargs: Any
+    ) -> None:
         super(EditConfigurationRequest, self).__init__(**kwargs)
         self.task = task
         self.configuration = configuration
@@ -6982,56 +6680,51 @@ class EditConfigurationRequest(Request):
         self.force = force
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("configuration")
-    def configuration(self):
+    def configuration(self) -> List[Any]:
         return self._property_configuration
 
     @configuration.setter
-    def configuration(self, value):
+    def configuration(self, value: List[Any]) -> None:
         if value is None:
             self._property_configuration = None
             return
-
         self.assert_isinstance(value, "configuration", (dict, ConfigurationItem), is_array=True)
-        value = [(ConfigurationItem(**v) if isinstance(v, dict) else v) for v in value]
-
+        value = [ConfigurationItem(**v) if isinstance(v, dict) else v for v in value]
         self._property_configuration = value
 
     @schema_property("replace_configuration")
-    def replace_configuration(self):
+    def replace_configuration(self) -> Optional[bool]:
         return self._property_replace_configuration
 
     @replace_configuration.setter
-    def replace_configuration(self, value):
+    def replace_configuration(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_replace_configuration = None
             return
-
         self.assert_isinstance(value, "replace_configuration", (bool,))
         self._property_replace_configuration = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -7047,7 +6740,6 @@ class EditConfigurationResponse(Response):
     _service = "tasks"
     _action = "edit_configuration"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -7059,22 +6751,21 @@ class EditConfigurationResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(EditConfigurationResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -7136,27 +6827,17 @@ class EditHyperParamsRequest(Request):
         },
         "properties": {
             "force": {
-                "description": (
-                    "If set to True then both new and running task hyper params can be edited. Otherwise only the new"
-                    " task ones. Default is False"
-                ),
+                "description": "If set to True then both new and running task hyper params can be edited. Otherwise only the new task ones. Default is False",
                 "type": "boolean",
             },
             "hyperparams": {
-                "description": (
-                    "Task hyper parameters. The new ones will be added and the already existing ones will be updated"
-                ),
+                "description": "Task hyper parameters. The new ones will be added and the already existing ones will be updated",
                 "items": {"$ref": "#/definitions/params_item"},
                 "type": "array",
             },
             "replace_hyperparams": {
                 "$ref": "#/definitions/replace_hyperparams_enum",
-                "description": (
-                    "Can be set to one of the following:\n                     'all' - all the hyper parameters will be"
-                    " replaced with the provided ones\n                     'section' - the sections that present in"
-                    " the new parameters will be replaced with the provided parameters\n                     'none'"
-                    " (the default value) - only the specific parameters will be updated or added"
-                ),
+                "description": "Can be set to one of the following:\n                     'all' - all the hyper parameters will be replaced with the provided ones\n                     'section' - the sections that present in the new parameters will be replaced with the provided parameters\n                     'none' (the default value) - only the specific parameters will be updated or added",
             },
             "task": {"description": "Task ID", "type": "string"},
         },
@@ -7164,7 +6845,14 @@ class EditHyperParamsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, hyperparams, replace_hyperparams=None, force=None, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        hyperparams: List[Any],
+        replace_hyperparams: Any = None,
+        force: Optional[bool] = None,
+        **kwargs: Any
+    ) -> None:
         super(EditHyperParamsRequest, self).__init__(**kwargs)
         self.task = task
         self.hyperparams = hyperparams
@@ -7172,39 +6860,36 @@ class EditHyperParamsRequest(Request):
         self.force = force
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("hyperparams")
-    def hyperparams(self):
+    def hyperparams(self) -> List[Any]:
         return self._property_hyperparams
 
     @hyperparams.setter
-    def hyperparams(self, value):
+    def hyperparams(self, value: List[Any]) -> None:
         if value is None:
             self._property_hyperparams = None
             return
-
         self.assert_isinstance(value, "hyperparams", (dict, ParamsItem), is_array=True)
-        value = [(ParamsItem(**v) if isinstance(v, dict) else v) for v in value]
-
+        value = [ParamsItem(**v) if isinstance(v, dict) else v for v in value]
         self._property_hyperparams = value
 
     @schema_property("replace_hyperparams")
-    def replace_hyperparams(self):
+    def replace_hyperparams(self) -> Any:
         return self._property_replace_hyperparams
 
     @replace_hyperparams.setter
-    def replace_hyperparams(self, value):
+    def replace_hyperparams(self, value: Any) -> None:
         if value is None:
             self._property_replace_hyperparams = None
             return
@@ -7218,15 +6903,14 @@ class EditHyperParamsRequest(Request):
         self._property_replace_hyperparams = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -7242,7 +6926,6 @@ class EditHyperParamsResponse(Response):
     _service = "tasks"
     _action = "edit_hyper_params"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -7254,22 +6937,21 @@ class EditHyperParamsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(EditHyperParamsResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -7311,16 +6993,11 @@ class EnqueueRequest(Request):
         "definitions": {},
         "properties": {
             "queue": {
-                "description": (
-                    "Queue id. If not provided and no queue name is passed then task is added to the default queue."
-                ),
+                "description": "Queue id. If not provided and no queue name is passed then task is added to the default queue.",
                 "type": ["string", "null"],
             },
             "queue_name": {
-                "description": (
-                    "The name of the queue. If the queue does not exist then it is auto-created. Cannot be used "
-                    "together with the queue id"
-                ),
+                "description": "The name of the queue. If the queue does not exist then it is auto-created. Cannot be used together with the queue id",
                 "type": "string",
             },
             "status_message": {
@@ -7344,14 +7021,14 @@ class EnqueueRequest(Request):
 
     def __init__(
         self,
-        task,
-        queue=None,
-        status_reason=None,
-        status_message=None,
-        queue_name=None,
-        verify_watched_queue=False,
-        **kwargs
-    ):
+        task: str,
+        queue: Optional[str] = None,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        queue_name: Optional[str] = None,
+        verify_watched_queue: Optional[bool] = False,
+        **kwargs: Any
+    ) -> None:
         super(EnqueueRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
@@ -7361,80 +7038,74 @@ class EnqueueRequest(Request):
         self.verify_watched_queue = verify_watched_queue
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> Optional[str]:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
     @schema_property("queue_name")
-    def queue_name(self):
+    def queue_name(self) -> Optional[str]:
         return self._property_queue_name
 
     @queue_name.setter
-    def queue_name(self, value):
+    def queue_name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue_name = None
             return
-
         self.assert_isinstance(value, "queue_name", six.string_types)
         self._property_queue_name = value
 
     @schema_property("verify_watched_queue")
-    def verify_watched_queue(self):
+    def verify_watched_queue(self) -> Optional[bool]:
         return self._property_verify_watched_queue
 
     @verify_watched_queue.setter
-    def verify_watched_queue(self, value):
+    def verify_watched_queue(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_verify_watched_queue = None
             return
-
         self.assert_isinstance(value, "verify_watched_queue", (bool,))
         self._property_verify_watched_queue = value
 
@@ -7457,7 +7128,6 @@ class EnqueueResponse(Response):
     _service = "tasks"
     _action = "enqueue"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -7484,7 +7154,14 @@ class EnqueueResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, queued=None, queue_watched=None, **kwargs):
+    def __init__(
+        self,
+        updated: Optional[int] = None,
+        fields: Optional[dict] = None,
+        queued: Optional[int] = None,
+        queue_watched: Optional[bool] = None,
+        **kwargs: Any
+    ) -> None:
         super(EnqueueResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
@@ -7492,58 +7169,54 @@ class EnqueueResponse(Response):
         self.queue_watched = queue_watched
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
     @schema_property("queued")
-    def queued(self):
+    def queued(self) -> Optional[int]:
         return self._property_queued
 
     @queued.setter
-    def queued(self, value):
+    def queued(self, value: Optional[int]) -> None:
         if value is None:
             self._property_queued = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "queued", six.integer_types)
         self._property_queued = value
 
     @schema_property("queue_watched")
-    def queue_watched(self):
+    def queue_watched(self) -> Optional[bool]:
         return self._property_queue_watched
 
     @queue_watched.setter
-    def queue_watched(self, value):
+    def queue_watched(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_queue_watched = None
             return
-
         self.assert_isinstance(value, "queue_watched", (bool,))
         self._property_queue_watched = value
 
@@ -7583,16 +7256,11 @@ class EnqueueManyRequest(Request):
                 "type": "array",
             },
             "queue": {
-                "description": (
-                    "Queue id. If not provided and no queue name is passed then tasks are added to the default queue."
-                ),
+                "description": "Queue id. If not provided and no queue name is passed then tasks are added to the default queue.",
                 "type": "string",
             },
             "queue_name": {
-                "description": (
-                    "The name of the queue. If the queue does not exist then it is auto-created. Cannot be used "
-                    "together with the queue id"
-                ),
+                "description": "The name of the queue. If the queue does not exist then it is auto-created. Cannot be used together with the queue id",
                 "type": "string",
             },
             "status_message": {
@@ -7620,15 +7288,15 @@ class EnqueueManyRequest(Request):
 
     def __init__(
         self,
-        ids,
-        status_reason=None,
-        status_message=None,
-        queue=None,
-        validate_tasks=False,
-        queue_name=None,
-        verify_watched_queue=False,
-        **kwargs
-    ):
+        ids: List[str],
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        queue: Optional[str] = None,
+        validate_tasks: Optional[bool] = False,
+        queue_name: Optional[str] = None,
+        verify_watched_queue: Optional[bool] = False,
+        **kwargs: Any
+    ) -> None:
         super(EnqueueManyRequest, self).__init__(**kwargs)
         self.ids = ids
         self.status_reason = status_reason
@@ -7639,95 +7307,87 @@ class EnqueueManyRequest(Request):
         self.verify_watched_queue = verify_watched_queue
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
     @schema_property("queue")
-    def queue(self):
+    def queue(self) -> Optional[str]:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
     @schema_property("validate_tasks")
-    def validate_tasks(self):
+    def validate_tasks(self) -> Optional[bool]:
         return self._property_validate_tasks
 
     @validate_tasks.setter
-    def validate_tasks(self, value):
+    def validate_tasks(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_validate_tasks = None
             return
-
         self.assert_isinstance(value, "validate_tasks", (bool,))
         self._property_validate_tasks = value
 
     @schema_property("queue_name")
-    def queue_name(self):
+    def queue_name(self) -> Optional[str]:
         return self._property_queue_name
 
     @queue_name.setter
-    def queue_name(self, value):
+    def queue_name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue_name = None
             return
-
         self.assert_isinstance(value, "queue_name", six.string_types)
         self._property_queue_name = value
 
     @schema_property("verify_watched_queue")
-    def verify_watched_queue(self):
+    def verify_watched_queue(self) -> Optional[bool]:
         return self._property_verify_watched_queue
 
     @verify_watched_queue.setter
-    def verify_watched_queue(self, value):
+    def verify_watched_queue(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_verify_watched_queue = None
             return
-
         self.assert_isinstance(value, "verify_watched_queue", (bool,))
         self._property_verify_watched_queue = value
 
@@ -7748,7 +7408,6 @@ class EnqueueManyResponse(Response):
     _service = "tasks"
     _action = "enqueue_many"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -7813,52 +7472,53 @@ class EnqueueManyResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, succeeded=None, failed=None, queue_watched=None, **kwargs):
+    def __init__(
+        self,
+        succeeded: Optional[List[dict]] = None,
+        failed: Optional[List[dict]] = None,
+        queue_watched: Optional[bool] = None,
+        **kwargs: Any
+    ) -> None:
         super(EnqueueManyResponse, self).__init__(**kwargs)
         self.succeeded = succeeded
         self.failed = failed
         self.queue_watched = queue_watched
 
     @schema_property("succeeded")
-    def succeeded(self):
+    def succeeded(self) -> Optional[List[dict]]:
         return self._property_succeeded
 
     @succeeded.setter
-    def succeeded(self, value):
+    def succeeded(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_succeeded = None
             return
-
         self.assert_isinstance(value, "succeeded", (list, tuple))
-
         self.assert_isinstance(value, "succeeded", (dict,), is_array=True)
         self._property_succeeded = value
 
     @schema_property("failed")
-    def failed(self):
+    def failed(self) -> Optional[List[dict]]:
         return self._property_failed
 
     @failed.setter
-    def failed(self, value):
+    def failed(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_failed = None
             return
-
         self.assert_isinstance(value, "failed", (list, tuple))
-
         self.assert_isinstance(value, "failed", (dict,), is_array=True)
         self._property_failed = value
 
     @schema_property("queue_watched")
-    def queue_watched(self):
+    def queue_watched(self) -> Optional[bool]:
         return self._property_queue_watched
 
     @queue_watched.setter
-    def queue_watched(self, value):
+    def queue_watched(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_queue_watched = None
             return
-
         self.assert_isinstance(value, "queue_watched", (bool,))
         self._property_queue_watched = value
 
@@ -7902,7 +7562,14 @@ class FailedRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, force=False, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        force: Optional[bool] = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(FailedRequest, self).__init__(**kwargs)
         self.force = force
         self.task = task
@@ -7910,54 +7577,50 @@ class FailedRequest(Request):
         self.status_message = status_message
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -7975,7 +7638,6 @@ class FailedResponse(Response):
     _service = "tasks"
     _action = "failed"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -7993,36 +7655,34 @@ class FailedResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(FailedResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -8151,22 +7811,12 @@ class GetAllRequest(Request):
                 "type": ["string", "null"],
             },
             "only_fields": {
-                "description": (
-                    "List of task field names (nesting is supported using '.', e.g. execution.model_labels). If"
-                    " provided, this list defines the query's projection (only these fields will be returned for each"
-                    " result entry)"
-                ),
+                "description": "List of task field names (nesting is supported using '.', e.g. execution.model_labels). If provided, this list defines the query's projection (only these fields will be returned for each result entry)",
                 "items": {"type": "string"},
                 "type": ["array", "null"],
             },
             "order_by": {
-                "description": (
-                    "List of field names to order by. When search_text is used,\n                    '@text_score' can"
-                    " be used as a field representing the text score of returned documents.\n                    Use"
-                    " '-' prefix to specify descending order. Optional, recommended when using page.\n                 "
-                    "   If the first order field is a hyper parameter or metric then string values are ordered\n       "
-                    "             according to numeric ordering rules where applicable"
-                ),
+                "description": "List of field names to order by. When search_text is used,\n                    '@text_score' can be used as a field representing the text score of returned documents.\n                    Use '-' prefix to specify descending order. Optional, recommended when using page.\n                    If the first order field is a hyper parameter or metric then string values are ordered\n                    according to numeric ordering rules where applicable",
                 "items": {"type": "string"},
                 "type": ["array", "null"],
             },
@@ -8176,10 +7826,7 @@ class GetAllRequest(Request):
                 "type": ["integer", "null"],
             },
             "page_size": {
-                "description": (
-                    "Page size, specifies the number of results returned in each page (last page may contain fewer "
-                    "results)"
-                ),
+                "description": "Page size, specifies the number of results returned in each page (last page may contain fewer results)",
                 "minimum": 1,
                 "type": ["integer", "null"],
             },
@@ -8217,10 +7864,7 @@ class GetAllRequest(Request):
                 "type": ["array", "null"],
             },
             "status_changed": {
-                "description": (
-                    "List of status changed constraint strings, or a single string (utcformat, epoch) with an optional prefix modifier "
-                    "(\\>,\\>=, \\<, \\<=)"
-                ),
+                "description": "List of status changed constraint strings, or a single string (utcformat, epoch) with an optional prefix modifier (\\>,\\>=, \\<, \\<=)",
                 "items": {"pattern": "^(>=|>|<=|<)?.*$", "type": "string"},
                 "type": ["string", "array", "null"],
             },
@@ -8235,10 +7879,7 @@ class GetAllRequest(Request):
                 "type": ["array", "null"],
             },
             "type": {
-                "description": (
-                    "List of task types. One or more of: 'import', 'annotation', 'training' or "
-                    "'testing' (case insensitive)"
-                ),
+                "description": "List of task types. One or more of: 'import', 'annotation', 'training' or 'testing' (case insensitive)",
                 "items": {"type": "string"},
                 "type": ["array", "null"],
             },
@@ -8253,29 +7894,29 @@ class GetAllRequest(Request):
 
     def __init__(
         self,
-        id=None,
-        name=None,
-        user=None,
-        project=None,
-        page=None,
-        page_size=None,
-        order_by=None,
-        type=None,
-        tags=None,
-        system_tags=None,
-        status=None,
-        only_fields=None,
-        parent=None,
-        status_changed=None,
-        search_text=None,
-        _all_=None,
-        _any_=None,
-        search_hidden=False,
-        scroll_id=None,
-        refresh_scroll=None,
-        size=None,
-        **kwargs
-    ):
+        id: Optional[List[str]] = None,
+        name: Optional[str] = None,
+        user: Optional[List[str]] = None,
+        project: Optional[List[str]] = None,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        order_by: Optional[List[str]] = None,
+        type: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        status: Optional[List[Any]] = None,
+        only_fields: Optional[List[str]] = None,
+        parent: Optional[str] = None,
+        status_changed: Optional[Union[str, List[str]]] = None,
+        search_text: Optional[str] = None,
+        _all_: Any = None,
+        _any_: Any = None,
+        search_hidden: Optional[bool] = False,
+        scroll_id: Optional[str] = None,
+        refresh_scroll: Optional[bool] = None,
+        size: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetAllRequest, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -8300,234 +7941,209 @@ class GetAllRequest(Request):
         self.size = size
 
     @schema_property("id")
-    def id(self):
+    def id(self) -> Optional[List[str]]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", (list, tuple))
-
         self.assert_isinstance(value, "id", six.string_types, is_array=True)
         self._property_id = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("user")
-    def user(self):
+    def user(self) -> Optional[List[str]]:
         return self._property_user
 
     @user.setter
-    def user(self, value):
+    def user(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_user = None
             return
-
         self.assert_isinstance(value, "user", (list, tuple))
-
         self.assert_isinstance(value, "user", six.string_types, is_array=True)
         self._property_user = value
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Optional[List[str]]:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", (list, tuple))
-
         self.assert_isinstance(value, "project", six.string_types, is_array=True)
         self._property_project = value
 
     @schema_property("page")
-    def page(self):
+    def page(self) -> Optional[int]:
         return self._property_page
 
     @page.setter
-    def page(self, value):
+    def page(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page", six.integer_types)
         self._property_page = value
 
     @schema_property("page_size")
-    def page_size(self):
+    def page_size(self) -> Optional[int]:
         return self._property_page_size
 
     @page_size.setter
-    def page_size(self, value):
+    def page_size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page_size", six.integer_types)
         self._property_page_size = value
 
     @schema_property("order_by")
-    def order_by(self):
+    def order_by(self) -> Optional[List[str]]:
         return self._property_order_by
 
     @order_by.setter
-    def order_by(self, value):
+    def order_by(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_order_by = None
             return
-
         self.assert_isinstance(value, "order_by", (list, tuple))
-
         self.assert_isinstance(value, "order_by", six.string_types, is_array=True)
         self._property_order_by = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Optional[List[str]]:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_type = None
             return
-
         self.assert_isinstance(value, "type", (list, tuple))
-
         self.assert_isinstance(value, "type", six.string_types, is_array=True)
         self._property_type = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("status")
-    def status(self):
+    def status(self) -> Optional[List[Any]]:
         return self._property_status
 
     @status.setter
-    def status(self, value):
+    def status(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_status = None
             return
-
         self.assert_isinstance(value, "status", (list, tuple))
-        if any(isinstance(v, six.string_types) for v in value):
+        if any((isinstance(v, six.string_types) for v in value)):
             value = [TaskStatusEnum(v) if isinstance(v, six.string_types) else v for v in value]
         else:
             self.assert_isinstance(value, "status", TaskStatusEnum, is_array=True)
         self._property_status = value
 
     @schema_property("only_fields")
-    def only_fields(self):
+    def only_fields(self) -> Optional[List[str]]:
         return self._property_only_fields
 
     @only_fields.setter
-    def only_fields(self, value):
+    def only_fields(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_only_fields = None
             return
-
         self.assert_isinstance(value, "only_fields", (list, tuple))
-
         self.assert_isinstance(value, "only_fields", six.string_types, is_array=True)
         self._property_only_fields = value
 
     @schema_property("parent")
-    def parent(self):
+    def parent(self) -> Optional[str]:
         return self._property_parent
 
     @parent.setter
-    def parent(self, value):
+    def parent(self, value: Optional[str]) -> None:
         if value is None:
             self._property_parent = None
             return
-
         self.assert_isinstance(value, "parent", six.string_types)
         self._property_parent = value
 
     @schema_property("status_changed")
-    def status_changed(self):
+    def status_changed(self) -> Optional[Union[str, List[str]]]:
         return self._property_status_changed
 
     @status_changed.setter
-    def status_changed(self, value):
+    def status_changed(self, value: Optional[Union[str, List[str]]]) -> None:
         if value is None:
             self._property_status_changed = None
             return
-
         self.assert_isinstance(value, "status_changed", (str, list, tuple))
-
         if not isinstance(value, six.string_types):
             self.assert_isinstance(value, "status_changed", six.string_types, is_array=True)
-
         self._property_status_changed = value
 
     @schema_property("search_text")
-    def search_text(self):
+    def search_text(self) -> Optional[str]:
         return self._property_search_text
 
     @search_text.setter
-    def search_text(self, value):
+    def search_text(self, value: Optional[str]) -> None:
         if value is None:
             self._property_search_text = None
             return
-
         self.assert_isinstance(value, "search_text", six.string_types)
         self._property_search_text = value
 
     @schema_property("_all_")
-    def _all_(self):
+    def _all_(self) -> Any:
         return self._property__all_
 
     @_all_.setter
-    def _all_(self, value):
+    def _all_(self, value: Any) -> None:
         if value is None:
             self._property__all_ = None
             return
@@ -8538,11 +8154,11 @@ class GetAllRequest(Request):
         self._property__all_ = value
 
     @schema_property("_any_")
-    def _any_(self):
+    def _any_(self) -> Any:
         return self._property__any_
 
     @_any_.setter
-    def _any_(self, value):
+    def _any_(self, value: Any) -> None:
         if value is None:
             self._property__any_ = None
             return
@@ -8553,56 +8169,52 @@ class GetAllRequest(Request):
         self._property__any_ = value
 
     @schema_property("search_hidden")
-    def search_hidden(self):
+    def search_hidden(self) -> Optional[bool]:
         return self._property_search_hidden
 
     @search_hidden.setter
-    def search_hidden(self, value):
+    def search_hidden(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_search_hidden = None
             return
-
         self.assert_isinstance(value, "search_hidden", (bool,))
         self._property_search_hidden = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
     @schema_property("refresh_scroll")
-    def refresh_scroll(self):
+    def refresh_scroll(self) -> Optional[bool]:
         return self._property_refresh_scroll
 
     @refresh_scroll.setter
-    def refresh_scroll(self, value):
+    def refresh_scroll(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_refresh_scroll = None
             return
-
         self.assert_isinstance(value, "refresh_scroll", (bool,))
         self._property_refresh_scroll = value
 
     @schema_property("size")
-    def size(self):
+    def size(self) -> Optional[int]:
         return self._property_size
 
     @size.setter
-    def size(self, value):
+    def size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "size", six.integer_types)
         self._property_size = value
 
@@ -8621,7 +8233,6 @@ class GetAllResponse(Response):
     _service = "tasks"
     _action = "get_all"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "artifact": {
@@ -8648,10 +8259,7 @@ class GetAllResponse(Response):
                         "description": "Epoch time when artifact was created",
                         "type": "integer",
                     },
-                    "type": {
-                        "description": "System defined type",
-                        "type": "string",
-                    },
+                    "type": {"description": "System defined type", "type": "string"},
                     "type_data": {
                         "$ref": "#/definitions/artifact_type_data",
                         "description": "Additional fields defined by the system",
@@ -8712,9 +8320,7 @@ class GetAllResponse(Response):
                         "type": ["array", "null"],
                     },
                     "framework": {
-                        "description": (
-                            "Framework related to the task. Case insensitive. Mandatory for Training tasks. "
-                        ),
+                        "description": "Framework related to the task. Case insensitive. Mandatory for Training tasks. ",
                         "type": ["string", "null"],
                     },
                     "model_desc": {
@@ -8724,11 +8330,7 @@ class GetAllResponse(Response):
                     },
                     "model_labels": {
                         "additionalProperties": {"type": "integer"},
-                        "description": (
-                            "Json object representing the ids of the labels in the model.\n            The keys are the"
-                            " layers' names and the values are the IDs.\n            Not applicable for Register"
-                            " (Import) tasks.\n            Mandatory for Training tasks"
-                        ),
+                        "description": "Json object representing the ids of the labels in the model.\n            The keys are the layers' names and the values are the IDs.\n            Not applicable for Register (Import) tasks.\n            Mandatory for Training tasks",
                         "type": ["object", "null"],
                     },
                     "parameters": {
@@ -8832,10 +8434,7 @@ class GetAllResponse(Response):
                         "type": ["string", "null"],
                     },
                     "branch": {
-                        "description": (
-                            "Repository branch id If not provided and tag not provided, default repository branch "
-                            "is used."
-                        ),
+                        "description": "Repository branch id If not provided and tag not provided, default repository branch is used.",
                         "type": ["string", "null"],
                     },
                     "diff": {
@@ -8859,15 +8458,11 @@ class GetAllResponse(Response):
                         "type": ["string", "null"],
                     },
                     "version_num": {
-                        "description": (
-                            "Version (changeset) number. Optional (default is head version) Unused if tag is provided."
-                        ),
+                        "description": "Version (changeset) number. Optional (default is head version) Unused if tag is provided.",
                         "type": ["string", "null"],
                     },
                     "working_dir": {
-                        "description": (
-                            "Path to the folder from which to run the script Default - root folder of repository"
-                        ),
+                        "description": "Path to the folder from which to run the script Default - root folder of repository",
                         "type": ["string", "null"],
                     },
                 },
@@ -8940,9 +8535,7 @@ class GetAllResponse(Response):
                         "type": ["object", "null"],
                     },
                     "last_update": {
-                        "description": (
-                            "Last time this task was created, edited, changed or events for this task were reported"
-                        ),
+                        "description": "Last time this task was created, edited, changed or events for this task were reported",
                         "format": "date-time",
                         "type": ["string", "null"],
                     },
@@ -9041,10 +8634,7 @@ class GetAllResponse(Response):
             "task_model_item": {
                 "properties": {
                     "model": {"description": "The model ID", "type": "string"},
-                    "name": {
-                        "description": "The task model name",
-                        "type": "string",
-                    },
+                    "name": {"description": "The task model name", "type": "string"},
                 },
                 "required": ["name", "model"],
                 "type": "object",
@@ -9110,38 +8700,36 @@ class GetAllResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, tasks=None, scroll_id=None, **kwargs):
+    def __init__(self, tasks: Optional[List[Any]] = None, scroll_id: Optional[str] = None, **kwargs: Any) -> None:
         super(GetAllResponse, self).__init__(**kwargs)
         self.tasks = tasks
         self.scroll_id = scroll_id
 
     @schema_property("tasks")
-    def tasks(self):
+    def tasks(self) -> Optional[List[Any]]:
         return self._property_tasks
 
     @tasks.setter
-    def tasks(self, value):
+    def tasks(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_tasks = None
             return
-
         self.assert_isinstance(value, "tasks", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [Task.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "tasks", Task, is_array=True)
         self._property_tasks = value
 
     @schema_property("scroll_id")
-    def scroll_id(self):
+    def scroll_id(self) -> Optional[str]:
         return self._property_scroll_id
 
     @scroll_id.setter
-    def scroll_id(self, value):
+    def scroll_id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_scroll_id = None
             return
-
         self.assert_isinstance(value, "scroll_id", six.string_types)
         self._property_scroll_id = value
 
@@ -9164,20 +8752,19 @@ class GetByIdRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, **kwargs):
+    def __init__(self, task: str, **kwargs: Any) -> None:
         super(GetByIdRequest, self).__init__(**kwargs)
         self.task = task
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -9193,7 +8780,6 @@ class GetByIdResponse(Response):
     _service = "tasks"
     _action = "get_by_id"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "artifact": {
@@ -9220,10 +8806,7 @@ class GetByIdResponse(Response):
                         "description": "Epoch time when artifact was created",
                         "type": "integer",
                     },
-                    "type": {
-                        "description": "System defined type",
-                        "type": "string",
-                    },
+                    "type": {"description": "System defined type", "type": "string"},
                     "type_data": {
                         "$ref": "#/definitions/artifact_type_data",
                         "description": "Additional fields defined by the system",
@@ -9284,9 +8867,7 @@ class GetByIdResponse(Response):
                         "type": ["array", "null"],
                     },
                     "framework": {
-                        "description": (
-                            "Framework related to the task. Case insensitive. Mandatory for Training tasks. "
-                        ),
+                        "description": "Framework related to the task. Case insensitive. Mandatory for Training tasks. ",
                         "type": ["string", "null"],
                     },
                     "model_desc": {
@@ -9296,11 +8877,7 @@ class GetByIdResponse(Response):
                     },
                     "model_labels": {
                         "additionalProperties": {"type": "integer"},
-                        "description": (
-                            "Json object representing the ids of the labels in the model.\n            The keys are the"
-                            " layers' names and the values are the IDs.\n            Not applicable for Register"
-                            " (Import) tasks.\n            Mandatory for Training tasks"
-                        ),
+                        "description": "Json object representing the ids of the labels in the model.\n            The keys are the layers' names and the values are the IDs.\n            Not applicable for Register (Import) tasks.\n            Mandatory for Training tasks",
                         "type": ["object", "null"],
                     },
                     "parameters": {
@@ -9404,10 +8981,7 @@ class GetByIdResponse(Response):
                         "type": ["string", "null"],
                     },
                     "branch": {
-                        "description": (
-                            "Repository branch id If not provided and tag not provided, default repository branch "
-                            "is used."
-                        ),
+                        "description": "Repository branch id If not provided and tag not provided, default repository branch is used.",
                         "type": ["string", "null"],
                     },
                     "diff": {
@@ -9431,15 +9005,11 @@ class GetByIdResponse(Response):
                         "type": ["string", "null"],
                     },
                     "version_num": {
-                        "description": (
-                            "Version (changeset) number. Optional (default is head version) Unused if tag is provided."
-                        ),
+                        "description": "Version (changeset) number. Optional (default is head version) Unused if tag is provided.",
                         "type": ["string", "null"],
                     },
                     "working_dir": {
-                        "description": (
-                            "Path to the folder from which to run the script Default - root folder of repository"
-                        ),
+                        "description": "Path to the folder from which to run the script Default - root folder of repository",
                         "type": ["string", "null"],
                     },
                 },
@@ -9512,9 +9082,7 @@ class GetByIdResponse(Response):
                         "type": ["object", "null"],
                     },
                     "last_update": {
-                        "description": (
-                            "Last time this task was created, edited, changed or events for this task were reported"
-                        ),
+                        "description": "Last time this task was created, edited, changed or events for this task were reported",
                         "format": "date-time",
                         "type": ["string", "null"],
                     },
@@ -9613,10 +9181,7 @@ class GetByIdResponse(Response):
             "task_model_item": {
                 "properties": {
                     "model": {"description": "The model ID", "type": "string"},
-                    "name": {
-                        "description": "The task model name",
-                        "type": "string",
-                    },
+                    "name": {"description": "The task model name", "type": "string"},
                 },
                 "required": ["name", "model"],
                 "type": "object",
@@ -9677,16 +9242,16 @@ class GetByIdResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, task=None, **kwargs):
+    def __init__(self, task: Any = None, **kwargs: Any) -> None:
         super(GetByIdResponse, self).__init__(**kwargs)
         self.task = task
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> Any:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: Any) -> None:
         if value is None:
             self._property_task = None
             return
@@ -9716,9 +9281,7 @@ class GetConfigurationNamesRequest(Request):
         "properties": {
             "skip_empty": {
                 "default": True,
-                "description": (
-                    "If set to 'true' then the names for configurations with missing values are not returned"
-                ),
+                "description": "If set to 'true' then the names for configurations with missing values are not returned",
                 "type": "boolean",
             },
             "tasks": {
@@ -9731,36 +9294,33 @@ class GetConfigurationNamesRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, tasks, skip_empty=True, **kwargs):
+    def __init__(self, tasks: List[str], skip_empty: Optional[bool] = True, **kwargs: Any) -> None:
         super(GetConfigurationNamesRequest, self).__init__(**kwargs)
         self.tasks = tasks
         self.skip_empty = skip_empty
 
     @schema_property("tasks")
-    def tasks(self):
+    def tasks(self) -> List[str]:
         return self._property_tasks
 
     @tasks.setter
-    def tasks(self, value):
+    def tasks(self, value: List[str]) -> None:
         if value is None:
             self._property_tasks = None
             return
-
         self.assert_isinstance(value, "tasks", (list, tuple))
-
         self.assert_isinstance(value, "tasks", six.string_types, is_array=True)
         self._property_tasks = value
 
     @schema_property("skip_empty")
-    def skip_empty(self):
+    def skip_empty(self) -> Optional[bool]:
         return self._property_skip_empty
 
     @skip_empty.setter
-    def skip_empty(self, value):
+    def skip_empty(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_skip_empty = None
             return
-
         self.assert_isinstance(value, "skip_empty", (bool,))
         self._property_skip_empty = value
 
@@ -9776,7 +9336,6 @@ class GetConfigurationNamesResponse(Response):
     _service = "tasks"
     _action = "get_configuration_names"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -9796,20 +9355,19 @@ class GetConfigurationNamesResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, configurations=None, **kwargs):
+    def __init__(self, configurations: Optional[dict] = None, **kwargs: Any) -> None:
         super(GetConfigurationNamesResponse, self).__init__(**kwargs)
         self.configurations = configurations
 
     @schema_property("configurations")
-    def configurations(self):
+    def configurations(self) -> Optional[dict]:
         return self._property_configurations
 
     @configurations.setter
-    def configurations(self, value):
+    def configurations(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_configurations = None
             return
-
         self.assert_isinstance(value, "configurations", (dict,))
         self._property_configurations = value
 
@@ -9832,10 +9390,7 @@ class GetConfigurationsRequest(Request):
         "definitions": {},
         "properties": {
             "names": {
-                "description": (
-                    "Names of the configuration items to retreive. If not passed or empty then all the configurations"
-                    " will be retrieved."
-                ),
+                "description": "Names of the configuration items to retreive. If not passed or empty then all the configurations will be retrieved.",
                 "items": {"type": "string"},
                 "type": "array",
             },
@@ -9849,38 +9404,34 @@ class GetConfigurationsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, tasks, names=None, **kwargs):
+    def __init__(self, tasks: List[str], names: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(GetConfigurationsRequest, self).__init__(**kwargs)
         self.tasks = tasks
         self.names = names
 
     @schema_property("tasks")
-    def tasks(self):
+    def tasks(self) -> List[str]:
         return self._property_tasks
 
     @tasks.setter
-    def tasks(self, value):
+    def tasks(self, value: List[str]) -> None:
         if value is None:
             self._property_tasks = None
             return
-
         self.assert_isinstance(value, "tasks", (list, tuple))
-
         self.assert_isinstance(value, "tasks", six.string_types, is_array=True)
         self._property_tasks = value
 
     @schema_property("names")
-    def names(self):
+    def names(self) -> Optional[List[str]]:
         return self._property_names
 
     @names.setter
-    def names(self, value):
+    def names(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_names = None
             return
-
         self.assert_isinstance(value, "names", (list, tuple))
-
         self.assert_isinstance(value, "names", six.string_types, is_array=True)
         self._property_names = value
 
@@ -9896,7 +9447,6 @@ class GetConfigurationsResponse(Response):
     _service = "tasks"
     _action = "get_configurations"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "configuration_item": {
@@ -9941,22 +9491,20 @@ class GetConfigurationsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, configurations=None, **kwargs):
+    def __init__(self, configurations: Optional[List[dict]] = None, **kwargs: Any) -> None:
         super(GetConfigurationsResponse, self).__init__(**kwargs)
         self.configurations = configurations
 
     @schema_property("configurations")
-    def configurations(self):
+    def configurations(self) -> Optional[List[dict]]:
         return self._property_configurations
 
     @configurations.setter
-    def configurations(self, value):
+    def configurations(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_configurations = None
             return
-
         self.assert_isinstance(value, "configurations", (list, tuple))
-
         self.assert_isinstance(value, "configurations", (dict,), is_array=True)
         self._property_configurations = value
 
@@ -9985,22 +9533,20 @@ class GetHyperParamsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, tasks, **kwargs):
+    def __init__(self, tasks: List[str], **kwargs: Any) -> None:
         super(GetHyperParamsRequest, self).__init__(**kwargs)
         self.tasks = tasks
 
     @schema_property("tasks")
-    def tasks(self):
+    def tasks(self) -> List[str]:
         return self._property_tasks
 
     @tasks.setter
-    def tasks(self, value):
+    def tasks(self, value: List[str]) -> None:
         if value is None:
             self._property_tasks = None
             return
-
         self.assert_isinstance(value, "tasks", (list, tuple))
-
         self.assert_isinstance(value, "tasks", six.string_types, is_array=True)
         self._property_tasks = value
 
@@ -10016,7 +9562,6 @@ class GetHyperParamsResponse(Response):
     _service = "tasks"
     _action = "get_hyper_params"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "params_item": {
@@ -10065,22 +9610,20 @@ class GetHyperParamsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, params=None, **kwargs):
+    def __init__(self, params: Optional[List[dict]] = None, **kwargs: Any) -> None:
         super(GetHyperParamsResponse, self).__init__(**kwargs)
         self.params = params
 
     @schema_property("params")
-    def params(self):
+    def params(self) -> Optional[List[dict]]:
         return self._property_params
 
     @params.setter
-    def params(self, value):
+    def params(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_params = None
             return
-
         self.assert_isinstance(value, "params", (list, tuple))
-
         self.assert_isinstance(value, "params", (dict,), is_array=True)
         self._property_params = value
 
@@ -10101,10 +9644,7 @@ class GetTypesRequest(Request):
         "definitions": {},
         "properties": {
             "projects": {
-                "description": (
-                    "The list of projects which tasks will be analyzed. If not passed or empty then all the company and"
-                    " public tasks will be analyzed"
-                ),
+                "description": "The list of projects which tasks will be analyzed. If not passed or empty then all the company and public tasks will be analyzed",
                 "items": {"type": "string"},
                 "type": ["array", "null"],
             }
@@ -10112,22 +9652,20 @@ class GetTypesRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, projects=None, **kwargs):
+    def __init__(self, projects: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(GetTypesRequest, self).__init__(**kwargs)
         self.projects = projects
 
     @schema_property("projects")
-    def projects(self):
+    def projects(self) -> Optional[List[str]]:
         return self._property_projects
 
     @projects.setter
-    def projects(self, value):
+    def projects(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_projects = None
             return
-
         self.assert_isinstance(value, "projects", (list, tuple))
-
         self.assert_isinstance(value, "projects", six.string_types, is_array=True)
         self._property_projects = value
 
@@ -10143,7 +9681,6 @@ class GetTypesResponse(Response):
     _service = "tasks"
     _action = "get_types"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -10156,22 +9693,20 @@ class GetTypesResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, types=None, **kwargs):
+    def __init__(self, types: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(GetTypesResponse, self).__init__(**kwargs)
         self.types = types
 
-    @schema_property("types")  # noqa: F811
-    def types(self):
+    @schema_property("types")
+    def types(self) -> Optional[List[str]]:
         return self._property_types
 
     @types.setter
-    def types(self, value):
+    def types(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_types = None
             return
-
         self.assert_isinstance(value, "types", (list, tuple))
-
         self.assert_isinstance(value, "types", six.string_types, is_array=True)
         self._property_types = value
 
@@ -10200,22 +9735,20 @@ class MakePrivateRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, ids=None, **kwargs):
+    def __init__(self, ids: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(MakePrivateRequest, self).__init__(**kwargs)
         self.ids = ids
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> Optional[List[str]]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
@@ -10231,7 +9764,6 @@ class MakePrivateResponse(Response):
     _service = "tasks"
     _action = "make_private"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -10243,22 +9775,21 @@ class MakePrivateResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(MakePrivateResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -10286,22 +9817,20 @@ class MakePublicRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, ids=None, **kwargs):
+    def __init__(self, ids: Optional[List[str]] = None, **kwargs: Any) -> None:
         super(MakePublicRequest, self).__init__(**kwargs)
         self.ids = ids
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> Optional[List[str]]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
@@ -10317,7 +9846,6 @@ class MakePublicResponse(Response):
     _service = "tasks"
     _action = "make_public"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -10329,22 +9857,21 @@ class MakePublicResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(MakePublicResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -10376,16 +9903,11 @@ class MoveRequest(Request):
                 "type": "array",
             },
             "project": {
-                "description": (
-                    "Target project ID. If not provided, `project_name` must be provided. Use null for the root project"
-                ),
+                "description": "Target project ID. If not provided, `project_name` must be provided. Use null for the root project",
                 "type": "string",
             },
             "project_name": {
-                "description": (
-                    "Target project name. If provided and a project with this name does not exist, a new project will"
-                    " be created. If not provided, `project` must be provided."
-                ),
+                "description": "Target project name. If provided and a project with this name does not exist, a new project will be created. If not provided, `project` must be provided.",
                 "type": "string",
             },
         },
@@ -10393,50 +9915,48 @@ class MoveRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, ids, project=None, project_name=None, **kwargs):
+    def __init__(
+        self, ids: List[str], project: Optional[str] = None, project_name: Optional[str] = None, **kwargs: Any
+    ) -> None:
         super(MoveRequest, self).__init__(**kwargs)
         self.ids = ids
         self.project = project
         self.project_name = project_name
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Optional[str]:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("project_name")
-    def project_name(self):
+    def project_name(self) -> Optional[str]:
         return self._property_project_name
 
     @project_name.setter
-    def project_name(self, value):
+    def project_name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_project_name = None
             return
-
         self.assert_isinstance(value, "project_name", six.string_types)
         self._property_project_name = value
 
@@ -10450,7 +9970,6 @@ class MoveResponse(Response):
     _service = "tasks"
     _action = "move"
     _version = "2.23"
-
     _schema = {"additionalProperties": True, "definitions": {}, "type": "object"}
 
 
@@ -10472,20 +9991,19 @@ class PingRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, **kwargs):
+    def __init__(self, task: str, **kwargs: Any) -> None:
         super(PingRequest, self).__init__(**kwargs)
         self.task = task
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -10499,7 +10017,6 @@ class PingResponse(Response):
     _service = "tasks"
     _action = "ping"
     _version = "2.23"
-
     _schema = {"additionalProperties": False, "definitions": {}, "type": "object"}
 
 
@@ -10536,10 +10053,7 @@ class PublishRequest(Request):
                 "type": ["boolean", "null"],
             },
             "publish_model": {
-                "description": (
-                    "Indicates that the task output model (if exists) should be published. Optional, the default value "
-                    "is True."
-                ),
+                "description": "Indicates that the task output model (if exists) should be published. Optional, the default value is True.",
                 "type": ["boolean", "null"],
             },
             "status_message": {
@@ -10556,7 +10070,15 @@ class PublishRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, force=False, publish_model=None, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        force: Optional[bool] = False,
+        publish_model: Optional[bool] = None,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(PublishRequest, self).__init__(**kwargs)
         self.force = force
         self.publish_model = publish_model
@@ -10565,67 +10087,62 @@ class PublishRequest(Request):
         self.status_message = status_message
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("publish_model")
-    def publish_model(self):
+    def publish_model(self) -> Optional[bool]:
         return self._property_publish_model
 
     @publish_model.setter
-    def publish_model(self, value):
+    def publish_model(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_publish_model = None
             return
-
         self.assert_isinstance(value, "publish_model", (bool,))
         self._property_publish_model = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -10643,7 +10160,6 @@ class PublishResponse(Response):
     _service = "tasks"
     _action = "publish"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -10661,36 +10177,34 @@ class PublishResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(PublishResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -10729,10 +10243,7 @@ class PublishManyRequest(Request):
                 "type": "array",
             },
             "publish_model": {
-                "description": (
-                    "Indicates that the task output model (if exists) should be published. Optional, the default value "
-                    "is True."
-                ),
+                "description": "Indicates that the task output model (if exists) should be published. Optional, the default value is True.",
                 "type": "boolean",
             },
             "status_message": {
@@ -10748,7 +10259,15 @@ class PublishManyRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, ids, status_reason=None, status_message=None, force=False, publish_model=None, **kwargs):
+    def __init__(
+        self,
+        ids: List[str],
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        force: Optional[bool] = False,
+        publish_model: Optional[bool] = None,
+        **kwargs: Any
+    ) -> None:
         super(PublishManyRequest, self).__init__(**kwargs)
         self.ids = ids
         self.status_reason = status_reason
@@ -10757,69 +10276,63 @@ class PublishManyRequest(Request):
         self.publish_model = publish_model
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("publish_model")
-    def publish_model(self):
+    def publish_model(self) -> Optional[bool]:
         return self._property_publish_model
 
     @publish_model.setter
-    def publish_model(self, value):
+    def publish_model(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_publish_model = None
             return
-
         self.assert_isinstance(value, "publish_model", (bool,))
         self._property_publish_model = value
 
@@ -10837,7 +10350,6 @@ class PublishManyResponse(Response):
     _service = "tasks"
     _action = "publish_many"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -10894,38 +10406,36 @@ class PublishManyResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, succeeded=None, failed=None, **kwargs):
+    def __init__(
+        self, succeeded: Optional[List[dict]] = None, failed: Optional[List[dict]] = None, **kwargs: Any
+    ) -> None:
         super(PublishManyResponse, self).__init__(**kwargs)
         self.succeeded = succeeded
         self.failed = failed
 
     @schema_property("succeeded")
-    def succeeded(self):
+    def succeeded(self) -> Optional[List[dict]]:
         return self._property_succeeded
 
     @succeeded.setter
-    def succeeded(self, value):
+    def succeeded(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_succeeded = None
             return
-
         self.assert_isinstance(value, "succeeded", (list, tuple))
-
         self.assert_isinstance(value, "succeeded", (dict,), is_array=True)
         self._property_succeeded = value
 
     @schema_property("failed")
-    def failed(self):
+    def failed(self) -> Optional[List[dict]]:
         return self._property_failed
 
     @failed.setter
-    def failed(self, value):
+    def failed(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_failed = None
             return
-
         self.assert_isinstance(value, "failed", (list, tuple))
-
         self.assert_isinstance(value, "failed", (dict,), is_array=True)
         self._property_failed = value
 
@@ -10969,17 +10479,11 @@ class ResetRequest(Request):
             },
             "delete_external_artifacts": {
                 "default": True,
-                "description": (
-                    "If set to 'true' then BE will try to delete the extenal artifacts associated with the task from"
-                    " the fileserver (if configured to do so)"
-                ),
+                "description": "If set to 'true' then BE will try to delete the extenal artifacts associated with the task from the fileserver (if configured to do so)",
                 "type": "boolean",
             },
             "delete_output_models": {
-                "description": (
-                    "If set to 'true' then delete output models of this task that are not referenced by other tasks."
-                    " Default value is 'true'"
-                ),
+                "description": "If set to 'true' then delete output models of this task that are not referenced by other tasks. Default value is 'true'",
                 "type": "boolean",
             },
             "force": {
@@ -10988,10 +10492,7 @@ class ResetRequest(Request):
                 "type": ["boolean", "null"],
             },
             "return_file_urls": {
-                "description": (
-                    "If set to 'true' then return the urls of the files that were uploaded by this task. Default "
-                    "value is 'false'"
-                ),
+                "description": "If set to 'true' then return the urls of the files that were uploaded by this task. Default value is 'false'",
                 "type": "boolean",
             },
             "status_message": {
@@ -11010,16 +10511,16 @@ class ResetRequest(Request):
 
     def __init__(
         self,
-        task,
-        force=False,
-        clear_all=False,
-        status_reason=None,
-        status_message=None,
-        return_file_urls=None,
-        delete_output_models=None,
-        delete_external_artifacts=True,
-        **kwargs
-    ):
+        task: str,
+        force: Optional[bool] = False,
+        clear_all: Optional[bool] = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        return_file_urls: Optional[bool] = None,
+        delete_output_models: Optional[bool] = None,
+        delete_external_artifacts: Optional[bool] = True,
+        **kwargs: Any
+    ) -> None:
         super(ResetRequest, self).__init__(**kwargs)
         self.force = force
         self.clear_all = clear_all
@@ -11031,106 +10532,98 @@ class ResetRequest(Request):
         self.delete_external_artifacts = delete_external_artifacts
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("clear_all")
-    def clear_all(self):
+    def clear_all(self) -> Optional[bool]:
         return self._property_clear_all
 
     @clear_all.setter
-    def clear_all(self, value):
+    def clear_all(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_clear_all = None
             return
-
         self.assert_isinstance(value, "clear_all", (bool,))
         self._property_clear_all = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
     @schema_property("return_file_urls")
-    def return_file_urls(self):
+    def return_file_urls(self) -> Optional[bool]:
         return self._property_return_file_urls
 
     @return_file_urls.setter
-    def return_file_urls(self, value):
+    def return_file_urls(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_return_file_urls = None
             return
-
         self.assert_isinstance(value, "return_file_urls", (bool,))
         self._property_return_file_urls = value
 
     @schema_property("delete_output_models")
-    def delete_output_models(self):
+    def delete_output_models(self) -> Optional[bool]:
         return self._property_delete_output_models
 
     @delete_output_models.setter
-    def delete_output_models(self, value):
+    def delete_output_models(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_output_models = None
             return
-
         self.assert_isinstance(value, "delete_output_models", (bool,))
         self._property_delete_output_models = value
 
     @schema_property("delete_external_artifacts")
-    def delete_external_artifacts(self):
+    def delete_external_artifacts(self) -> Optional[bool]:
         return self._property_delete_external_artifacts
 
     @delete_external_artifacts.setter
-    def delete_external_artifacts(self, value):
+    def delete_external_artifacts(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_external_artifacts = None
             return
-
         self.assert_isinstance(value, "delete_external_artifacts", (bool,))
         self._property_delete_external_artifacts = value
 
@@ -11157,7 +10650,6 @@ class ResetResponse(Response):
     _service = "tasks"
     _action = "reset"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "task_urls": {
@@ -11204,17 +10696,23 @@ class ResetResponse(Response):
                 "type": ["integer", "null"],
             },
             "urls": {
-                "description": (
-                    "The urls of the files that were uploaded by this task. Returned if the 'return_file_urls' was set"
-                    " to 'true'"
-                ),
+                "description": "The urls of the files that were uploaded by this task. Returned if the 'return_file_urls' was set to 'true'",
                 "oneOf": [{"$ref": "#/definitions/task_urls"}, {"type": "null"}],
             },
         },
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, dequeued=None, events=None, deleted_models=None, urls=None, **kwargs):
+    def __init__(
+        self,
+        updated: Optional[int] = None,
+        fields: Optional[dict] = None,
+        dequeued: Optional[dict] = None,
+        events: Optional[dict] = None,
+        deleted_models: Optional[int] = None,
+        urls: Any = None,
+        **kwargs: Any
+    ) -> None:
         super(ResetResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
@@ -11224,80 +10722,75 @@ class ResetResponse(Response):
         self.urls = urls
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
     @schema_property("dequeued")
-    def dequeued(self):
+    def dequeued(self) -> Optional[dict]:
         return self._property_dequeued
 
     @dequeued.setter
-    def dequeued(self, value):
+    def dequeued(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_dequeued = None
             return
-
         self.assert_isinstance(value, "dequeued", (dict,))
         self._property_dequeued = value
 
     @schema_property("events")
-    def events(self):
+    def events(self) -> Optional[dict]:
         return self._property_events
 
     @events.setter
-    def events(self, value):
+    def events(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_events = None
             return
-
         self.assert_isinstance(value, "events", (dict,))
         self._property_events = value
 
     @schema_property("deleted_models")
-    def deleted_models(self):
+    def deleted_models(self) -> Optional[int]:
         return self._property_deleted_models
 
     @deleted_models.setter
-    def deleted_models(self, value):
+    def deleted_models(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted_models = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted_models", six.integer_types)
         self._property_deleted_models = value
 
     @schema_property("urls")
-    def urls(self):
+    def urls(self) -> Any:
         return self._property_urls
 
     @urls.setter
-    def urls(self, value):
+    def urls(self, value: Any) -> None:
         if value is None:
             self._property_urls = None
             return
@@ -11343,17 +10836,11 @@ class ResetManyRequest(Request):
             },
             "delete_external_artifacts": {
                 "default": True,
-                "description": (
-                    "If set to 'true' then BE will try to delete the extenal artifacts associated with the tasks from"
-                    " the fileserver (if configured to do so)"
-                ),
+                "description": "If set to 'true' then BE will try to delete the extenal artifacts associated with the tasks from the fileserver (if configured to do so)",
                 "type": "boolean",
             },
             "delete_output_models": {
-                "description": (
-                    "If set to 'true' then delete output models of the tasks that are not referenced by other tasks."
-                    " Default value is 'true'"
-                ),
+                "description": "If set to 'true' then delete output models of the tasks that are not referenced by other tasks. Default value is 'true'",
                 "type": "boolean",
             },
             "force": {
@@ -11367,10 +10854,7 @@ class ResetManyRequest(Request):
                 "type": "array",
             },
             "return_file_urls": {
-                "description": (
-                    "If set to 'true' then return the urls of the files that were uploaded by the tasks. Default "
-                    "value is 'false'"
-                ),
+                "description": "If set to 'true' then return the urls of the files that were uploaded by the tasks. Default value is 'false'",
                 "type": "boolean",
             },
         },
@@ -11380,14 +10864,14 @@ class ResetManyRequest(Request):
 
     def __init__(
         self,
-        ids,
-        force=False,
-        clear_all=False,
-        return_file_urls=None,
-        delete_output_models=None,
-        delete_external_artifacts=True,
-        **kwargs
-    ):
+        ids: List[str],
+        force: Optional[bool] = False,
+        clear_all: Optional[bool] = False,
+        return_file_urls: Optional[bool] = None,
+        delete_output_models: Optional[bool] = None,
+        delete_external_artifacts: Optional[bool] = True,
+        **kwargs: Any
+    ) -> None:
         super(ResetManyRequest, self).__init__(**kwargs)
         self.ids = ids
         self.force = force
@@ -11397,82 +10881,75 @@ class ResetManyRequest(Request):
         self.delete_external_artifacts = delete_external_artifacts
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("clear_all")
-    def clear_all(self):
+    def clear_all(self) -> Optional[bool]:
         return self._property_clear_all
 
     @clear_all.setter
-    def clear_all(self, value):
+    def clear_all(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_clear_all = None
             return
-
         self.assert_isinstance(value, "clear_all", (bool,))
         self._property_clear_all = value
 
     @schema_property("return_file_urls")
-    def return_file_urls(self):
+    def return_file_urls(self) -> Optional[bool]:
         return self._property_return_file_urls
 
     @return_file_urls.setter
-    def return_file_urls(self, value):
+    def return_file_urls(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_return_file_urls = None
             return
-
         self.assert_isinstance(value, "return_file_urls", (bool,))
         self._property_return_file_urls = value
 
     @schema_property("delete_output_models")
-    def delete_output_models(self):
+    def delete_output_models(self) -> Optional[bool]:
         return self._property_delete_output_models
 
     @delete_output_models.setter
-    def delete_output_models(self, value):
+    def delete_output_models(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_output_models = None
             return
-
         self.assert_isinstance(value, "delete_output_models", (bool,))
         self._property_delete_output_models = value
 
     @schema_property("delete_external_artifacts")
-    def delete_external_artifacts(self):
+    def delete_external_artifacts(self) -> Optional[bool]:
         return self._property_delete_external_artifacts
 
     @delete_external_artifacts.setter
-    def delete_external_artifacts(self, value):
+    def delete_external_artifacts(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_delete_external_artifacts = None
             return
-
         self.assert_isinstance(value, "delete_external_artifacts", (bool,))
         self._property_delete_external_artifacts = value
 
@@ -11490,7 +10967,6 @@ class ResetManyResponse(Response):
     _service = "tasks"
     _action = "reset_many"
     _version = "2.23"
-
     _schema = {
         "definitions": {
             "task_urls": {
@@ -11566,10 +11042,7 @@ class ResetManyResponse(Response):
                         },
                         "urls": {
                             "$ref": "#/definitions/task_urls",
-                            "description": (
-                                "The urls of the files that were uploaded by the task. Returned if the"
-                                " 'return_file_urls' was set to 'true'"
-                            ),
+                            "description": "The urls of the files that were uploaded by the task. Returned if the 'return_file_urls' was set to 'true'",
                         },
                     },
                     "type": "object",
@@ -11580,38 +11053,36 @@ class ResetManyResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, succeeded=None, failed=None, **kwargs):
+    def __init__(
+        self, succeeded: Optional[List[dict]] = None, failed: Optional[List[dict]] = None, **kwargs: Any
+    ) -> None:
         super(ResetManyResponse, self).__init__(**kwargs)
         self.succeeded = succeeded
         self.failed = failed
 
     @schema_property("succeeded")
-    def succeeded(self):
+    def succeeded(self) -> Optional[List[dict]]:
         return self._property_succeeded
 
     @succeeded.setter
-    def succeeded(self, value):
+    def succeeded(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_succeeded = None
             return
-
         self.assert_isinstance(value, "succeeded", (list, tuple))
-
         self.assert_isinstance(value, "succeeded", (dict,), is_array=True)
         self._property_succeeded = value
 
     @schema_property("failed")
-    def failed(self):
+    def failed(self) -> Optional[List[dict]]:
         return self._property_failed
 
     @failed.setter
-    def failed(self, value):
+    def failed(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_failed = None
             return
-
         self.assert_isinstance(value, "failed", (list, tuple))
-
         self.assert_isinstance(value, "failed", (dict,), is_array=True)
         self._property_failed = value
 
@@ -11642,34 +11113,32 @@ class SetRequirementsRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, requirements, **kwargs):
+    def __init__(self, task: str, requirements: dict, **kwargs: Any) -> None:
         super(SetRequirementsRequest, self).__init__(**kwargs)
         self.task = task
         self.requirements = requirements
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("requirements")
-    def requirements(self):
+    def requirements(self) -> dict:
         return self._property_requirements
 
     @requirements.setter
-    def requirements(self, value):
+    def requirements(self, value: dict) -> None:
         if value is None:
             self._property_requirements = None
             return
-
         self.assert_isinstance(value, "requirements", (dict,))
         self._property_requirements = value
 
@@ -11687,7 +11156,6 @@ class SetRequirementsResponse(Response):
     _service = "tasks"
     _action = "set_requirements"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -11705,36 +11173,34 @@ class SetRequirementsResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(SetRequirementsResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -11778,7 +11244,14 @@ class StartedRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, force=False, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        force: Optional[bool] = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(StartedRequest, self).__init__(**kwargs)
         self.force = force
         self.task = task
@@ -11786,54 +11259,50 @@ class StartedRequest(Request):
         self.status_message = status_message
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -11853,7 +11322,6 @@ class StartedResponse(Response):
     _service = "tasks"
     _action = "started"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -11876,52 +11344,51 @@ class StartedResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, started=None, **kwargs):
+    def __init__(
+        self, updated: Optional[int] = None, fields: Optional[dict] = None, started: Optional[int] = None, **kwargs: Any
+    ) -> None:
         super(StartedResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
         self.started = started
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
     @schema_property("started")
-    def started(self):
+    def started(self) -> Optional[int]:
         return self._property_started
 
     @started.setter
-    def started(self, value):
+    def started(self, value: Optional[int]) -> None:
         if value is None:
             self._property_started = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "started", six.integer_types)
         self._property_started = value
 
@@ -11965,7 +11432,14 @@ class StopRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, force=False, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        force: Optional[bool] = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(StopRequest, self).__init__(**kwargs)
         self.force = force
         self.task = task
@@ -11973,54 +11447,50 @@ class StopRequest(Request):
         self.status_message = status_message
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -12038,7 +11508,6 @@ class StopResponse(Response):
     _service = "tasks"
     _action = "stop"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -12056,36 +11525,34 @@ class StopResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(StopResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -12133,7 +11600,14 @@ class StopManyRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, ids, status_reason=None, status_message=None, force=False, **kwargs):
+    def __init__(
+        self,
+        ids: List[str],
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        force: Optional[bool] = False,
+        **kwargs: Any
+    ) -> None:
         super(StopManyRequest, self).__init__(**kwargs)
         self.ids = ids
         self.status_reason = status_reason
@@ -12141,56 +11615,51 @@ class StopManyRequest(Request):
         self.force = force
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -12208,7 +11677,6 @@ class StopManyResponse(Response):
     _service = "tasks"
     _action = "stop_many"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -12265,38 +11733,36 @@ class StopManyResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, succeeded=None, failed=None, **kwargs):
+    def __init__(
+        self, succeeded: Optional[List[dict]] = None, failed: Optional[List[dict]] = None, **kwargs: Any
+    ) -> None:
         super(StopManyResponse, self).__init__(**kwargs)
         self.succeeded = succeeded
         self.failed = failed
 
     @schema_property("succeeded")
-    def succeeded(self):
+    def succeeded(self) -> Optional[List[dict]]:
         return self._property_succeeded
 
     @succeeded.setter
-    def succeeded(self, value):
+    def succeeded(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_succeeded = None
             return
-
         self.assert_isinstance(value, "succeeded", (list, tuple))
-
         self.assert_isinstance(value, "succeeded", (dict,), is_array=True)
         self._property_succeeded = value
 
     @schema_property("failed")
-    def failed(self):
+    def failed(self) -> Optional[List[dict]]:
         return self._property_failed
 
     @failed.setter
-    def failed(self, value):
+    def failed(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_failed = None
             return
-
         self.assert_isinstance(value, "failed", (list, tuple))
-
         self.assert_isinstance(value, "failed", (dict,), is_array=True)
         self._property_failed = value
 
@@ -12340,7 +11806,14 @@ class StoppedRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, task, force=False, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self,
+        task: str,
+        force: Optional[bool] = False,
+        status_reason: Optional[str] = None,
+        status_message: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(StoppedRequest, self).__init__(**kwargs)
         self.force = force
         self.task = task
@@ -12348,54 +11821,50 @@ class StoppedRequest(Request):
         self.status_message = status_message
 
     @schema_property("force")
-    def force(self):
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -12413,7 +11882,6 @@ class StoppedResponse(Response):
     _service = "tasks"
     _action = "stopped"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -12431,36 +11899,34 @@ class StoppedResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(StoppedResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -12501,50 +11967,48 @@ class UnarchiveManyRequest(Request):
         "type": "object",
     }
 
-    def __init__(self, ids, status_reason=None, status_message=None, **kwargs):
+    def __init__(
+        self, ids: List[str], status_reason: Optional[str] = None, status_message: Optional[str] = None, **kwargs: Any
+    ) -> None:
         super(UnarchiveManyRequest, self).__init__(**kwargs)
         self.ids = ids
         self.status_reason = status_reason
         self.status_message = status_message
 
     @schema_property("ids")
-    def ids(self):
+    def ids(self) -> List[str]:
         return self._property_ids
 
     @ids.setter
-    def ids(self, value):
+    def ids(self, value: List[str]) -> None:
         if value is None:
             self._property_ids = None
             return
-
         self.assert_isinstance(value, "ids", (list, tuple))
-
         self.assert_isinstance(value, "ids", six.string_types, is_array=True)
         self._property_ids = value
 
     @schema_property("status_reason")
-    def status_reason(self):
+    def status_reason(self) -> Optional[str]:
         return self._property_status_reason
 
     @status_reason.setter
-    def status_reason(self, value):
+    def status_reason(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_reason = None
             return
-
         self.assert_isinstance(value, "status_reason", six.string_types)
         self._property_status_reason = value
 
     @schema_property("status_message")
-    def status_message(self):
+    def status_message(self) -> Optional[str]:
         return self._property_status_message
 
     @status_message.setter
-    def status_message(self, value):
+    def status_message(self, value: Optional[str]) -> None:
         if value is None:
             self._property_status_message = None
             return
-
         self.assert_isinstance(value, "status_message", six.string_types)
         self._property_status_message = value
 
@@ -12562,7 +12026,6 @@ class UnarchiveManyResponse(Response):
     _service = "tasks"
     _action = "unarchive_many"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -12613,38 +12076,36 @@ class UnarchiveManyResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, succeeded=None, failed=None, **kwargs):
+    def __init__(
+        self, succeeded: Optional[List[dict]] = None, failed: Optional[List[dict]] = None, **kwargs: Any
+    ) -> None:
         super(UnarchiveManyResponse, self).__init__(**kwargs)
         self.succeeded = succeeded
         self.failed = failed
 
     @schema_property("succeeded")
-    def succeeded(self):
+    def succeeded(self) -> Optional[List[dict]]:
         return self._property_succeeded
 
     @succeeded.setter
-    def succeeded(self, value):
+    def succeeded(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_succeeded = None
             return
-
         self.assert_isinstance(value, "succeeded", (list, tuple))
-
         self.assert_isinstance(value, "succeeded", (dict,), is_array=True)
         self._property_succeeded = value
 
     @schema_property("failed")
-    def failed(self):
+    def failed(self) -> Optional[List[dict]]:
         return self._property_failed
 
     @failed.setter
-    def failed(self, value):
+    def failed(self, value: Optional[List[dict]]) -> None:
         if value is None:
             self._property_failed = None
             return
-
         self.assert_isinstance(value, "failed", (list, tuple))
-
         self.assert_isinstance(value, "failed", (dict,), is_array=True)
         self._property_failed = value
 
@@ -12711,16 +12172,16 @@ class UpdateRequest(Request):
 
     def __init__(
         self,
-        task,
-        name=None,
-        tags=None,
-        system_tags=None,
-        comment=None,
-        project=None,
-        output__error=None,
-        created=None,
-        **kwargs
-    ):
+        task: str,
+        name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        comment: Optional[str] = None,
+        project: Optional[str] = None,
+        output__error: Optional[str] = None,
+        created: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
         super(UpdateRequest, self).__init__(**kwargs)
         self.task = task
         self.name = name
@@ -12732,110 +12193,100 @@ class UpdateRequest(Request):
         self.created = created
 
     @schema_property("task")
-    def task(self):
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("comment")
-    def comment(self):
+    def comment(self) -> Optional[str]:
         return self._property_comment
 
     @comment.setter
-    def comment(self, value):
+    def comment(self, value: Optional[str]) -> None:
         if value is None:
             self._property_comment = None
             return
-
         self.assert_isinstance(value, "comment", six.string_types)
         self._property_comment = value
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Optional[str]:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("output__error")
-    def output__error(self):
+    def output__error(self) -> Optional[str]:
         return self._property_output__error
 
     @output__error.setter
-    def output__error(self, value):
+    def output__error(self, value: Optional[str]) -> None:
         if value is None:
             self._property_output__error = None
             return
-
         self.assert_isinstance(value, "output__error", six.string_types)
         self._property_output__error = value
 
     @schema_property("created")
-    def created(self):
+    def created(self) -> Optional[str]:
         return self._property_created
 
     @created.setter
-    def created(self, value):
+    def created(self, value: Optional[str]) -> None:
         if value is None:
             self._property_created = None
             return
-
         self.assert_isinstance(value, "created", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
@@ -12855,7 +12306,6 @@ class UpdateResponse(Response):
     _service = "tasks"
     _action = "update"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -12873,36 +12323,34 @@ class UpdateResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(UpdateResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
     @schema_property("fields")
-    def fields(self):
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 
@@ -12931,7 +12379,6 @@ class UpdateBatchResponse(Response):
     _service = "tasks"
     _action = "update_batch"
     _version = "2.23"
-
     _schema = {
         "definitions": {},
         "properties": {
@@ -12944,22 +12391,21 @@ class UpdateBatchResponse(Response):
         "type": "object",
     }
 
-    def __init__(self, updated=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, **kwargs: Any) -> None:
         super(UpdateBatchResponse, self).__init__(**kwargs)
         self.updated = updated
 
     @schema_property("updated")
-    def updated(self):
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
@@ -13030,10 +12476,7 @@ class ValidateRequest(Request):
                         "description": "Epoch time when artifact was created",
                         "type": "integer",
                     },
-                    "type": {
-                        "description": "System defined type",
-                        "type": "string",
-                    },
+                    "type": {"description": "System defined type", "type": "string"},
                     "type_data": {
                         "$ref": "#/definitions/artifact_type_data",
                         "description": "Additional fields defined by the system",
@@ -13094,9 +12537,7 @@ class ValidateRequest(Request):
                         "type": ["array", "null"],
                     },
                     "framework": {
-                        "description": (
-                            "Framework related to the task. Case insensitive. Mandatory for Training tasks. "
-                        ),
+                        "description": "Framework related to the task. Case insensitive. Mandatory for Training tasks. ",
                         "type": ["string", "null"],
                     },
                     "model_desc": {
@@ -13106,11 +12547,7 @@ class ValidateRequest(Request):
                     },
                     "model_labels": {
                         "additionalProperties": {"type": "integer"},
-                        "description": (
-                            "Json object representing the ids of the labels in the model.\n            The keys are the"
-                            " layers' names and the values are the IDs.\n            Not applicable for Register"
-                            " (Import) tasks.\n            Mandatory for Training tasks"
-                        ),
+                        "description": "Json object representing the ids of the labels in the model.\n            The keys are the layers' names and the values are the IDs.\n            Not applicable for Register (Import) tasks.\n            Mandatory for Training tasks",
                         "type": ["object", "null"],
                     },
                     "parameters": {
@@ -13158,10 +12595,7 @@ class ValidateRequest(Request):
                         "type": ["string", "null"],
                     },
                     "branch": {
-                        "description": (
-                            "Repository branch id If not provided and tag not provided, default repository branch "
-                            "is used."
-                        ),
+                        "description": "Repository branch id If not provided and tag not provided, default repository branch is used.",
                         "type": ["string", "null"],
                     },
                     "diff": {
@@ -13185,15 +12619,11 @@ class ValidateRequest(Request):
                         "type": ["string", "null"],
                     },
                     "version_num": {
-                        "description": (
-                            "Version (changeset) number. Optional (default is head version) Unused if tag is provided."
-                        ),
+                        "description": "Version (changeset) number. Optional (default is head version) Unused if tag is provided.",
                         "type": ["string", "null"],
                     },
                     "working_dir": {
-                        "description": (
-                            "Path to the folder from which to run the script Default - root folder of repository"
-                        ),
+                        "description": "Path to the folder from which to run the script Default - root folder of repository",
                         "type": ["string", "null"],
                     },
                 },
@@ -13207,10 +12637,7 @@ class ValidateRequest(Request):
             "task_model_item": {
                 "properties": {
                     "model": {"description": "The model ID", "type": "string"},
-                    "name": {
-                        "description": "The task model name",
-                        "type": "string",
-                    },
+                    "name": {"description": "The task model name", "type": "string"},
                 },
                 "required": ["name", "model"],
                 "type": "object",
@@ -13310,22 +12737,22 @@ class ValidateRequest(Request):
 
     def __init__(
         self,
-        name,
-        type,
-        tags=None,
-        system_tags=None,
-        comment=None,
-        parent=None,
-        project=None,
-        output_dest=None,
-        execution=None,
-        script=None,
-        hyperparams=None,
-        configuration=None,
-        models=None,
-        container=None,
-        **kwargs
-    ):
+        name: str,
+        type: Any,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        comment: Optional[str] = None,
+        parent: Optional[str] = None,
+        project: Optional[str] = None,
+        output_dest: Optional[str] = None,
+        execution: Any = None,
+        script: Any = None,
+        hyperparams: Optional[dict] = None,
+        configuration: Optional[dict] = None,
+        models: Any = None,
+        container: Optional[dict] = None,
+        **kwargs: Any
+    ) -> None:
         super(ValidateRequest, self).__init__(**kwargs)
         self.name = name
         self.tags = tags
@@ -13343,54 +12770,49 @@ class ValidateRequest(Request):
         self.container = container
 
     @schema_property("name")
-    def name(self):
+    def name(self) -> str:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
     @schema_property("tags")
-    def tags(self):
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
     @schema_property("system_tags")
-    def system_tags(self):
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
     @schema_property("type")
-    def type(self):
+    def type(self) -> Any:
         return self._property_type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: Any) -> None:
         if value is None:
             self._property_type = None
             return
@@ -13404,63 +12826,59 @@ class ValidateRequest(Request):
         self._property_type = value
 
     @schema_property("comment")
-    def comment(self):
+    def comment(self) -> Optional[str]:
         return self._property_comment
 
     @comment.setter
-    def comment(self, value):
+    def comment(self, value: Optional[str]) -> None:
         if value is None:
             self._property_comment = None
             return
-
         self.assert_isinstance(value, "comment", six.string_types)
         self._property_comment = value
 
     @schema_property("parent")
-    def parent(self):
+    def parent(self) -> Optional[str]:
         return self._property_parent
 
     @parent.setter
-    def parent(self, value):
+    def parent(self, value: Optional[str]) -> None:
         if value is None:
             self._property_parent = None
             return
-
         self.assert_isinstance(value, "parent", six.string_types)
         self._property_parent = value
 
     @schema_property("project")
-    def project(self):
+    def project(self) -> Optional[str]:
         return self._property_project
 
     @project.setter
-    def project(self, value):
+    def project(self, value: Optional[str]) -> None:
         if value is None:
             self._property_project = None
             return
-
         self.assert_isinstance(value, "project", six.string_types)
         self._property_project = value
 
     @schema_property("output_dest")
-    def output_dest(self):
+    def output_dest(self) -> Optional[str]:
         return self._property_output_dest
 
     @output_dest.setter
-    def output_dest(self, value):
+    def output_dest(self, value: Optional[str]) -> None:
         if value is None:
             self._property_output_dest = None
             return
-
         self.assert_isinstance(value, "output_dest", six.string_types)
         self._property_output_dest = value
 
     @schema_property("execution")
-    def execution(self):
+    def execution(self) -> Any:
         return self._property_execution
 
     @execution.setter
-    def execution(self, value):
+    def execution(self, value: Any) -> None:
         if value is None:
             self._property_execution = None
             return
@@ -13471,11 +12889,11 @@ class ValidateRequest(Request):
         self._property_execution = value
 
     @schema_property("script")
-    def script(self):
+    def script(self) -> Any:
         return self._property_script
 
     @script.setter
-    def script(self, value):
+    def script(self, value: Any) -> None:
         if value is None:
             self._property_script = None
             return
@@ -13486,37 +12904,35 @@ class ValidateRequest(Request):
         self._property_script = value
 
     @schema_property("hyperparams")
-    def hyperparams(self):
+    def hyperparams(self) -> Optional[dict]:
         return self._property_hyperparams
 
     @hyperparams.setter
-    def hyperparams(self, value):
+    def hyperparams(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_hyperparams = None
             return
-
         self.assert_isinstance(value, "hyperparams", (dict,))
         self._property_hyperparams = value
 
     @schema_property("configuration")
-    def configuration(self):
+    def configuration(self) -> Optional[dict]:
         return self._property_configuration
 
     @configuration.setter
-    def configuration(self, value):
+    def configuration(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_configuration = None
             return
-
         self.assert_isinstance(value, "configuration", (dict,))
         self._property_configuration = value
 
     @schema_property("models")
-    def models(self):
+    def models(self) -> Any:
         return self._property_models
 
     @models.setter
-    def models(self, value):
+    def models(self, value: Any) -> None:
         if value is None:
             self._property_models = None
             return
@@ -13527,15 +12943,14 @@ class ValidateRequest(Request):
         self._property_models = value
 
     @schema_property("container")
-    def container(self):
+    def container(self) -> Optional[dict]:
         return self._property_container
 
     @container.setter
-    def container(self, value):
+    def container(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_container = None
             return
-
         self.assert_isinstance(value, "container", (dict,))
         self._property_container = value
 
@@ -13549,7 +12964,6 @@ class ValidateResponse(Response):
     _service = "tasks"
     _action = "validate"
     _version = "2.23"
-
     _schema = {"additionalProperties": False, "definitions": {}, "type": "object"}
 
 

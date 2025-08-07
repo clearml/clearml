@@ -1,29 +1,29 @@
 import os
-
-from copy import deepcopy
-from time import sleep
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Callable, Optional, Union, Generator, List, Type
-from zipfile import ZipFile, ZIP_DEFLATED
-from six.moves.queue import PriorityQueue, Queue, Empty
-from pathlib2 import Path
-from tempfile import mkstemp
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
+from tempfile import mkstemp
 from threading import Thread
+from time import sleep
+from typing import Callable, Optional, Union, Generator, List, Type, Dict, Any
+from zipfile import ZipFile, ZIP_DEFLATED
+
+from pathlib2 import Path
+from six.moves.queue import PriorityQueue, Queue, Empty
 
 from ..debugging.log import LoggerRoot
 from ..storage.util import format_size
 
 
 class _DeferredClass(object):
-    __slots__ = ('__queue', '__future_caller', '__future_func')
+    __slots__ = ("__queue", "__future_caller", "__future_func")
 
-    def __init__(self, a_future_caller, future_func):
+    def __init__(self, a_future_caller: Any, future_func: str) -> None:
         self.__queue = Queue()
         self.__future_caller = a_future_caller
         self.__future_func = future_func
 
-    def __nested_caller(self, item, args, kwargs):
+    def __nested_caller(self, item: str, args: tuple, kwargs: dict) -> Any:
         # wait until object is constructed
         getattr(self.__future_caller, "id")  # noqa
 
@@ -32,10 +32,18 @@ class _DeferredClass(object):
         the_object_func = getattr(the_object, item)
         return the_object_func(*args, **kwargs)
 
-    def _flush_into_logger(self, a_future_object=None, a_future_func=None):
+    def _flush_into_logger(
+        self,
+        a_future_object: Optional[Any] = None,
+        a_future_func: Optional[Any] = None,
+    ) -> None:
         self.__close_queue(a_future_object=a_future_object, a_future_func=a_future_func)
 
-    def __close_queue(self, a_future_object=None, a_future_func=None):
+    def __close_queue(
+        self,
+        a_future_object: Optional[Any] = None,
+        a_future_func: Optional[Any] = None,
+    ) -> None:
         # call this function when we Know the object is initialization is completed
         if self.__queue is None:
             return
@@ -63,8 +71,8 @@ class _DeferredClass(object):
                 # stdout_print(''.join(traceback.format_exc()))
                 pass
 
-    def __getattr__(self, item):
-        def _caller(*args, **kwargs):
+    def __getattr__(self, item: str) -> Callable:
+        def _caller(*args: Any, **kwargs: Any) -> Union[bool, Any]:
             # if we already completed the background initialization, call functions immediately
             # noinspection PyProtectedMember
             if not self.__queue or self.__future_caller._FutureTaskCaller__executor is None:
@@ -73,7 +81,13 @@ class _DeferredClass(object):
             # noinspection PyBroadException
             try:
                 # if pool is still active call async
-                self.__queue.put((item, deepcopy(args) if args else args, deepcopy(kwargs) if kwargs else kwargs))
+                self.__queue.put(
+                    (
+                        item,
+                        deepcopy(args) if args else args,
+                        deepcopy(kwargs) if kwargs else kwargs,
+                    )
+                )
             except Exception:
                 # assume we wait only if self.__pool was nulled between the if and now, so just call directly
                 return self.__nested_caller(item, args, kwargs)
@@ -96,14 +110,21 @@ class FutureTaskCaller(object):
         print('Running other code')
         print(future.result())  # will print '2'
     """
-    __slots__ = ('__object', '__object_cls', '__executor', '__deferred_bkg_class')
+
+    __slots__ = ("__object", "__object_cls", "__executor", "__deferred_bkg_class")
 
     @property
-    def __class__(self):
+    def __class__(self) -> Type:
         return self.__object_cls
 
-    def __init__(self, func, func_cb, override_cls, *args, **kwargs):
-        # type: (Callable, Optional[Callable], Type, *Any, **Any) -> None
+    def __init__(
+        self,
+        func: Callable,
+        func_cb: Optional[Callable],
+        override_cls: Type,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """
         __init__(*args, **kwargs) in another thread
 
@@ -117,7 +138,13 @@ class FutureTaskCaller(object):
         self.__executor.daemon = True
         self.__executor.start()
 
-    def __submit__(self, fn, fn_cb, args, kwargs):
+    def __submit__(
+        self,
+        fn: Callable,
+        fn_cb: Optional[Callable],
+        args: Any,
+        kwargs: Any,
+    ) -> None:
         # background initialization call
         _object = fn(*args, **kwargs)
 
@@ -134,20 +161,23 @@ class FutureTaskCaller(object):
         if fn_cb is not None:
             fn_cb(self.__object)
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         # if we get here, by definition this is not a __slot__ entry, pass to the object
         return getattr(self.__result__(), item)
 
-    def __setattr__(self, item, value):
+    def __setattr__(self, item: str, value: Any) -> None:
         # make sure we can set the slots
-        if item in ["_FutureTaskCaller__executor", "_FutureTaskCaller__object",
-                    "_FutureTaskCaller__object_cls", "_FutureTaskCaller__deferred_bkg_class"]:
+        if item in [
+            "_FutureTaskCaller__executor",
+            "_FutureTaskCaller__object",
+            "_FutureTaskCaller__object_cls",
+            "_FutureTaskCaller__deferred_bkg_class",
+        ]:
             return super(FutureTaskCaller, self).__setattr__(item, value)
 
         setattr(self.__result__(), item, value)
 
-    def __result__(self, timeout=None):
-        # type: (Optional[float]) -> Any
+    def __result__(self, timeout: Optional[float] = None) -> Any:
         """
         Wait and get the result of the function called with self.call()
 
@@ -174,7 +204,7 @@ class FutureTaskCaller(object):
 
     # This is the part where we are no longer generic, but __slots__
     # inheritance is too cumbersome to actually inherit and make sure it works optimally
-    def get_logger(self):
+    def get_logger(self) -> Union[LoggerRoot, _DeferredClass]:
         if self.__object is not None:
             return self.__object.get_logger()
 
@@ -189,19 +219,20 @@ class ParallelZipper(object):
     """
     Used to zip multiple files in zip chunks of a particular size, all in parallel
     """
+
     class ZipperObject(object):
         def __init__(
             self,
-            chunk_size,  # int
-            zipper_queue,  # PriorityQueue[ParallelZipper.ZipperObject]
-            zipper_results,  # Queue[ParallelZipper.ZipperObject]
-            allow_zip_64,  # bool
-            compression,  # Any
-            zip_prefix,  # str
-            zip_suffix,  # str
-            verbose,  # bool
-            task,  # Any
-        ):
+            chunk_size: int,
+            zipper_queue: PriorityQueue,
+            zipper_results: Queue,
+            allow_zip_64: bool,
+            compression: Any,
+            zip_prefix: str,
+            zip_suffix: str,
+            verbose: bool,
+            task: Any,
+        ) -> None:
             # (...) -> ParallelZipper.ZipperObject
             """
             Initialize a ParallelZipper.ZipperObject instance that holds its corresponding zip
@@ -237,13 +268,17 @@ class ParallelZipper(object):
             self._task = task
             self.fd, self.zip_path = mkstemp(prefix=zip_prefix, suffix=zip_suffix)
             self.zip_path = Path(self.zip_path)
-            self.zip_file = ZipFile(self.zip_path.as_posix(), "w", allowZip64=allow_zip_64, compression=compression)
+            self.zip_file = ZipFile(
+                self.zip_path.as_posix(),
+                "w",
+                allowZip64=allow_zip_64,
+                compression=compression,
+            )
             self.archive_preview = []
             self.count = 0
             self.files_zipped = set()
 
-        def zip(self, file_path, arcname=None):
-            # type: (Union[str, Path], str) -> ()
+        def zip(self, file_path: Union[str, Path], arcname: str = None) -> ():
             """
             Zips a file into the ZipFile created by this instance. This instance will either add
             itself back to the PriorityQueue used to select the best zipping candidate or add itself
@@ -279,8 +314,7 @@ class ParallelZipper(object):
                 )
                 self._zipper_results.put(self)
 
-        def merge(self, other):
-            # type: (ParallelZipper.ZipperObject) -> ()
+        def merge(self, other: "ParallelZipper.ZipperObject") -> ():
             """
             Merges one ParallelZipper.ZipperObject instance into the current one.
             All the files zipped by the other instance will be added to this instance,
@@ -296,8 +330,7 @@ class ParallelZipper(object):
             self.count += other.count
             self.archive_preview.extend(other.archive_preview)
 
-        def close(self):
-            # type: () -> ()
+        def close(self) -> ():
             """
             Attempts to close file descriptors associated to the ZipFile
             """
@@ -308,8 +341,7 @@ class ParallelZipper(object):
             except Exception:
                 pass
 
-        def delete(self):
-            # type: () -> ()
+        def delete(self) -> ():
             """
             Attempts to delete the ZipFile from the disk
             """
@@ -321,30 +353,28 @@ class ParallelZipper(object):
                 pass
 
         @property
-        def size(self):
-            # type: () -> ()
+        def size(self) -> ():
             """
             :return: Size of the ZipFile, in bytes
             """
             return self.zip_path.stat().st_size
 
-        def __lt__(self, other):
+        def __lt__(self, other: "ParallelZipper.ZipperObject") -> bool:
             # we want to completely "fill" as many zip files as possible, hence the ">" comparison
             return self.size > other.size
 
     def __init__(
         self,
-        chunk_size,  # type: int
-        max_workers,  # type: int
-        allow_zip_64=True,  # type: Optional[bool]
-        compression=ZIP_DEFLATED,  # type: Optional[Any]
-        zip_prefix="",  # type: Optional[str]
-        zip_suffix="",  # type: Optional[str]
-        verbose=False,  # type: Optional[bool]
-        task=None,  # type: Optional[Any]
-        pool=None,  # type: Optional[ThreadPoolExecutor]
-    ):
-        # type: (...) -> ParallelZipper
+        chunk_size: int,
+        max_workers: int,
+        allow_zip_64: Optional[bool] = True,
+        compression: Optional[Any] = ZIP_DEFLATED,
+        zip_prefix: Optional[str] = "",
+        zip_suffix: Optional[str] = "",
+        verbose: Optional[bool] = False,
+        task: Optional[Any] = None,
+        pool: Optional[ThreadPoolExecutor] = None,
+    ) -> "ParallelZipper":
         """
         Initialize the ParallelZipper. Each zip created by this object will have the following naming
         format: [zip_prefix]<random_string>[zip_suffix]
@@ -365,7 +395,7 @@ class ParallelZipper(object):
 
         :return: ParallelZipper instance
         """
-        self._chunk_size = chunk_size * (1024 ** 2)
+        self._chunk_size = chunk_size * (1024**2)
         self._max_workers = max_workers
         self._allow_zip_64 = allow_zip_64
         self._compression = compression
@@ -378,11 +408,10 @@ class ParallelZipper(object):
         self._zipper_results = Queue()
 
     def zip_iter(
-            self,
-            file_paths,  # type: List[Union[str, Path]]
-            arcnames=None  # type: Optional[dict[Union[str, Path], str]]
-    ):
-        # type: (...) -> Generator[ParallelZipper.ZipperObject]
+        self,
+        file_paths: List[Union[str, Path]],
+        arcnames: Optional[Dict[Union[str, Path], str]] = None,
+    ) -> Generator["ParallelZipper.ZipperObject", None, None]:
         """
         Generator function that returns zip files as soon as they are available.
         The zipping is done in parallel
@@ -466,7 +495,9 @@ class ParallelZipper(object):
                 child_zip.delete()
             yield zip_
 
-    def _yield_zipper_results(self):
+    def _yield_zipper_results(
+        self,
+    ) -> Generator["ParallelZipper.ZipperObject", None, None]:
         while True:
             try:
                 result = self._zipper_results.get_nowait()

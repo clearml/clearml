@@ -1,28 +1,25 @@
-from typing import Optional
 from logging import getLogger
+from typing import Optional, Any
+
 from ..task import Task
 
 _logger = getLogger("clearml.external.kerastuner")
-
 
 try:
     import pandas as pd
 except ImportError:
     pd = None
-    _logger.warning(
-        "Pandas is not installed, summary table reporting will be skipped."
-    )
+    _logger.warning("Pandas is not installed, summary table reporting will be skipped.")
 
 try:
     from kerastuner import Logger
 except ImportError:
     _logger.warning("Legacy ClearmlTunerLogger requires 'kerastuner<1.3.0'")
 else:
-    class ClearmlTunerLogger(Logger):
 
+    class ClearmlTunerLogger(Logger):
         # noinspection PyTypeChecker
-        def __init__(self, task=None):
-            # type: (Optional[Task]) -> ()
+        def __init__(self, task: Optional[Task] = None) -> ():
             super(ClearmlTunerLogger, self).__init__()
             self.task = task or Task.current_task()
             if not self.task:
@@ -32,13 +29,11 @@ else:
                 )
             self._summary = pd.DataFrame() if pd else None
 
-        def register_tuner(self, tuner_state):
-            # type: (dict) -> ()
+        def register_tuner(self, tuner_state: dict) -> ():
             """Informs the logger that a new search is starting."""
             pass
 
-        def register_trial(self, trial_id, trial_state):
-            # type: (str, dict) -> ()
+        def register_trial(self, trial_id: str, trial_state: dict) -> ():
             """Informs the logger that a new Trial is starting."""
             if not self.task:
                 return
@@ -51,8 +46,7 @@ else:
             self.task.get_logger()._set_tensorboard_series_prefix(trial_id + " ")
             self.report_trial_state(trial_id, trial_state)
 
-        def report_trial_state(self, trial_id, trial_state):
-            # type: (str, dict) -> ()
+        def report_trial_state(self, trial_id: str, trial_state: dict) -> ():
             if self._summary is None or not self.task:
                 return
 
@@ -80,7 +74,7 @@ else:
             self._summary = self._summary.reindex(columns=sorted(self._summary.columns))
             self.task.get_logger().report_table("summary", "trial", 0, table_plot=self._summary)
 
-        def exit(self):
+        def exit(self) -> None:
             if not self.task:
                 return
             self.task.flush(wait_for_uploads=True)
@@ -93,8 +87,14 @@ except ImportError:
         "Could not import 'tensorflow.keras.callbacks.Callback'. ClearmlTunerCallback will not be importable"
     )
 else:
+
     class ClearmlTunerCallback(Callback):
-        def __init__(self, tuner, best_trials_reported=100, task=None):
+        def __init__(
+            self,
+            tuner: Any,
+            best_trials_reported: int = 100,
+            task: Optional[Task] = None,
+        ) -> None:
             self.task = task or Task.current_task()
             if not self.task:
                 raise ValueError(
@@ -105,7 +105,7 @@ else:
             self.best_trials_reported = best_trials_reported
             super(ClearmlTunerCallback, self).__init__()
 
-        def on_train_end(self, *args, **kwargs):
+        def on_train_end(self, *args: Any, **kwargs: Any) -> None:
             summary = pd.DataFrame() if pd else None
             if summary is None:
                 return
@@ -114,7 +114,10 @@ else:
                 trial_dict = {"trial id": trial.trial_id}
                 for hparam in trial.hyperparameters.space:
                     trial_dict[hparam.name] = trial.hyperparameters.values.get(hparam.name)
-                summary = pd.concat([summary, pd.DataFrame(trial_dict, index=[trial.trial_id])], ignore_index=True)
+                summary = pd.concat(
+                    [summary, pd.DataFrame(trial_dict, index=[trial.trial_id])],
+                    ignore_index=True,
+                )
             summary.index.name = "trial id"
             summary = summary[["trial id", *sorted(summary.columns[1:])]]
             self.task.get_logger().report_table("summary", "trial", 0, table_plot=summary)

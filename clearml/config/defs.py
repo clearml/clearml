@@ -1,8 +1,9 @@
 import tempfile
 
+from pathlib2 import Path
+
 from ..backend_config import EnvEntry
 from ..backend_config.converters import base64_to_text, or_
-from pathlib2 import Path
 
 SESSION_CACHE_FILE = ".session.json"
 DEFAULT_CACHE_DIR = str(Path(tempfile.gettempdir()) / "clearml_cache")

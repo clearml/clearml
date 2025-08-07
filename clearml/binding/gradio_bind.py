@@ -1,9 +1,11 @@
 import sys
 from logging import getLogger
+from typing import Optional, Callable, Any
+
 from .frameworks import _patched_call  # noqa
 from .import_bind import PostImportHookPatching
-from ..utilities.networking import get_private_ip
 from ..config import running_remotely
+from ..utilities.networking import get_private_ip
 
 
 class PatchGradio:
@@ -16,7 +18,7 @@ class PatchGradio:
     __server_config_warning = set()
 
     @classmethod
-    def update_current_task(cls, task=None):
+    def update_current_task(cls, task: Optional[Any] = None) -> None:
         cls._current_task = task
         if cls.__patched:
             return
@@ -26,7 +28,7 @@ class PatchGradio:
             PostImportHookPatching.add_on_import("gradio", cls.patch_gradio)
 
     @classmethod
-    def patch_gradio(cls):
+    def patch_gradio(cls) -> None:
         if cls.__patched:
             return
         # noinspection PyBroadException
@@ -40,7 +42,7 @@ class PatchGradio:
         cls.__patched = True
 
     @staticmethod
-    def _patched_get_blocks(original_fn, *args, **kwargs):
+    def _patched_get_blocks(original_fn: Callable, *args: Any, **kwargs: Any) -> Any:
         blocks = original_fn(*args, **kwargs)
         if not PatchGradio._current_task or not running_remotely():
             return blocks
@@ -49,19 +51,23 @@ class PatchGradio:
         return blocks
 
     @staticmethod
-    def _patched_launch(original_fn, *args, **kwargs):
+    def _patched_launch(original_fn: Callable, *args: Any, **kwargs: Any) -> Any:
         if not PatchGradio._current_task:
             return original_fn(*args, **kwargs)
         PatchGradio.__warn_on_server_config(
             kwargs.get("server_name"),
             kwargs.get("server_port"),
-            kwargs.get("root_path")
+            kwargs.get("root_path"),
         )
         if not running_remotely():
             return original_fn(*args, **kwargs)
         # noinspection PyProtectedMember
         PatchGradio._current_task._set_runtime_properties(
-            {"_SERVICE": "EXTERNAL", "_ADDRESS": get_private_ip(), "_PORT": PatchGradio._default_gradio_port}
+            {
+                "_SERVICE": "EXTERNAL",
+                "_ADDRESS": get_private_ip(),
+                "_PORT": PatchGradio._default_gradio_port,
+            }
         )
         PatchGradio._current_task.set_system_tags(["external_service"])
         kwargs["server_name"] = PatchGradio._default_gradio_address
@@ -75,9 +81,15 @@ class PatchGradio:
             return original_fn(*args, **kwargs)
 
     @classmethod
-    def __warn_on_server_config(cls, server_name, server_port, root_path):
-        if (server_name is None or server_name == PatchGradio._default_gradio_address) and \
-                (server_port is None and server_port == PatchGradio._default_gradio_port):
+    def __warn_on_server_config(
+        cls,
+        server_name: Optional[str],
+        server_port: Optional[int],
+        root_path: Optional[str],
+    ) -> None:
+        if (server_name is None or server_name == PatchGradio._default_gradio_address) and (
+            server_port is None and server_port == PatchGradio._default_gradio_port
+        ):
             return
         if (server_name, server_port, root_path) in cls.__server_config_warning:
             return
@@ -93,12 +105,16 @@ class PatchGradio:
             what_to_ignore = "port"
         getLogger().warning(
             "ClearML only supports '{}:{}' as the Gradio server. Ignoring {} '{}' in remote execution".format(
-                PatchGradio._default_gradio_address, PatchGradio._default_gradio_port, what_to_ignore, server_config
+                PatchGradio._default_gradio_address,
+                PatchGradio._default_gradio_port,
+                what_to_ignore,
+                server_config,
             )
         )
         if root_path is not None:
             getLogger().warning(
                 "ClearML will override root_path '{}' to '{}' in remote execution".format(
-                    root_path, PatchGradio._root_path_format.format(PatchGradio._current_task.id)
+                    root_path,
+                    PatchGradio._root_path_format.format(PatchGradio._current_task.id),
                 )
             )

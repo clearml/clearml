@@ -1,6 +1,8 @@
+import argparse
 import json
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
+from typing import List, Union
 
 import clearml.backend_api.session
 from clearml import Task
@@ -18,7 +20,6 @@ from clearml.version import __version__
 
 clearml.backend_api.session.Session.add_client("clearml-param-search", __version__)
 
-
 try:
     from clearml.automation.optuna import OptimizerOptuna  # noqa
 except ImportError:
@@ -29,7 +30,7 @@ except ImportError:
     OptimizerBOHB = None
 
 
-def setup_parser(parser):
+def setup_parser(parser: ArgumentParser) -> None:
     group = parser.add_mutually_exclusive_group(required=True)
     parser.add_argument(
         "--project-name",
@@ -87,7 +88,7 @@ def setup_parser(parser):
         "    - step_size: Optional[int]  # Default: 1\n"
         "    - include_max_value: Optional[bool]  # Whether or not to include the max_value in range. Default: True\n"
         "  - DiscreteParameterRange:\n"
-        "    - values: List[Any]  # The list of valid parameter values to sample from",
+        "    - values: List[object]  # The list of valid parameter values to sample from",
     )
     parser.add_argument(
         "--params-override",
@@ -98,7 +99,7 @@ def setup_parser(parser):
         "Each parameter must be a JSON having the following format:\n"
         "{\n"
         '  "name": str,  # name of the parameter to override\n'
-        '  "value": Any  # value of the parameter being overriden\n'
+        '  "value": object  # value of the parameter being overriden\n'
         "}",
     )
     parser.add_argument(
@@ -204,8 +205,17 @@ def setup_parser(parser):
     )
 
 
-def eval_params_search(params_search, params_override):
-    def eval_param(param_):
+def eval_params_search(
+    params_search: List[str], params_override: List[str]
+) -> List[
+    Union[
+        LogUniformParameterRange,
+        UniformParameterRange,
+        UniformIntegerParameterRange,
+        DiscreteParameterRange,
+    ]
+]:
+    def eval_param(param_: str) -> dict:
         param_ = json.loads(param_)
         if "/" not in param_["name"]:
             param_["name"] = "General/{}".format(param_["name"])
@@ -236,7 +246,9 @@ def eval_params_search(params_search, params_override):
     return result
 
 
-def eval_optimizer_class(optimizer_class):
+def eval_optimizer_class(
+    optimizer_class: str,
+) -> Union[OptimizerOptuna, OptimizerBOHB, GridSearch, RandomSearch]:
     type_map = {
         "OptimizerOptuna": OptimizerOptuna,
         "OptimizerBOHB": OptimizerBOHB,
@@ -258,7 +270,7 @@ def eval_optimizer_class(optimizer_class):
     return type_map[optimizer_class]
 
 
-def build_opt_kwargs(args):
+def build_opt_kwargs(args: argparse.Namespace) -> dict:
     kwargs = {}
     optional_arg_names = [
         "time_limit_per_job",
@@ -277,7 +289,7 @@ def build_opt_kwargs(args):
     return kwargs
 
 
-def cli():
+def cli() -> None:
     title = "ClearML HPO - search for the best parameters for your models"
     print(title)
     parser = ArgumentParser(description=title, formatter_class=RawTextHelpFormatter)
@@ -338,7 +350,7 @@ def cli():
     optimizer.stop()
 
 
-def main():
+def main() -> None:
     try:
         cli()
     except KeyboardInterrupt:

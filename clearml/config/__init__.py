@@ -3,13 +3,14 @@ import logging
 import os
 import sys
 from os.path import expandvars, expanduser
-
-from ..backend_api import load_config
-from ..backend_config import Config
-from ..backend_config.bucket_config import S3BucketConfigurations
+from typing import Optional, Callable, Iterable, Tuple, List, Any
+from pathlib2 import Path
 
 from .defs import *  # noqa: F403
 from .remote import running_remotely_task_id as _running_remotely_task_id
+from ..backend_api import load_config
+from ..backend_config import Config
+from ..backend_config.bucket_config import S3BucketConfigurations
 
 # config_obj = load_config(Path(__file__).parent)  # noqa: F405
 # config_obj.initialize_logging()
@@ -21,24 +22,24 @@ class ConfigWrapper(object):
     _config = None
 
     @classmethod
-    def _init(cls):
+    def _init(cls) -> Config:
         if cls._config is None:
             cls._config = load_config(Path(__file__).parent)  # noqa: F405
             cls._config.initialize_logging()
         return cls._config
 
     @classmethod
-    def get(cls, *args, **kwargs):
+    def get(cls, *args: Any, **kwargs: Any) -> Any:
         cls._init()
         return cls._config.get(*args, **kwargs)
 
     @classmethod
-    def set_overrides(cls, *args, **kwargs):
+    def set_overrides(cls, *args: Any, **kwargs: Any) -> None:
         cls._init()
         return cls._config.set_overrides(*args, **kwargs)
 
     @classmethod
-    def set_config_impl(cls, value):
+    def set_config_impl(cls, value: "ConfigWrapper") -> None:
         try:
             if issubclass(value, ConfigWrapper):
                 cls._config = value._config
@@ -50,31 +51,39 @@ class ConfigSDKWrapper(object):
     _config_sdk = None
 
     @classmethod
-    def _init(cls):
+    def _init(cls) -> None:
         if cls._config_sdk is None:
             cls._config_sdk = ConfigWrapper.get("sdk")
 
     @classmethod
-    def get(cls, *args, **kwargs):
+    def get(cls, *args: Any, **kwargs: Any) -> Any:
         cls._init()
         return cls._config_sdk.get(*args, **kwargs)
 
     @classmethod
-    def set_overrides(cls, *args, **kwargs):
+    def set_overrides(cls, *args: Any, **kwargs: Any) -> None:
         cls._init()
         return cls._config_sdk.set_overrides(*args, **kwargs)
 
     @classmethod
-    def clear_config_impl(cls):
+    def clear_config_impl(cls) -> None:
         cls._config_sdk = None
 
 
-def deferred_config(key=None, default=Config._MISSING, transform=None, multi=None):
+def deferred_config(
+    key: Optional[str] = None,
+    default: Any = Config.MISSING,
+    transform: Optional[Callable[[], Any]] = None,
+    multi: Optional[Iterable[Tuple[Any]]] = None,
+) -> LazyEvalWrapper:
     return LazyEvalWrapper(
         callback=lambda: (
             ConfigSDKWrapper.get(key, default)
             if not multi
-            else next((ConfigSDKWrapper.get(*a) for a in multi if ConfigSDKWrapper.get(*a)), None)
+            else next(
+                (ConfigSDKWrapper.get(*a) for a in multi if ConfigSDKWrapper.get(*a)),
+                None,
+            )
         )
         if transform is None
         else (
@@ -83,7 +92,10 @@ def deferred_config(key=None, default=Config._MISSING, transform=None, multi=Non
             else transform(
                 ConfigSDKWrapper.get(key, default)
                 if not multi
-                else next((ConfigSDKWrapper.get(*a) for a in multi if ConfigSDKWrapper.get(*a)), None)  # noqa
+                else next(
+                    (ConfigSDKWrapper.get(*a) for a in multi if ConfigSDKWrapper.get(*a)),
+                    None,
+                )  # noqa
             )
         )
     )
@@ -95,7 +107,7 @@ config = ConfigSDKWrapper
 """ Configuration object reflecting the merged SDK section of all available configuration files """
 
 
-def get_cache_dir():
+def get_cache_dir() -> Path:
     cache_base_dir = Path(  # noqa: F405
         expandvars(
             expanduser(
@@ -108,13 +120,13 @@ def get_cache_dir():
     return cache_base_dir
 
 
-def get_offline_dir(task_id=None):
+def get_offline_dir(task_id: str = None) -> Path:
     if not task_id:
         return get_cache_dir() / "offline"
     return get_cache_dir() / "offline" / task_id
 
 
-def get_config_for_bucket(base_url, extra_configurations=None):
+def get_config_for_bucket(base_url: str, extra_configurations: Optional[List[Any]] = None) -> Any:
     config_list = S3BucketConfigurations.from_config(config.get("aws.s3"))
 
     for configuration in extra_configurations or []:
@@ -123,19 +135,19 @@ def get_config_for_bucket(base_url, extra_configurations=None):
     return config_list.get_config_by_uri(base_url)
 
 
-def get_remote_task_id():
+def get_remote_task_id() -> str:
     return _running_remotely_task_id
 
 
-def running_remotely():
+def running_remotely() -> bool:
     return bool(_running_remotely_task_id)
 
 
-def get_log_to_backend(default=None):
+def get_log_to_backend(default: Optional[bool] = None) -> bool:
     return LOG_TO_BACKEND_ENV_VAR.get(default=default)  # noqa: F405
 
 
-def get_node_count():
+def get_node_count() -> Optional[int]:
     # noinspection PyBroadException
     try:
         mpi_world_rank = int(os.environ.get("OMPI_COMM_WORLD_NODE_RANK", os.environ.get("PMI_RANK")))
@@ -165,7 +177,7 @@ def get_node_count():
     return None
 
 
-def get_node_id(default=0):
+def get_node_id(default: int = 0) -> int:
     node_id = NODE_ID_ENV_VAR.get()  # noqa: F405
 
     # noinspection PyBroadException
@@ -177,7 +189,10 @@ def get_node_id(default=0):
     # noinspection PyBroadException
     try:
         mpi_rank = int(
-            os.environ.get("OMPI_COMM_WORLD_RANK", os.environ.get("SLURM_PROCID", os.environ.get("SLURM_NODEID")))
+            os.environ.get(
+                "OMPI_COMM_WORLD_RANK",
+                os.environ.get("SLURM_PROCID", os.environ.get("SLURM_NODEID")),
+            )
         )
     except Exception:
         mpi_rank = None
@@ -231,7 +246,7 @@ def get_node_id(default=0):
     return node_id
 
 
-def get_is_master_node():
+def get_is_master_node() -> bool:
     global __force_master_node
     if __force_master_node:
         return True
@@ -239,7 +254,7 @@ def get_is_master_node():
     return get_node_id(default=0) == 0
 
 
-def get_log_redirect_level():
+def get_log_redirect_level() -> Optional[int]:
     """Returns which log level (and up) should be redirected to stderr. None means no redirection."""
     value = LOG_STDERR_REDIRECT_LEVEL.get()  # noqa: F405
     try:
@@ -249,11 +264,11 @@ def get_log_redirect_level():
         pass
 
 
-def dev_worker_name():
+def dev_worker_name() -> str:
     return DEV_WORKER_NAME.get()  # noqa: F405
 
 
-def __set_is_master_node():
+def __set_is_master_node() -> Optional[bool]:
     # noinspection PyBroadException
     try:
         # pop both set the first

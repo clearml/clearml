@@ -1,12 +1,27 @@
+from typing import (
+    Optional,
+    Union,
+    Iterable,
+    List,
+    Callable,
+    Tuple,
+    Type,
+    Dict,
+    TYPE_CHECKING,
+    Any,
+)
+
 import six
 import attr
 from attr import validators
 
+if TYPE_CHECKING:
+    from clearml import Task
 
 __all__ = ["range_validator", "param", "percent_param", "TaskParameters"]
 
 
-def _canonize_validator(current_validator):
+def _canonize_validator(current_validator: Union[None, Iterable[Any]]) -> List[Any]:
     """
     Convert current_validator to a new list and return it.
 
@@ -27,7 +42,9 @@ def _canonize_validator(current_validator):
     return current_validator
 
 
-def range_validator(min_value, max_value):
+def range_validator(
+    min_value: Optional[Union[int, float]], max_value: Optional[Union[int, float]]
+) -> Callable[[Any, attr.Attribute, Union[int, float]], None]:
     """
     A parameter validator that checks range constraint on a parameter.
 
@@ -36,14 +53,22 @@ def range_validator(min_value, max_value):
     :return: A new range validator.
     """
 
-    def _range_validator(instance, attribute, value):
+    def _range_validator(instance: Any, attribute: attr.Attribute, value: Union[int, float]) -> None:
         if ((min_value is not None) and (value < min_value)) or ((max_value is not None) and (value > max_value)):
             raise ValueError("{} must be in range [{}, {}]".format(attribute.name, min_value, max_value))
 
     return _range_validator
 
 
-def param(validator=None, range=None, type=None, desc=None, metadata=None, *args, **kwargs):
+def param(
+    validator: Union[Callable, List[Callable], None] = None,
+    range: Union[Tuple[Optional[int], Optional[int]], None] = None,
+    type: Union[Type[int], Type[str], Type[float], None] = None,
+    desc: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    *args: Any,
+    **kwargs: Any,
+) -> attr.Attribute:
     """
     A parameter inside a TaskParameters class.
 
@@ -85,7 +110,7 @@ def param(validator=None, range=None, type=None, desc=None, metadata=None, *args
     return attr.ib(validator=validator, type=type, metadata=metadata, *args, **kwargs)
 
 
-def percent_param(*args, **kwargs):
+def percent_param(*args: Any, **kwargs: Any) -> attr.Attribute:
     """
     A param with type float and range limit (0, 1).
     """
@@ -93,7 +118,7 @@ def percent_param(*args, **kwargs):
 
 
 class _AttrsMeta(type):
-    def __new__(mcs, name, bases, dct):
+    def __new__(mcs: Type["_AttrsMeta"], name: str, bases: Tuple[Any], dct: Dict[str, Any]) -> type:
         new_class = super(_AttrsMeta, mcs).__new__(mcs, name, bases, dct)
         return attr.s(new_class)
 
@@ -118,14 +143,14 @@ class TaskParameters(object):
         )
     """
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         """
         :return: A new dictionary with keys are the parameters names and values
             are the corresponding values.
         """
         return attr.asdict(self)
 
-    def update_from_dict(self, source_dict):
+    def update_from_dict(self, source_dict: dict) -> None:
         """
         Update the parameters using values from a dictionary.
 
@@ -138,7 +163,7 @@ class TaskParameters(object):
 
             setattr(self, key, value)
 
-    def connect(self, task):
+    def connect(self, task: "Task") -> None:
         """
         Connect to a task.
 

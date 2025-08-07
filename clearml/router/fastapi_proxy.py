@@ -1,8 +1,9 @@
 import functools
 import threading
 from multiprocessing import Process
-from typing import Optional
+from typing import Optional, Callable, Awaitable, AsyncGenerator, Union
 
+import fastapi
 import httpx
 import uvicorn
 from fastapi import FastAPI, Request, Response
@@ -17,7 +18,15 @@ from ..utilities.process.mp import SafeQueue
 class FastAPIProxy:
     ALL_REST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
 
-    def __init__(self, port, workers=None, default_target=None, log_level=None, access_log=None, enable_streaming=True):
+    def __init__(
+        self,
+        port: int,
+        workers: Optional[int] = None,
+        default_target: Optional[str] = None,
+        log_level: Optional[str] = None,
+        access_log: Optional[bool] = None,
+        enable_streaming: bool = True,
+    ) -> None:
         self.app = None
         self.routes = {}
         self.port = port
@@ -31,11 +40,15 @@ class FastAPIProxy:
         self._default_session = None
         self._in_subprocess = False
 
-    def _create_default_route(self):
+    def _create_default_route(self) -> None:
         proxy = self
 
         class DefaultRouteMiddleware(BaseHTTPMiddleware):
-            async def dispatch(self, request: Request, call_next):
+            async def dispatch(
+                self,
+                request: Request,
+                call_next: Callable[[Request], Awaitable[Response]],
+            ) -> Response:
                 scope = {
                     "type": "http",
                     "method": request.method,
@@ -53,7 +66,9 @@ class FastAPIProxy:
                     if route.matches(scope)[0] == Match.FULL:
                         return await call_next(request)
                 proxied_response = await proxy._send_request(
-                    request, proxy._default_target, proxy._default_target + request.url.path
+                    request,
+                    proxy._default_target,
+                    proxy._default_target + request.url.path,
                 )
                 return await proxy._convert_httpx_response_to_fastapi(proxied_response)
 
@@ -64,7 +79,7 @@ class FastAPIProxy:
         request: Request,
         path: Optional[str] = None,
         source_path: Optional[str] = None,
-    ):
+    ) -> Response:
         route_data = self.routes.get(source_path)
         if not route_data:
             return Response(status_code=404)
@@ -72,7 +87,9 @@ class FastAPIProxy:
         request = await route_data.on_request(request)
         try:
             proxied_response = await self._send_request(
-                request, route_data.session, url=f"{route_data.target_url}/{path}" if path else route_data.target_url
+                request,
+                route_data.session,
+                url=f"{route_data.target_url}/{path}" if path else route_data.target_url,
             )
             proxied_response = await self._convert_httpx_response_to_fastapi(proxied_response)
         except Exception as e:
@@ -80,7 +97,7 @@ class FastAPIProxy:
             raise
         return await route_data.on_response(proxied_response, request)
 
-    async def _send_request(self, request, session, url):
+    async def _send_request(self, request: Request, session: httpx.AsyncClient, url: str) -> httpx.Response:
         if not self.enable_streaming:
             proxied_response = await session.request(
                 method=request.method,
@@ -106,15 +123,17 @@ class FastAPIProxy:
             )
         return proxied_response
 
-    async def _convert_httpx_response_to_fastapi(self, httpx_response):
+    async def _convert_httpx_response_to_fastapi(self, httpx_response: httpx.Response) -> fastapi.responses.Response:
         if self.enable_streaming and httpx_response.headers.get("transfer-encoding", "").lower() == "chunked":
 
-            async def upstream_body_generator():
+            async def upstream_body_generator() -> AsyncGenerator[bytes, None]:
                 async for chunk in httpx_response.aiter_bytes():
                     yield chunk
 
             return StreamingResponse(
-                upstream_body_generator(), status_code=httpx_response.status_code, headers=dict(httpx_response.headers)
+                upstream_body_generator(),
+                status_code=httpx_response.status_code,
+                headers=dict(httpx_response.headers),
             )
         if not self.enable_streaming:
             content = httpx_response.content
@@ -138,13 +157,13 @@ class FastAPIProxy:
 
     def add_route(
         self,
-        source,
-        target,
-        request_callback=None,
-        response_callback=None,
-        error_callback=None,
-        endpoint_telemetry=True,
-    ):
+        source: str,
+        target: str,
+        request_callback: Optional[callable] = None,
+        response_callback: Optional[callable] = None,
+        error_callback: Optional[callable] = None,
+        endpoint_telemetry: Union[bool, dict] = True,
+    ) -> Optional[Route]:
         if not self._in_subprocess:
             self.message_queue.put(
                 {
@@ -197,7 +216,7 @@ class FastAPIProxy:
             )
         return self.routes[source]
 
-    def remove_route(self, source):
+    def remove_route(self, source: str) -> None:
         if not self._in_subprocess:
             self.message_queue.put({"method": "remove_route", "kwargs": {"source": source}})
             return
@@ -209,7 +228,7 @@ class FastAPIProxy:
             # when self.add_route is called on the same source_path after removal
             self.routes[source] = None
 
-    def _start(self):
+    def _start(self) -> None:
         self._in_subprocess = True
         self.app = FastAPI()
         if self._default_target:
@@ -227,7 +246,7 @@ class FastAPIProxy:
             access_log=self.access_log,
         )
 
-    def _rpc_manager(self):
+    def _rpc_manager(self) -> None:
         while True:
             message = self.message_queue.get()
             if message["method"] == "add_route":
@@ -235,11 +254,11 @@ class FastAPIProxy:
             elif message["method"] == "remove_route":
                 self.remove_route(**message["kwargs"])
 
-    def start(self):
+    def start(self) -> None:
         self.uvicorn_subprocess = Process(target=self._start)
         self.uvicorn_subprocess.start()
 
-    def stop(self):
+    def stop(self) -> None:
         if self.uvicorn_subprocess:
             self.uvicorn_subprocess.terminate()
             self.uvicorn_subprocess = None

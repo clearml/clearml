@@ -1,16 +1,18 @@
 import ctypes
-import threading
-import six
 import sys
+import threading
 import time
+from typing import Any
+
+import six
 
 
-def get_current_thread_id():
+def get_current_thread_id() -> int:
     return threading._get_ident() if six.PY2 else threading.get_ident()  # noqa
 
 
 # Nasty hack to raise exception for other threads
-def _lowlevel_async_raise(thread_obj, exception=None):
+def _lowlevel_async_raise(thread_obj: threading.Thread, exception: Exception = None) -> bool:
     NULL = 0  # noqa
     found = False
     target_tid = 0
@@ -60,7 +62,7 @@ def _lowlevel_async_raise(thread_obj, exception=None):
     return True
 
 
-def kill_thread(thread_obj, wait=False):
+def kill_thread(thread_obj: threading.Thread, wait: bool = False) -> bool:
     if not _lowlevel_async_raise(thread_obj, SystemExit()):
         return False
 
@@ -69,7 +71,7 @@ def kill_thread(thread_obj, wait=False):
     return True
 
 
-def __wait_thread(a_thread, a_event):
+def __wait_thread(a_thread: threading.Thread, a_event: threading.Event) -> None:
     # noinspection PyBroadException
     try:
         a_thread.join()
@@ -78,7 +80,7 @@ def __wait_thread(a_thread, a_event):
         pass
 
 
-def threadpool_waited_join(thread_object, timeout):
+def threadpool_waited_join(thread_object: threading.Thread, timeout: float) -> bool:
     """
     Call threadpool.join() with timeout. If join completed return True, otherwise False
     Notice: This function creates another daemon thread and kills it, use with care.
@@ -95,7 +97,13 @@ def threadpool_waited_join(thread_object, timeout):
         return not thread_object.is_alive()
 
     done_signal = threading.Event()
-    waitable = threading.Thread(target=__wait_thread, args=(thread_object, done_signal,))
+    waitable = threading.Thread(
+        target=__wait_thread,
+        args=(
+            thread_object,
+            done_signal,
+        ),
+    )
     waitable.daemon = True
     waitable.start()
 
@@ -105,12 +113,14 @@ def threadpool_waited_join(thread_object, timeout):
     return True
 
 
-if __name__ == '__main__':
-    def demo_thread(*_, **__):
+if __name__ == "__main__":
+
+    def demo_thread(*_: Any, **__: Any) -> None:
         from time import sleep
+
         for i in range(5):
-            print('.')
-            sleep(1.)
+            print(".")
+            sleep(1.0)
 
     t = threading.Thread(target=demo_thread)
     t.daemon = True

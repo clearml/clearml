@@ -1,10 +1,12 @@
 """ Argparse utilities"""
+import argparse
 import sys
 import warnings
+from argparse import ArgumentParser, Namespace
 from copy import copy
+from typing import Optional, List, Union, Dict, Tuple, Callable, Type, Any
 
 from six import PY2
-from argparse import ArgumentParser, Namespace
 
 try:
     from argparse import _SubParsersAction
@@ -25,17 +27,21 @@ class PatchArgumentParser:
     _recursion_guard = False
 
     @staticmethod
-    def add_subparsers(self, **kwargs):
-        if 'dest' not in kwargs:
-            if kwargs.get('title'):
-                kwargs['dest'] = '/' + kwargs['title']
+    def add_subparsers(self, **kwargs: Any) -> _SubParsersAction:
+        if "dest" not in kwargs:
+            if kwargs.get("title"):
+                kwargs["dest"] = "/" + kwargs["title"]
             else:
                 PatchArgumentParser._add_subparsers_counter += 1
-                kwargs['dest'] = '/subparser%d' % PatchArgumentParser._add_subparsers_counter
+                kwargs["dest"] = "/subparser%d" % PatchArgumentParser._add_subparsers_counter
         return PatchArgumentParser._original_add_subparsers(self, **kwargs)
 
     @staticmethod
-    def parse_args(self, args=None, namespace=None):
+    def parse_args(
+        self,
+        args: Optional[List[str]] = None,
+        namespace: Optional[Namespace] = None,
+    ) -> Union[Dict[str, Any], Namespace]:
         if PatchArgumentParser._recursion_guard:
             return (
                 {}
@@ -46,7 +52,10 @@ class PatchArgumentParser:
         PatchArgumentParser._recursion_guard = True
         try:
             result = PatchArgumentParser._patched_parse_args(
-                PatchArgumentParser._original_parse_args, self, args=args, namespace=namespace
+                PatchArgumentParser._original_parse_args,
+                self,
+                args=args,
+                namespace=namespace,
             )
         except Exception as e:
             result = (
@@ -60,7 +69,11 @@ class PatchArgumentParser:
         return result
 
     @staticmethod
-    def parse_known_args(self, args=None, namespace=None):
+    def parse_known_args(
+        self,
+        args: Optional[List[str]] = None,
+        namespace: Optional[Namespace] = None,
+    ) -> Tuple[Namespace, List[str]]:
         if PatchArgumentParser._recursion_guard:
             return (
                 {}
@@ -71,7 +84,10 @@ class PatchArgumentParser:
         PatchArgumentParser._recursion_guard = True
         try:
             result = PatchArgumentParser._patched_parse_args(
-                PatchArgumentParser._original_parse_known_args, self, args=args, namespace=namespace
+                PatchArgumentParser._original_parse_known_args,
+                self,
+                args=args,
+                namespace=namespace,
             )
         except Exception as e:
             result = (
@@ -85,14 +101,21 @@ class PatchArgumentParser:
         return result
 
     @staticmethod
-    def _patched_parse_args(original_parse_fn, self, args=None, namespace=None):
+    def _patched_parse_args(
+        original_parse_fn: Callable,
+        self: Any,
+        args: Optional[List[str]] = None,
+        namespace: Optional[Namespace] = None,
+    ) -> Union[Namespace, Tuple[Namespace, List[str]]]:
         current_task = PatchArgumentParser._current_task
         # if we are running remotely, we always have a task id, so we better patch the argparser as soon as possible.
         if not current_task:
             from ..config import running_remotely, get_remote_task_id
+
             if running_remotely():
                 # this will cause the current_task() to set PatchArgumentParser._current_task
                 from clearml import Task
+
                 # noinspection PyBroadException
                 try:
                     current_task = Task.get_task(task_id=get_remote_task_id())
@@ -100,7 +123,7 @@ class PatchArgumentParser:
                     # (we will do that when we actually call parse args)
                     # this will make sure that if we have args we should not track we know them
                     # noinspection PyProtectedMember
-                    current_task._arguments.exclude_parser_args({'*': True})
+                    current_task._arguments.exclude_parser_args({"*": True})
                 except Exception:
                     pass
         # automatically connect to current task:
@@ -129,8 +152,10 @@ class PatchArgumentParser:
                 # sync to/from task
                 # noinspection PyProtectedMember
                 current_task._connect_argparse(
-                    self, args=args, namespace=namespace,
-                    parsed_args=parsed_args_str[0] if isinstance(parsed_args_str, tuple) else parsed_args_str
+                    self,
+                    args=args,
+                    namespace=namespace,
+                    parsed_args=parsed_args_str[0] if isinstance(parsed_args_str, tuple) else parsed_args_str,
                 )
             except Exception:
                 pass
@@ -143,15 +168,21 @@ class PatchArgumentParser:
                     if PY2:
                         import itertools
 
-                        def _get_sub_parsers_defaults(subparser, prev=[]):
-                            actions_grp = [v._actions for v in subparser.choices.values()] if isinstance(
-                                subparser, _SubParsersAction) else [subparser._actions]
-                            _sub_parsers_defaults = [[subparser]] if hasattr(
-                                subparser, 'default') and subparser.default else []
+                        def _get_sub_parsers_defaults(subparser: _SubParsersAction, prev: list = []) -> list:
+                            actions_grp = (
+                                [v._actions for v in subparser.choices.values()]
+                                if isinstance(subparser, _SubParsersAction)
+                                else [subparser._actions]
+                            )
+                            _sub_parsers_defaults = (
+                                [[subparser]] if hasattr(subparser, "default") and subparser.default else []
+                            )
                             for actions in actions_grp:
-                                _sub_parsers_defaults += [_get_sub_parsers_defaults(v, prev)
-                                                          for v in actions if isinstance(v, _SubParsersAction) and
-                                                          hasattr(v, 'default') and v.default]
+                                _sub_parsers_defaults += [
+                                    _get_sub_parsers_defaults(v, prev)
+                                    for v in actions
+                                    if isinstance(v, _SubParsersAction) and hasattr(v, "default") and v.default
+                                ]
 
                             return list(itertools.chain.from_iterable(_sub_parsers_defaults))
 
@@ -160,6 +191,7 @@ class PatchArgumentParser:
                             if args is None:
                                 # args default to the system args
                                 import sys as _sys
+
                                 args = _sys.argv[1:]
                             else:
                                 args = list(args)
@@ -185,8 +217,11 @@ class PatchArgumentParser:
         return parsed_args
 
     @staticmethod
-    def _add_last_parsed_args(parser, parsed_args):
-        if hasattr(parser, '_parsed_arg_string_lookup'):
+    def _add_last_parsed_args(
+        parser: ArgumentParser,
+        parsed_args: Union[Namespace, Tuple[Namespace, List[Any]]],
+    ) -> Union[Namespace, Tuple[Namespace, List[Any]]]:
+        if hasattr(parser, "_parsed_arg_string_lookup"):
             if isinstance(parsed_args, tuple):
                 parsed_args_namespace = copy(parsed_args[0])
                 parsed_args = (parsed_args_namespace, parsed_args[1])
@@ -201,8 +236,9 @@ class PatchArgumentParser:
                         if isinstance(getattr(parsed_args_namespace, k, None), list) and not isinstance(v, list):
                             v = [v]
                         setattr(
-                            parsed_args_namespace, k,
-                            v if isinstance(v, list) else str(v)
+                            parsed_args_namespace,
+                            k,
+                            v if isinstance(v, list) else str(v),
                         )
 
         if not PatchArgumentParser._last_parsed_args or parsed_args not in PatchArgumentParser._last_parsed_args:
@@ -210,40 +246,53 @@ class PatchArgumentParser:
         return parsed_args
 
     @staticmethod
-    def _add_last_arg_parser(a_argparser):
+    def _add_last_arg_parser(a_argparser: ArgumentParser) -> None:
         PatchArgumentParser._last_arg_parser = (PatchArgumentParser._last_arg_parser or []) + [a_argparser]
 
     @staticmethod
-    def _get_value(self, action, arg_string):
-        if not hasattr(self, '_parsed_arg_string_lookup'):
-            setattr(self, '_parsed_arg_string_lookup', dict())
+    def _get_value(self, action: argparse.Action, arg_string: str) -> Any:
+        if not hasattr(self, "_parsed_arg_string_lookup"):
+            setattr(self, "_parsed_arg_string_lookup", dict())
         k = str(action.dest)
         if k not in self._parsed_arg_string_lookup:
             self._parsed_arg_string_lookup[k] = arg_string
         else:
-            self._parsed_arg_string_lookup[k] = \
-                (self._parsed_arg_string_lookup[k]
-                 if isinstance(self._parsed_arg_string_lookup[k], list)
-                 else [self._parsed_arg_string_lookup[k]]) + [arg_string]
+            self._parsed_arg_string_lookup[k] = (
+                self._parsed_arg_string_lookup[k]
+                if isinstance(self._parsed_arg_string_lookup[k], list)
+                else [self._parsed_arg_string_lookup[k]]
+            ) + [arg_string]
         return PatchArgumentParser._original_get_value(self, action, arg_string)
 
+    @property
+    def last_parsed_args(self) -> None:
+        return self._last_parsed_args
 
-def patch_argparse():
+    @property
+    def last_arg_parser(self) -> None:
+        return self._last_arg_parser
+
+    @property
+    def original_parse_args(self) -> None:
+        return self._original_parse_args
+
+
+def patch_argparse() -> None:
     # make sure we only patch once
-    if not sys.modules.get('argparse') or hasattr(sys.modules['argparse'].ArgumentParser, '_parse_args_patched'):
+    if not sys.modules.get("argparse") or hasattr(sys.modules["argparse"].ArgumentParser, "_parse_args_patched"):
         return
     # mark patched argparse
-    sys.modules['argparse'].ArgumentParser._parse_args_patched = True
+    sys.modules["argparse"].ArgumentParser._parse_args_patched = True
     # patch argparser
-    PatchArgumentParser._original_parse_args = sys.modules['argparse'].ArgumentParser.parse_args
-    PatchArgumentParser._original_parse_known_args = sys.modules['argparse'].ArgumentParser.parse_known_args
-    PatchArgumentParser._original_add_subparsers = sys.modules['argparse'].ArgumentParser.add_subparsers
-    sys.modules['argparse'].ArgumentParser.parse_args = PatchArgumentParser.parse_args
-    sys.modules['argparse'].ArgumentParser.parse_known_args = PatchArgumentParser.parse_known_args
-    sys.modules['argparse'].ArgumentParser.add_subparsers = PatchArgumentParser.add_subparsers
-    if hasattr(sys.modules['argparse'].ArgumentParser, '_get_value'):
-        PatchArgumentParser._original_get_value = sys.modules['argparse'].ArgumentParser._get_value
-        sys.modules['argparse'].ArgumentParser._get_value = PatchArgumentParser._get_value
+    PatchArgumentParser._original_parse_args = sys.modules["argparse"].ArgumentParser.parse_args
+    PatchArgumentParser._original_parse_known_args = sys.modules["argparse"].ArgumentParser.parse_known_args
+    PatchArgumentParser._original_add_subparsers = sys.modules["argparse"].ArgumentParser.add_subparsers
+    sys.modules["argparse"].ArgumentParser.parse_args = PatchArgumentParser.parse_args
+    sys.modules["argparse"].ArgumentParser.parse_known_args = PatchArgumentParser.parse_known_args
+    sys.modules["argparse"].ArgumentParser.add_subparsers = PatchArgumentParser.add_subparsers
+    if hasattr(sys.modules["argparse"].ArgumentParser, "_get_value"):
+        PatchArgumentParser._original_get_value = sys.modules["argparse"].ArgumentParser._get_value
+        sys.modules["argparse"].ArgumentParser._get_value = PatchArgumentParser._get_value
 
 
 # Notice! we are patching argparser, so we know if someone parsed arguments before connecting to task
@@ -253,32 +302,43 @@ except Exception as e:
     warnings.warn("Failed patching argparse: %s" % e)
 
 
-def call_original_argparser(self, args=None, namespace=None):
-    if PatchArgumentParser._original_parse_args:
-        return PatchArgumentParser._original_parse_args(self, args=args, namespace=namespace)
+def call_original_argparser(
+    self,
+    args: Optional[List[str]] = None,
+    namespace: Optional[Namespace] = None,
+) -> Namespace:
+    if PatchArgumentParser.original_parse_args:
+        return PatchArgumentParser.original_parse_args(self, args=args, namespace=namespace)
 
 
-def argparser_parseargs_called():
-    return PatchArgumentParser._last_arg_parser is not None
+def argparser_parseargs_called() -> bool:
+    return PatchArgumentParser.last_arg_parser is not None
 
 
-def argparser_update_currenttask(task):
+def argparser_update_currenttask(task: Any) -> None:
     PatchArgumentParser._current_task = task
 
 
-def get_argparser_last_args():
-    if not PatchArgumentParser._last_arg_parser or not PatchArgumentParser._last_parsed_args:
+def get_argparser_last_args() -> List[Tuple[ArgumentParser, Any]]:
+    if not PatchArgumentParser.last_arg_parser or not PatchArgumentParser.last_parsed_args:
         return []
 
-    return [(parser, args[0] if isinstance(args, tuple) else args)
-            for parser, args in zip(PatchArgumentParser._last_arg_parser, PatchArgumentParser._last_parsed_args)]
+    return [
+        (parser, args[0] if isinstance(args, tuple) else args)
+        for parser, args in zip(
+            (PatchArgumentParser._last_arg_parser or []),
+            (PatchArgumentParser._last_parsed_args or []),
+        )
+    ]
 
 
-def add_params_to_parser(parser, params):
+def add_params_to_parser(parser: ArgumentParser, params: dict) -> ArgumentParser:
     assert isinstance(parser, ArgumentParser)
     assert isinstance(params, dict)
 
-    def get_type_details(v):
+    def get_type_details(
+        v: Any,
+    ) -> Tuple[Union[Type[int], Type[float], Type[str]], Union[int, float, str]]:
         for t in (int, float, str):
             try:
                 _value = t(v)
@@ -287,9 +347,9 @@ def add_params_to_parser(parser, params):
                 continue
 
     # AJB temporary protection from ui problems sending empty dicts
-    params.pop('', None)
+    params.pop("", None)
 
     for param, value in params.items():
         _type, type_value = get_type_details(value)
-        parser.add_argument('--%s' % param, type=_type, default=type_value)
+        parser.add_argument("--%s" % param, type=_type, default=type_value)
     return parser

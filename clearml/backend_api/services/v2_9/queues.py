@@ -3,12 +3,16 @@ queues service
 
 Provides a management API for queues of tasks waiting to be executed by workers deployed anywhere (see Workers Service).
 """
+from typing import List, Optional, Any
 from datetime import datetime
-
 import six
 from dateutil.parser import parse as parse_datetime
-
-from ....backend_api.session import NonStrictDataModel, Request, Response, schema_property
+from ....backend_api.session import (
+    NonStrictDataModel,
+    Request,
+    Response,
+    schema_property,
+)
 
 
 class QueueMetrics(NonStrictDataModel):
@@ -29,93 +33,93 @@ class QueueMetrics(NonStrictDataModel):
         taken.
     :type queue_lengths: Sequence[int]
     """
+
     _schema = {
-        'properties': {
-            'avg_waiting_times': {
-                'description': 'List of average waiting times for tasks in the queue. The points correspond to the timestamps in the dates list. If more than one value exists for the given interval then the maximum value is taken.',
-                'items': {'type': 'number'},
-                'type': ['array', 'null'],
+        "properties": {
+            "avg_waiting_times": {
+                "description": "List of average waiting times for tasks in the queue. The points correspond to the timestamps in the dates list. If more than one value exists for the given interval then the maximum value is taken.",
+                "items": {"type": "number"},
+                "type": ["array", "null"],
             },
-            'dates': {
-                'description': 'List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by the requested interval. Timestamps where no queue status change was recorded are omitted.',
-                'items': {'type': 'integer'},
-                'type': ['array', 'null'],
+            "dates": {
+                "description": "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by the requested interval. Timestamps where no queue status change was recorded are omitted.",
+                "items": {"type": "integer"},
+                "type": ["array", "null"],
             },
-            'queue': {'description': 'ID of the queue', 'type': ['string', 'null']},
-            'queue_lengths': {
-                'description': 'List of tasks counts in the queue. The points correspond to the timestamps in the dates list. If more than one value exists for the given interval then the count that corresponds to the maximum average value is taken.',
-                'items': {'type': 'integer'},
-                'type': ['array', 'null'],
+            "queue": {"description": "ID of the queue", "type": ["string", "null"]},
+            "queue_lengths": {
+                "description": "List of tasks counts in the queue. The points correspond to the timestamps in the dates list. If more than one value exists for the given interval then the count that corresponds to the maximum average value is taken.",
+                "items": {"type": "integer"},
+                "type": ["array", "null"],
             },
         },
-        'type': 'object',
+        "type": "object",
     }
 
     def __init__(
-            self, queue=None, dates=None, avg_waiting_times=None, queue_lengths=None, **kwargs):
+        self,
+        queue: Optional[str] = None,
+        dates: Optional[List[int]] = None,
+        avg_waiting_times: Optional[List[float]] = None,
+        queue_lengths: Optional[List[int]] = None,
+        **kwargs: Any
+    ) -> None:
         super(QueueMetrics, self).__init__(**kwargs)
         self.queue = queue
         self.dates = dates
         self.avg_waiting_times = avg_waiting_times
         self.queue_lengths = queue_lengths
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> Optional[str]:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Optional[str]) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('dates')
-    def dates(self):
+    @schema_property("dates")
+    def dates(self) -> Optional[List[int]]:
         return self._property_dates
 
     @dates.setter
-    def dates(self, value):
+    def dates(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_dates = None
             return
-
         self.assert_isinstance(value, "dates", (list, tuple))
         value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
-
         self.assert_isinstance(value, "dates", six.integer_types, is_array=True)
         self._property_dates = value
 
-    @schema_property('avg_waiting_times')
-    def avg_waiting_times(self):
+    @schema_property("avg_waiting_times")
+    def avg_waiting_times(self) -> Optional[List[float]]:
         return self._property_avg_waiting_times
 
     @avg_waiting_times.setter
-    def avg_waiting_times(self, value):
+    def avg_waiting_times(self, value: Optional[List[float]]) -> None:
         if value is None:
             self._property_avg_waiting_times = None
             return
-
         self.assert_isinstance(value, "avg_waiting_times", (list, tuple))
-
         self.assert_isinstance(value, "avg_waiting_times", six.integer_types + (float,), is_array=True)
         self._property_avg_waiting_times = value
 
-    @schema_property('queue_lengths')
-    def queue_lengths(self):
+    @schema_property("queue_lengths")
+    def queue_lengths(self) -> Optional[List[int]]:
         return self._property_queue_lengths
 
     @queue_lengths.setter
-    def queue_lengths(self, value):
+    def queue_lengths(self, value: Optional[List[int]]) -> None:
         if value is None:
             self._property_queue_lengths = None
             return
-
         self.assert_isinstance(value, "queue_lengths", (list, tuple))
         value = [int(v) if isinstance(v, float) and v.is_integer() else v for v in value]
-
         self.assert_isinstance(value, "queue_lengths", six.integer_types, is_array=True)
         self._property_queue_lengths = value
 
@@ -127,47 +131,45 @@ class Entry(NonStrictDataModel):
     :param added: Time this entry was added to the queue
     :type added: datetime.datetime
     """
+
     _schema = {
-        'properties': {
-            'added': {
-                'description': 'Time this entry was added to the queue',
-                'format': 'date-time',
-                'type': ['string', 'null'],
+        "properties": {
+            "added": {
+                "description": "Time this entry was added to the queue",
+                "format": "date-time",
+                "type": ["string", "null"],
             },
-            'task': {'description': 'Queued task ID', 'type': ['string', 'null']},
+            "task": {"description": "Queued task ID", "type": ["string", "null"]},
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, task=None, added=None, **kwargs):
+    def __init__(self, task: Optional[str] = None, added: Optional[str] = None, **kwargs: Any) -> None:
         super(Entry, self).__init__(**kwargs)
         self.task = task
         self.added = added
 
-    @schema_property('task')
-    def task(self):
+    @schema_property("task")
+    def task(self) -> Optional[str]:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: Optional[str]) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
-    @schema_property('added')
-    def added(self):
+    @schema_property("added")
+    def added(self) -> Optional[str]:
         return self._property_added
 
     @added.setter
-    def added(self, value):
+    def added(self, value: Optional[str]) -> None:
         if value is None:
             self._property_added = None
             return
-
         self.assert_isinstance(value, "added", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
@@ -194,41 +196,49 @@ class Queue(NonStrictDataModel):
     :param entries: List of ordered queue entries
     :type entries: Sequence[Entry]
     """
+
     _schema = {
-        'properties': {
-            'company': {'description': 'Company id', 'type': ['string', 'null']},
-            'created': {
-                'description': 'Queue creation time',
-                'format': 'date-time',
-                'type': ['string', 'null'],
+        "properties": {
+            "company": {"description": "Company id", "type": ["string", "null"]},
+            "created": {
+                "description": "Queue creation time",
+                "format": "date-time",
+                "type": ["string", "null"],
             },
-            'entries': {
-                'description': 'List of ordered queue entries',
-                'items': {'$ref': '#/definitions/entry'},
-                'type': ['array', 'null'],
+            "entries": {
+                "description": "List of ordered queue entries",
+                "items": {"$ref": "#/definitions/entry"},
+                "type": ["array", "null"],
             },
-            'id': {'description': 'Queue id', 'type': ['string', 'null']},
-            'name': {'description': 'Queue name', 'type': ['string', 'null']},
-            'system_tags': {
-                'description': "System tags. This field is reserved for system use, please don't use it.",
-                'items': {'type': 'string'},
-                'type': ['array', 'null'],
+            "id": {"description": "Queue id", "type": ["string", "null"]},
+            "name": {"description": "Queue name", "type": ["string", "null"]},
+            "system_tags": {
+                "description": "System tags. This field is reserved for system use, please don't use it.",
+                "items": {"type": "string"},
+                "type": ["array", "null"],
             },
-            'tags': {
-                'description': 'User-defined tags',
-                'items': {'type': 'string'},
-                'type': ['array', 'null'],
+            "tags": {
+                "description": "User-defined tags",
+                "items": {"type": "string"},
+                "type": ["array", "null"],
             },
-            'user': {
-                'description': 'Associated user id',
-                'type': ['string', 'null'],
-            },
+            "user": {"description": "Associated user id", "type": ["string", "null"]},
         },
-        'type': 'object',
+        "type": "object",
     }
 
     def __init__(
-            self, id=None, name=None, user=None, company=None, created=None, tags=None, system_tags=None, entries=None, **kwargs):
+        self,
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        user: Optional[str] = None,
+        company: Optional[str] = None,
+        created: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        entries: Optional[List[Any]] = None,
+        **kwargs: Any
+    ) -> None:
         super(Queue, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -239,115 +249,105 @@ class Queue(NonStrictDataModel):
         self.system_tags = system_tags
         self.entries = entries
 
-    @schema_property('id')
-    def id(self):
+    @schema_property("id")
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
-    @schema_property('name')
-    def name(self):
+    @schema_property("name")
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
-    @schema_property('user')
-    def user(self):
+    @schema_property("user")
+    def user(self) -> Optional[str]:
         return self._property_user
 
     @user.setter
-    def user(self, value):
+    def user(self, value: Optional[str]) -> None:
         if value is None:
             self._property_user = None
             return
-
         self.assert_isinstance(value, "user", six.string_types)
         self._property_user = value
 
-    @schema_property('company')
-    def company(self):
+    @schema_property("company")
+    def company(self) -> Optional[str]:
         return self._property_company
 
     @company.setter
-    def company(self, value):
+    def company(self, value: Optional[str]) -> None:
         if value is None:
             self._property_company = None
             return
-
         self.assert_isinstance(value, "company", six.string_types)
         self._property_company = value
 
-    @schema_property('created')
-    def created(self):
+    @schema_property("created")
+    def created(self) -> Optional[str]:
         return self._property_created
 
     @created.setter
-    def created(self, value):
+    def created(self, value: Optional[str]) -> None:
         if value is None:
             self._property_created = None
             return
-
         self.assert_isinstance(value, "created", six.string_types + (datetime,))
         if not isinstance(value, datetime):
             value = parse_datetime(value)
         self._property_created = value
 
-    @schema_property('tags')
-    def tags(self):
+    @schema_property("tags")
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
-    @schema_property('system_tags')
-    def system_tags(self):
+    @schema_property("system_tags")
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
-    @schema_property('entries')
-    def entries(self):
+    @schema_property("entries")
+    def entries(self) -> Optional[List[Any]]:
         return self._property_entries
 
     @entries.setter
-    def entries(self, value):
+    def entries(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_entries = None
             return
-
         self.assert_isinstance(value, "entries", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [Entry.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "entries", Entry, is_array=True)
@@ -368,44 +368,41 @@ class AddTaskRequest(Request):
     _action = "add_task"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'queue': {'description': 'Queue id', 'type': 'string'},
-            'task': {'description': 'Task id', 'type': 'string'},
+        "definitions": {},
+        "properties": {
+            "queue": {"description": "Queue id", "type": "string"},
+            "task": {"description": "Task id", "type": "string"},
         },
-        'required': ['queue', 'task'],
-        'type': 'object',
+        "required": ["queue", "task"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, task, **kwargs):
+    def __init__(self, queue: str, task: str, **kwargs: Any) -> None:
         super(AddTaskRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('task')
-    def task(self):
+    @schema_property("task")
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -417,39 +414,37 @@ class AddTaskResponse(Response):
     :param added: Number of tasks added (0 or 1)
     :type added: int
     """
+
     _service = "queues"
     _action = "add_task"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'added': {
-                'description': 'Number of tasks added (0 or 1)',
-                'enum': [0, 1],
-                'type': ['integer', 'null'],
-            },
+        "definitions": {},
+        "properties": {
+            "added": {
+                "description": "Number of tasks added (0 or 1)",
+                "enum": [0, 1],
+                "type": ["integer", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, added=None, **kwargs):
+    def __init__(self, added: Optional[int] = None, **kwargs: Any) -> None:
         super(AddTaskResponse, self).__init__(**kwargs)
         self.added = added
 
-    @schema_property('added')
-    def added(self):
+    @schema_property("added")
+    def added(self) -> Optional[int]:
         return self._property_added
 
     @added.setter
-    def added(self, value):
+    def added(self, value: Optional[int]) -> None:
         if value is None:
             self._property_added = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "added", six.integer_types)
         self._property_added = value
 
@@ -471,74 +466,70 @@ class CreateRequest(Request):
     _action = "create"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'name': {
-                'description': 'Queue name Unique within the company.',
-                'type': 'string',
+        "definitions": {},
+        "properties": {
+            "name": {
+                "description": "Queue name Unique within the company.",
+                "type": "string",
             },
-            'system_tags': {
-                'description': "System tags list. This field is reserved for system use, please don't use it.",
-                'items': {'type': 'string'},
-                'type': 'array',
+            "system_tags": {
+                "description": "System tags list. This field is reserved for system use, please don't use it.",
+                "items": {"type": "string"},
+                "type": "array",
             },
-            'tags': {
-                'description': 'User-defined tags list',
-                'items': {'type': 'string'},
-                'type': 'array',
+            "tags": {
+                "description": "User-defined tags list",
+                "items": {"type": "string"},
+                "type": "array",
             },
         },
-        'required': ['name'],
-        'type': 'object',
+        "required": ["name"],
+        "type": "object",
     }
 
     def __init__(
-            self, name, tags=None, system_tags=None, **kwargs):
+        self, name: str, tags: Optional[List[str]] = None, system_tags: Optional[List[str]] = None, **kwargs: Any
+    ) -> None:
         super(CreateRequest, self).__init__(**kwargs)
         self.name = name
         self.tags = tags
         self.system_tags = system_tags
 
-    @schema_property('name')
-    def name(self):
+    @schema_property("name")
+    def name(self) -> str:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
-    @schema_property('tags')
-    def tags(self):
+    @schema_property("tags")
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
-    @schema_property('system_tags')
-    def system_tags(self):
+    @schema_property("system_tags")
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -550,33 +541,29 @@ class CreateResponse(Response):
     :param id: New queue ID
     :type id: str
     """
+
     _service = "queues"
     _action = "create"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'id': {'description': 'New queue ID', 'type': ['string', 'null']},
-        },
-        'type': 'object',
+        "definitions": {},
+        "properties": {"id": {"description": "New queue ID", "type": ["string", "null"]}},
+        "type": "object",
     }
 
-    def __init__(
-            self, id=None, **kwargs):
+    def __init__(self, id: Optional[str] = None, **kwargs: Any) -> None:
         super(CreateResponse, self).__init__(**kwargs)
         self.id = id
 
-    @schema_property('id')
-    def id(self):
+    @schema_property("id")
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
@@ -595,48 +582,45 @@ class DeleteRequest(Request):
     _action = "delete"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'force': {
-                'default': False,
-                'description': 'Force delete of non-empty queue. Defaults to false',
-                'type': 'boolean',
+        "definitions": {},
+        "properties": {
+            "force": {
+                "default": False,
+                "description": "Force delete of non-empty queue. Defaults to false",
+                "type": "boolean",
             },
-            'queue': {'description': 'Queue id', 'type': 'string'},
+            "queue": {"description": "Queue id", "type": "string"},
         },
-        'required': ['queue'],
-        'type': 'object',
+        "required": ["queue"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, force=False, **kwargs):
+    def __init__(self, queue: str, force: Optional[bool] = False, **kwargs: Any) -> None:
         super(DeleteRequest, self).__init__(**kwargs)
         self.queue = queue
         self.force = force
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('force')
-    def force(self):
+    @schema_property("force")
+    def force(self) -> Optional[bool]:
         return self._property_force
 
     @force.setter
-    def force(self, value):
+    def force(self, value: Optional[bool]) -> None:
         if value is None:
             self._property_force = None
             return
-
         self.assert_isinstance(value, "force", (bool,))
         self._property_force = value
 
@@ -648,39 +632,37 @@ class DeleteResponse(Response):
     :param deleted: Number of queues deleted (0 or 1)
     :type deleted: int
     """
+
     _service = "queues"
     _action = "delete"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'deleted': {
-                'description': 'Number of queues deleted (0 or 1)',
-                'enum': [0, 1],
-                'type': ['integer', 'null'],
-            },
+        "definitions": {},
+        "properties": {
+            "deleted": {
+                "description": "Number of queues deleted (0 or 1)",
+                "enum": [0, 1],
+                "type": ["integer", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, deleted=None, **kwargs):
+    def __init__(self, deleted: Optional[int] = None, **kwargs: Any) -> None:
         super(DeleteResponse, self).__init__(**kwargs)
         self.deleted = deleted
 
-    @schema_property('deleted')
-    def deleted(self):
+    @schema_property("deleted")
+    def deleted(self) -> Optional[int]:
         return self._property_deleted
 
     @deleted.setter
-    def deleted(self, value):
+    def deleted(self, value: Optional[int]) -> None:
         if value is None:
             self._property_deleted = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "deleted", six.integer_types)
         self._property_deleted = value
 
@@ -723,57 +705,68 @@ class GetAllRequest(Request):
     _action = "get_all"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'id': {
-                'description': 'List of Queue IDs used to filter results',
-                'items': {'type': 'string'},
-                'type': ['array', 'null'],
+        "definitions": {},
+        "properties": {
+            "id": {
+                "description": "List of Queue IDs used to filter results",
+                "items": {"type": "string"},
+                "type": ["array", "null"],
             },
-            'name': {
-                'description': 'Get only queues whose name matches this pattern (python regular expression syntax)',
-                'type': ['string', 'null'],
+            "name": {
+                "description": "Get only queues whose name matches this pattern (python regular expression syntax)",
+                "type": ["string", "null"],
             },
-            'only_fields': {
-                'description': "List of document field names (nesting is supported using '.', e.g. execution.model_labels). If provided, this list defines the query's projection (only these fields will be returned for each result entry)",
-                'items': {'type': 'string'},
-                'type': ['array', 'null'],
+            "only_fields": {
+                "description": "List of document field names (nesting is supported using '.', e.g. execution.model_labels). If provided, this list defines the query's projection (only these fields will be returned for each result entry)",
+                "items": {"type": "string"},
+                "type": ["array", "null"],
             },
-            'order_by': {
-                'description': "List of field names to order by. When search_text is used, '@text_score' can be used as a field representing the text score of returned documents. Use '-' prefix to specify descending order. Optional, recommended when using page",
-                'items': {'type': 'string'},
-                'type': ['array', 'null'],
+            "order_by": {
+                "description": "List of field names to order by. When search_text is used, '@text_score' can be used as a field representing the text score of returned documents. Use '-' prefix to specify descending order. Optional, recommended when using page",
+                "items": {"type": "string"},
+                "type": ["array", "null"],
             },
-            'page': {
-                'description': 'Page number, returns a specific page out of the result list of results.',
-                'minimum': 0,
-                'type': ['integer', 'null'],
+            "page": {
+                "description": "Page number, returns a specific page out of the result list of results.",
+                "minimum": 0,
+                "type": ["integer", "null"],
             },
-            'page_size': {
-                'description': 'Page size, specifies the number of results returned in each page (last page may contain fewer results)',
-                'minimum': 1,
-                'type': ['integer', 'null'],
+            "page_size": {
+                "description": "Page size, specifies the number of results returned in each page (last page may contain fewer results)",
+                "minimum": 1,
+                "type": ["integer", "null"],
             },
-            'search_text': {
-                'description': 'Free text search query',
-                'type': ['string', 'null'],
+            "search_text": {
+                "description": "Free text search query",
+                "type": ["string", "null"],
             },
-            'system_tags': {
-                'description': "System tags list used to filter results. Prepend '-' to system tag name to indicate exclusion",
-                'items': {'type': 'string'},
-                'type': ['array', 'null'],
+            "system_tags": {
+                "description": "System tags list used to filter results. Prepend '-' to system tag name to indicate exclusion",
+                "items": {"type": "string"},
+                "type": ["array", "null"],
             },
-            'tags': {
-                'description': "User-defined tags list used to filter results. Prepend '-' to tag name to indicate exclusion",
-                'items': {'type': 'string'},
-                'type': ['array', 'null'],
+            "tags": {
+                "description": "User-defined tags list used to filter results. Prepend '-' to tag name to indicate exclusion",
+                "items": {"type": "string"},
+                "type": ["array", "null"],
             },
         },
-        'type': 'object',
+        "type": "object",
     }
 
     def __init__(
-            self, name=None, id=None, tags=None, system_tags=None, page=None, page_size=None, order_by=None, search_text=None, only_fields=None, **kwargs):
+        self,
+        name: Optional[str] = None,
+        id: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        order_by: Optional[List[str]] = None,
+        search_text: Optional[str] = None,
+        only_fields: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(GetAllRequest, self).__init__(**kwargs)
         self.name = name
         self.id = id
@@ -785,134 +778,120 @@ class GetAllRequest(Request):
         self.search_text = search_text
         self.only_fields = only_fields
 
-    @schema_property('name')
-    def name(self):
+    @schema_property("name")
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
-    @schema_property('id')
-    def id(self):
+    @schema_property("id")
+    def id(self) -> Optional[List[str]]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", (list, tuple))
-
         self.assert_isinstance(value, "id", six.string_types, is_array=True)
         self._property_id = value
 
-    @schema_property('tags')
-    def tags(self):
+    @schema_property("tags")
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
-    @schema_property('system_tags')
-    def system_tags(self):
+    @schema_property("system_tags")
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
-    @schema_property('page')
-    def page(self):
+    @schema_property("page")
+    def page(self) -> Optional[int]:
         return self._property_page
 
     @page.setter
-    def page(self, value):
+    def page(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page", six.integer_types)
         self._property_page = value
 
-    @schema_property('page_size')
-    def page_size(self):
+    @schema_property("page_size")
+    def page_size(self) -> Optional[int]:
         return self._property_page_size
 
     @page_size.setter
-    def page_size(self, value):
+    def page_size(self, value: Optional[int]) -> None:
         if value is None:
             self._property_page_size = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "page_size", six.integer_types)
         self._property_page_size = value
 
-    @schema_property('order_by')
-    def order_by(self):
+    @schema_property("order_by")
+    def order_by(self) -> Optional[List[str]]:
         return self._property_order_by
 
     @order_by.setter
-    def order_by(self, value):
+    def order_by(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_order_by = None
             return
-
         self.assert_isinstance(value, "order_by", (list, tuple))
-
         self.assert_isinstance(value, "order_by", six.string_types, is_array=True)
         self._property_order_by = value
 
-    @schema_property('search_text')
-    def search_text(self):
+    @schema_property("search_text")
+    def search_text(self) -> Optional[str]:
         return self._property_search_text
 
     @search_text.setter
-    def search_text(self, value):
+    def search_text(self, value: Optional[str]) -> None:
         if value is None:
             self._property_search_text = None
             return
-
         self.assert_isinstance(value, "search_text", six.string_types)
         self._property_search_text = value
 
-    @schema_property('only_fields')
-    def only_fields(self):
+    @schema_property("only_fields")
+    def only_fields(self) -> Optional[List[str]]:
         return self._property_only_fields
 
     @only_fields.setter
-    def only_fields(self, value):
+    def only_fields(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_only_fields = None
             return
-
         self.assert_isinstance(value, "only_fields", (list, tuple))
-
         self.assert_isinstance(value, "only_fields", six.string_types, is_array=True)
         self._property_only_fields = value
 
@@ -924,92 +903,87 @@ class GetAllResponse(Response):
     :param queues: Queues list
     :type queues: Sequence[Queue]
     """
+
     _service = "queues"
     _action = "get_all"
     _version = "2.9"
-
     _schema = {
-        'definitions': {
-            'entry': {
-                'properties': {
-                    'added': {
-                        'description': 'Time this entry was added to the queue',
-                        'format': 'date-time',
-                        'type': ['string', 'null'],
+        "definitions": {
+            "entry": {
+                "properties": {
+                    "added": {
+                        "description": "Time this entry was added to the queue",
+                        "format": "date-time",
+                        "type": ["string", "null"],
                     },
-                    'task': {
-                        'description': 'Queued task ID',
-                        'type': ['string', 'null'],
-                    },
-                },
-                'type': 'object',
-            },
-            'queue': {
-                'properties': {
-                    'company': {
-                        'description': 'Company id',
-                        'type': ['string', 'null'],
-                    },
-                    'created': {
-                        'description': 'Queue creation time',
-                        'format': 'date-time',
-                        'type': ['string', 'null'],
-                    },
-                    'entries': {
-                        'description': 'List of ordered queue entries',
-                        'items': {'$ref': '#/definitions/entry'},
-                        'type': ['array', 'null'],
-                    },
-                    'id': {'description': 'Queue id', 'type': ['string', 'null']},
-                    'name': {
-                        'description': 'Queue name',
-                        'type': ['string', 'null'],
-                    },
-                    'system_tags': {
-                        'description': "System tags. This field is reserved for system use, please don't use it.",
-                        'items': {'type': 'string'},
-                        'type': ['array', 'null'],
-                    },
-                    'tags': {
-                        'description': 'User-defined tags',
-                        'items': {'type': 'string'},
-                        'type': ['array', 'null'],
-                    },
-                    'user': {
-                        'description': 'Associated user id',
-                        'type': ['string', 'null'],
+                    "task": {
+                        "description": "Queued task ID",
+                        "type": ["string", "null"],
                     },
                 },
-                'type': 'object',
+                "type": "object",
+            },
+            "queue": {
+                "properties": {
+                    "company": {
+                        "description": "Company id",
+                        "type": ["string", "null"],
+                    },
+                    "created": {
+                        "description": "Queue creation time",
+                        "format": "date-time",
+                        "type": ["string", "null"],
+                    },
+                    "entries": {
+                        "description": "List of ordered queue entries",
+                        "items": {"$ref": "#/definitions/entry"},
+                        "type": ["array", "null"],
+                    },
+                    "id": {"description": "Queue id", "type": ["string", "null"]},
+                    "name": {"description": "Queue name", "type": ["string", "null"]},
+                    "system_tags": {
+                        "description": "System tags. This field is reserved for system use, please don't use it.",
+                        "items": {"type": "string"},
+                        "type": ["array", "null"],
+                    },
+                    "tags": {
+                        "description": "User-defined tags",
+                        "items": {"type": "string"},
+                        "type": ["array", "null"],
+                    },
+                    "user": {
+                        "description": "Associated user id",
+                        "type": ["string", "null"],
+                    },
+                },
+                "type": "object",
             },
         },
-        'properties': {
-            'queues': {
-                'description': 'Queues list',
-                'items': {'$ref': '#/definitions/queue'},
-                'type': ['array', 'null'],
-            },
+        "properties": {
+            "queues": {
+                "description": "Queues list",
+                "items": {"$ref": "#/definitions/queue"},
+                "type": ["array", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, queues=None, **kwargs):
+    def __init__(self, queues: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetAllResponse, self).__init__(**kwargs)
         self.queues = queues
 
-    @schema_property('queues')
-    def queues(self):
+    @schema_property("queues")
+    def queues(self) -> Optional[List[Any]]:
         return self._property_queues
 
     @queues.setter
-    def queues(self, value):
+    def queues(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_queues = None
             return
-
         self.assert_isinstance(value, "queues", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [Queue.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "queues", Queue, is_array=True)
@@ -1028,27 +1002,25 @@ class GetByIdRequest(Request):
     _action = "get_by_id"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {'queue': {'description': 'Queue ID', 'type': 'string'}},
-        'required': ['queue'],
-        'type': 'object',
+        "definitions": {},
+        "properties": {"queue": {"description": "Queue ID", "type": "string"}},
+        "required": ["queue"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, **kwargs):
+    def __init__(self, queue: str, **kwargs: Any) -> None:
         super(GetByIdRequest, self).__init__(**kwargs)
         self.queue = queue
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
@@ -1060,85 +1032,81 @@ class GetByIdResponse(Response):
     :param queue: Queue info
     :type queue: Queue
     """
+
     _service = "queues"
     _action = "get_by_id"
     _version = "2.9"
-
     _schema = {
-        'definitions': {
-            'entry': {
-                'properties': {
-                    'added': {
-                        'description': 'Time this entry was added to the queue',
-                        'format': 'date-time',
-                        'type': ['string', 'null'],
+        "definitions": {
+            "entry": {
+                "properties": {
+                    "added": {
+                        "description": "Time this entry was added to the queue",
+                        "format": "date-time",
+                        "type": ["string", "null"],
                     },
-                    'task': {
-                        'description': 'Queued task ID',
-                        'type': ['string', 'null'],
-                    },
-                },
-                'type': 'object',
-            },
-            'queue': {
-                'properties': {
-                    'company': {
-                        'description': 'Company id',
-                        'type': ['string', 'null'],
-                    },
-                    'created': {
-                        'description': 'Queue creation time',
-                        'format': 'date-time',
-                        'type': ['string', 'null'],
-                    },
-                    'entries': {
-                        'description': 'List of ordered queue entries',
-                        'items': {'$ref': '#/definitions/entry'},
-                        'type': ['array', 'null'],
-                    },
-                    'id': {'description': 'Queue id', 'type': ['string', 'null']},
-                    'name': {
-                        'description': 'Queue name',
-                        'type': ['string', 'null'],
-                    },
-                    'system_tags': {
-                        'description': "System tags. This field is reserved for system use, please don't use it.",
-                        'items': {'type': 'string'},
-                        'type': ['array', 'null'],
-                    },
-                    'tags': {
-                        'description': 'User-defined tags',
-                        'items': {'type': 'string'},
-                        'type': ['array', 'null'],
-                    },
-                    'user': {
-                        'description': 'Associated user id',
-                        'type': ['string', 'null'],
+                    "task": {
+                        "description": "Queued task ID",
+                        "type": ["string", "null"],
                     },
                 },
-                'type': 'object',
+                "type": "object",
+            },
+            "queue": {
+                "properties": {
+                    "company": {
+                        "description": "Company id",
+                        "type": ["string", "null"],
+                    },
+                    "created": {
+                        "description": "Queue creation time",
+                        "format": "date-time",
+                        "type": ["string", "null"],
+                    },
+                    "entries": {
+                        "description": "List of ordered queue entries",
+                        "items": {"$ref": "#/definitions/entry"},
+                        "type": ["array", "null"],
+                    },
+                    "id": {"description": "Queue id", "type": ["string", "null"]},
+                    "name": {"description": "Queue name", "type": ["string", "null"]},
+                    "system_tags": {
+                        "description": "System tags. This field is reserved for system use, please don't use it.",
+                        "items": {"type": "string"},
+                        "type": ["array", "null"],
+                    },
+                    "tags": {
+                        "description": "User-defined tags",
+                        "items": {"type": "string"},
+                        "type": ["array", "null"],
+                    },
+                    "user": {
+                        "description": "Associated user id",
+                        "type": ["string", "null"],
+                    },
+                },
+                "type": "object",
             },
         },
-        'properties': {
-            'queue': {
-                'description': 'Queue info',
-                'oneOf': [{'$ref': '#/definitions/queue'}, {'type': 'null'}],
-            },
+        "properties": {
+            "queue": {
+                "description": "Queue info",
+                "oneOf": [{"$ref": "#/definitions/queue"}, {"type": "null"}],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, queue=None, **kwargs):
+    def __init__(self, queue: Any = None, **kwargs: Any) -> None:
         super(GetByIdResponse, self).__init__(**kwargs)
         self.queue = queue
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> Any:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: Any) -> None:
         if value is None:
             self._property_queue = None
             return
@@ -1150,17 +1118,16 @@ class GetByIdResponse(Response):
 
 
 class GetDefaultRequest(Request):
-    """
-    """
+    """ """
 
     _service = "queues"
     _action = "get_default"
     _version = "2.9"
     _schema = {
-        'additionalProperties': False,
-        'definitions': {},
-        'properties': {},
-        'type': 'object',
+        "additionalProperties": False,
+        "definitions": {},
+        "properties": {},
+        "type": "object",
     }
 
 
@@ -1173,48 +1140,45 @@ class GetDefaultResponse(Response):
     :param name: Queue name
     :type name: str
     """
+
     _service = "queues"
     _action = "get_default"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'id': {'description': 'Queue id', 'type': ['string', 'null']},
-            'name': {'description': 'Queue name', 'type': ['string', 'null']},
+        "definitions": {},
+        "properties": {
+            "id": {"description": "Queue id", "type": ["string", "null"]},
+            "name": {"description": "Queue name", "type": ["string", "null"]},
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, id=None, name=None, **kwargs):
+    def __init__(self, id: Optional[str] = None, name: Optional[str] = None, **kwargs: Any) -> None:
         super(GetDefaultResponse, self).__init__(**kwargs)
         self.id = id
         self.name = name
 
-    @schema_property('id')
-    def id(self):
+    @schema_property("id")
+    def id(self) -> Optional[str]:
         return self._property_id
 
     @id.setter
-    def id(self, value):
+    def id(self, value: Optional[str]) -> None:
         if value is None:
             self._property_id = None
             return
-
         self.assert_isinstance(value, "id", six.string_types)
         self._property_id = value
 
-    @schema_property('name')
-    def name(self):
+    @schema_property("name")
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
@@ -1231,27 +1195,25 @@ class GetNextTaskRequest(Request):
     _action = "get_next_task"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {'queue': {'description': 'Queue id', 'type': 'string'}},
-        'required': ['queue'],
-        'type': 'object',
+        "definitions": {},
+        "properties": {"queue": {"description": "Queue id", "type": "string"}},
+        "required": ["queue"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, **kwargs):
+    def __init__(self, queue: str, **kwargs: Any) -> None:
         super(GetNextTaskRequest, self).__init__(**kwargs)
         self.queue = queue
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
@@ -1263,47 +1225,46 @@ class GetNextTaskResponse(Response):
     :param entry: Entry information
     :type entry: Entry
     """
+
     _service = "queues"
     _action = "get_next_task"
     _version = "2.9"
-
     _schema = {
-        'definitions': {
-            'entry': {
-                'properties': {
-                    'added': {
-                        'description': 'Time this entry was added to the queue',
-                        'format': 'date-time',
-                        'type': ['string', 'null'],
+        "definitions": {
+            "entry": {
+                "properties": {
+                    "added": {
+                        "description": "Time this entry was added to the queue",
+                        "format": "date-time",
+                        "type": ["string", "null"],
                     },
-                    'task': {
-                        'description': 'Queued task ID',
-                        'type': ['string', 'null'],
+                    "task": {
+                        "description": "Queued task ID",
+                        "type": ["string", "null"],
                     },
                 },
-                'type': 'object',
-            },
+                "type": "object",
+            }
         },
-        'properties': {
-            'entry': {
-                'description': 'Entry information',
-                'oneOf': [{'$ref': '#/definitions/entry'}, {'type': 'null'}],
-            },
+        "properties": {
+            "entry": {
+                "description": "Entry information",
+                "oneOf": [{"$ref": "#/definitions/entry"}, {"type": "null"}],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, entry=None, **kwargs):
+    def __init__(self, entry: Any = None, **kwargs: Any) -> None:
         super(GetNextTaskResponse, self).__init__(**kwargs)
         self.entry = entry
 
-    @schema_property('entry')
-    def entry(self):
+    @schema_property("entry")
+    def entry(self) -> Any:
         return self._property_entry
 
     @entry.setter
-    def entry(self, value):
+    def entry(self, value: Any) -> None:
         if value is None:
             self._property_entry = None
             return
@@ -1335,91 +1296,87 @@ class GetQueueMetricsRequest(Request):
     _action = "get_queue_metrics"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'from_date': {
-                'description': 'Starting time (in seconds from epoch) for collecting metrics',
-                'type': 'number',
+        "definitions": {},
+        "properties": {
+            "from_date": {
+                "description": "Starting time (in seconds from epoch) for collecting metrics",
+                "type": "number",
             },
-            'interval': {
-                'description': 'Time interval in seconds for a single metrics point. The minimal value is 1',
-                'type': 'integer',
+            "interval": {
+                "description": "Time interval in seconds for a single metrics point. The minimal value is 1",
+                "type": "integer",
             },
-            'queue_ids': {
-                'description': 'List of queue ids to collect metrics for. If not provided or empty then all then average metrics across all the company queues will be returned.',
-                'items': {'type': 'string'},
-                'type': 'array',
+            "queue_ids": {
+                "description": "List of queue ids to collect metrics for. If not provided or empty then all then average metrics across all the company queues will be returned.",
+                "items": {"type": "string"},
+                "type": "array",
             },
-            'to_date': {
-                'description': 'Ending time (in seconds from epoch) for collecting metrics',
-                'type': 'number',
+            "to_date": {
+                "description": "Ending time (in seconds from epoch) for collecting metrics",
+                "type": "number",
             },
         },
-        'required': ['from_date', 'to_date', 'interval'],
-        'type': 'object',
+        "required": ["from_date", "to_date", "interval"],
+        "type": "object",
     }
 
     def __init__(
-            self, from_date, to_date, interval, queue_ids=None, **kwargs):
+        self, from_date: float, to_date: float, interval: int, queue_ids: Optional[List[str]] = None, **kwargs: Any
+    ) -> None:
         super(GetQueueMetricsRequest, self).__init__(**kwargs)
         self.from_date = from_date
         self.to_date = to_date
         self.interval = interval
         self.queue_ids = queue_ids
 
-    @schema_property('from_date')
-    def from_date(self):
+    @schema_property("from_date")
+    def from_date(self) -> float:
         return self._property_from_date
 
     @from_date.setter
-    def from_date(self, value):
+    def from_date(self, value: float) -> None:
         if value is None:
             self._property_from_date = None
             return
-
         self.assert_isinstance(value, "from_date", six.integer_types + (float,))
         self._property_from_date = value
 
-    @schema_property('to_date')
-    def to_date(self):
+    @schema_property("to_date")
+    def to_date(self) -> float:
         return self._property_to_date
 
     @to_date.setter
-    def to_date(self, value):
+    def to_date(self, value: float) -> None:
         if value is None:
             self._property_to_date = None
             return
-
         self.assert_isinstance(value, "to_date", six.integer_types + (float,))
         self._property_to_date = value
 
-    @schema_property('interval')
-    def interval(self):
+    @schema_property("interval")
+    def interval(self) -> int:
         return self._property_interval
 
     @interval.setter
-    def interval(self, value):
+    def interval(self, value: int) -> None:
         if value is None:
             self._property_interval = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "interval", six.integer_types)
         self._property_interval = value
 
-    @schema_property('queue_ids')
-    def queue_ids(self):
+    @schema_property("queue_ids")
+    def queue_ids(self) -> Optional[List[str]]:
         return self._property_queue_ids
 
     @queue_ids.setter
-    def queue_ids(self, value):
+    def queue_ids(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_queue_ids = None
             return
-
         self.assert_isinstance(value, "queue_ids", (list, tuple))
-
         self.assert_isinstance(value, "queue_ids", six.string_types, is_array=True)
         self._property_queue_ids = value
 
@@ -1433,64 +1390,62 @@ class GetQueueMetricsResponse(Response):
         all the company queues.
     :type queues: Sequence[QueueMetrics]
     """
+
     _service = "queues"
     _action = "get_queue_metrics"
     _version = "2.9"
-
     _schema = {
-        'definitions': {
-            'queue_metrics': {
-                'properties': {
-                    'avg_waiting_times': {
-                        'description': 'List of average waiting times for tasks in the queue. The points correspond to the timestamps in the dates list. If more than one value exists for the given interval then the maximum value is taken.',
-                        'items': {'type': 'number'},
-                        'type': ['array', 'null'],
+        "definitions": {
+            "queue_metrics": {
+                "properties": {
+                    "avg_waiting_times": {
+                        "description": "List of average waiting times for tasks in the queue. The points correspond to the timestamps in the dates list. If more than one value exists for the given interval then the maximum value is taken.",
+                        "items": {"type": "number"},
+                        "type": ["array", "null"],
                     },
-                    'dates': {
-                        'description': 'List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by the requested interval. Timestamps where no queue status change was recorded are omitted.',
-                        'items': {'type': 'integer'},
-                        'type': ['array', 'null'],
+                    "dates": {
+                        "description": "List of timestamps (in seconds from epoch) in the acceding order. The timestamps are separated by the requested interval. Timestamps where no queue status change was recorded are omitted.",
+                        "items": {"type": "integer"},
+                        "type": ["array", "null"],
                     },
-                    'queue': {
-                        'description': 'ID of the queue',
-                        'type': ['string', 'null'],
+                    "queue": {
+                        "description": "ID of the queue",
+                        "type": ["string", "null"],
                     },
-                    'queue_lengths': {
-                        'description': 'List of tasks counts in the queue. The points correspond to the timestamps in the dates list. If more than one value exists for the given interval then the count that corresponds to the maximum average value is taken.',
-                        'items': {'type': 'integer'},
-                        'type': ['array', 'null'],
+                    "queue_lengths": {
+                        "description": "List of tasks counts in the queue. The points correspond to the timestamps in the dates list. If more than one value exists for the given interval then the count that corresponds to the maximum average value is taken.",
+                        "items": {"type": "integer"},
+                        "type": ["array", "null"],
                     },
                 },
-                'type': 'object',
-            },
+                "type": "object",
+            }
         },
-        'properties': {
-            'queues': {
-                'description': "List of the requested queues with their metrics. If no queue ids were requested then 'all' queue is returned with the metrics averaged accross all the company queues.",
-                'items': {'$ref': '#/definitions/queue_metrics'},
-                'type': ['array', 'null'],
-            },
+        "properties": {
+            "queues": {
+                "description": "List of the requested queues with their metrics. If no queue ids were requested then 'all' queue is returned with the metrics averaged accross all the company queues.",
+                "items": {"$ref": "#/definitions/queue_metrics"},
+                "type": ["array", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, queues=None, **kwargs):
+    def __init__(self, queues: Optional[List[Any]] = None, **kwargs: Any) -> None:
         super(GetQueueMetricsResponse, self).__init__(**kwargs)
         self.queues = queues
 
-    @schema_property('queues')
-    def queues(self):
+    @schema_property("queues")
+    def queues(self) -> Optional[List[Any]]:
         return self._property_queues
 
     @queues.setter
-    def queues(self, value):
+    def queues(self, value: Optional[List[Any]]) -> None:
         if value is None:
             self._property_queues = None
             return
-
         self.assert_isinstance(value, "queues", (list, tuple))
-        if any(isinstance(v, dict) for v in value):
+        if any((isinstance(v, dict) for v in value)):
             value = [QueueMetrics.from_dict(v) if isinstance(v, dict) else v for v in value]
         else:
             self.assert_isinstance(value, "queues", QueueMetrics, is_array=True)
@@ -1512,64 +1467,60 @@ class MoveTaskBackwardRequest(Request):
     _action = "move_task_backward"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'count': {
-                'description': 'Number of positions in the queue to move the task forward relative to the current position. Optional, the default value is 1.',
-                'type': 'integer',
+        "definitions": {},
+        "properties": {
+            "count": {
+                "description": "Number of positions in the queue to move the task forward relative to the current position. Optional, the default value is 1.",
+                "type": "integer",
             },
-            'queue': {'description': 'Queue id', 'type': 'string'},
-            'task': {'description': 'Task id', 'type': 'string'},
+            "queue": {"description": "Queue id", "type": "string"},
+            "task": {"description": "Task id", "type": "string"},
         },
-        'required': ['queue', 'task'],
-        'type': 'object',
+        "required": ["queue", "task"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, task, count=None, **kwargs):
+    def __init__(self, queue: str, task: str, count: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskBackwardRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
         self.count = count
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('task')
-    def task(self):
+    @schema_property("task")
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
-    @schema_property('count')
-    def count(self):
+    @schema_property("count")
+    def count(self) -> Optional[int]:
         return self._property_count
 
     @count.setter
-    def count(self, value):
+    def count(self, value: Optional[int]) -> None:
         if value is None:
             self._property_count = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "count", six.integer_types)
         self._property_count = value
 
@@ -1582,38 +1533,36 @@ class MoveTaskBackwardResponse(Response):
         represents bottom of queue)
     :type position: int
     """
+
     _service = "queues"
     _action = "move_task_backward"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'position': {
-                'description': 'The new position of the task entry in the queue (index, -1 represents bottom of queue)',
-                'type': ['integer', 'null'],
-            },
+        "definitions": {},
+        "properties": {
+            "position": {
+                "description": "The new position of the task entry in the queue (index, -1 represents bottom of queue)",
+                "type": ["integer", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, position=None, **kwargs):
+    def __init__(self, position: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskBackwardResponse, self).__init__(**kwargs)
         self.position = position
 
-    @schema_property('position')
-    def position(self):
+    @schema_property("position")
+    def position(self) -> Optional[int]:
         return self._property_position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: Optional[int]) -> None:
         if value is None:
             self._property_position = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "position", six.integer_types)
         self._property_position = value
 
@@ -1635,64 +1584,60 @@ class MoveTaskForwardRequest(Request):
     _action = "move_task_forward"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'count': {
-                'description': 'Number of positions in the queue to move the task forward relative to the current position. Optional, the default value is 1.',
-                'type': 'integer',
+        "definitions": {},
+        "properties": {
+            "count": {
+                "description": "Number of positions in the queue to move the task forward relative to the current position. Optional, the default value is 1.",
+                "type": "integer",
             },
-            'queue': {'description': 'Queue id', 'type': 'string'},
-            'task': {'description': 'Task id', 'type': 'string'},
+            "queue": {"description": "Queue id", "type": "string"},
+            "task": {"description": "Task id", "type": "string"},
         },
-        'required': ['queue', 'task'],
-        'type': 'object',
+        "required": ["queue", "task"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, task, count=None, **kwargs):
+    def __init__(self, queue: str, task: str, count: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskForwardRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
         self.count = count
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('task')
-    def task(self):
+    @schema_property("task")
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
-    @schema_property('count')
-    def count(self):
+    @schema_property("count")
+    def count(self) -> Optional[int]:
         return self._property_count
 
     @count.setter
-    def count(self, value):
+    def count(self, value: Optional[int]) -> None:
         if value is None:
             self._property_count = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "count", six.integer_types)
         self._property_count = value
 
@@ -1705,38 +1650,36 @@ class MoveTaskForwardResponse(Response):
         represents bottom of queue)
     :type position: int
     """
+
     _service = "queues"
     _action = "move_task_forward"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'position': {
-                'description': 'The new position of the task entry in the queue (index, -1 represents bottom of queue)',
-                'type': ['integer', 'null'],
-            },
+        "definitions": {},
+        "properties": {
+            "position": {
+                "description": "The new position of the task entry in the queue (index, -1 represents bottom of queue)",
+                "type": ["integer", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, position=None, **kwargs):
+    def __init__(self, position: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskForwardResponse, self).__init__(**kwargs)
         self.position = position
 
-    @schema_property('position')
-    def position(self):
+    @schema_property("position")
+    def position(self) -> Optional[int]:
         return self._property_position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: Optional[int]) -> None:
         if value is None:
             self._property_position = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "position", six.integer_types)
         self._property_position = value
 
@@ -1753,44 +1696,41 @@ class MoveTaskToBackRequest(Request):
     _action = "move_task_to_back"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'queue': {'description': 'Queue id', 'type': 'string'},
-            'task': {'description': 'Task id', 'type': 'string'},
+        "definitions": {},
+        "properties": {
+            "queue": {"description": "Queue id", "type": "string"},
+            "task": {"description": "Task id", "type": "string"},
         },
-        'required': ['queue', 'task'],
-        'type': 'object',
+        "required": ["queue", "task"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, task, **kwargs):
+    def __init__(self, queue: str, task: str, **kwargs: Any) -> None:
         super(MoveTaskToBackRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('task')
-    def task(self):
+    @schema_property("task")
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -1803,38 +1743,36 @@ class MoveTaskToBackResponse(Response):
         represents bottom of queue)
     :type position: int
     """
+
     _service = "queues"
     _action = "move_task_to_back"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'position': {
-                'description': 'The new position of the task entry in the queue (index, -1 represents bottom of queue)',
-                'type': ['integer', 'null'],
-            },
+        "definitions": {},
+        "properties": {
+            "position": {
+                "description": "The new position of the task entry in the queue (index, -1 represents bottom of queue)",
+                "type": ["integer", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, position=None, **kwargs):
+    def __init__(self, position: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskToBackResponse, self).__init__(**kwargs)
         self.position = position
 
-    @schema_property('position')
-    def position(self):
+    @schema_property("position")
+    def position(self) -> Optional[int]:
         return self._property_position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: Optional[int]) -> None:
         if value is None:
             self._property_position = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "position", six.integer_types)
         self._property_position = value
 
@@ -1851,44 +1789,41 @@ class MoveTaskToFrontRequest(Request):
     _action = "move_task_to_front"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'queue': {'description': 'Queue id', 'type': 'string'},
-            'task': {'description': 'Task id', 'type': 'string'},
+        "definitions": {},
+        "properties": {
+            "queue": {"description": "Queue id", "type": "string"},
+            "task": {"description": "Task id", "type": "string"},
         },
-        'required': ['queue', 'task'],
-        'type': 'object',
+        "required": ["queue", "task"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, task, **kwargs):
+    def __init__(self, queue: str, task: str, **kwargs: Any) -> None:
         super(MoveTaskToFrontRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('task')
-    def task(self):
+    @schema_property("task")
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -1901,38 +1836,36 @@ class MoveTaskToFrontResponse(Response):
         represents bottom of queue)
     :type position: int
     """
+
     _service = "queues"
     _action = "move_task_to_front"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'position': {
-                'description': 'The new position of the task entry in the queue (index, -1 represents bottom of queue)',
-                'type': ['integer', 'null'],
-            },
+        "definitions": {},
+        "properties": {
+            "position": {
+                "description": "The new position of the task entry in the queue (index, -1 represents bottom of queue)",
+                "type": ["integer", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, position=None, **kwargs):
+    def __init__(self, position: Optional[int] = None, **kwargs: Any) -> None:
         super(MoveTaskToFrontResponse, self).__init__(**kwargs)
         self.position = position
 
-    @schema_property('position')
-    def position(self):
+    @schema_property("position")
+    def position(self) -> Optional[int]:
         return self._property_position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: Optional[int]) -> None:
         if value is None:
             self._property_position = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "position", six.integer_types)
         self._property_position = value
 
@@ -1951,44 +1884,41 @@ class RemoveTaskRequest(Request):
     _action = "remove_task"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'queue': {'description': 'Queue id', 'type': 'string'},
-            'task': {'description': 'Task id', 'type': 'string'},
+        "definitions": {},
+        "properties": {
+            "queue": {"description": "Queue id", "type": "string"},
+            "task": {"description": "Task id", "type": "string"},
         },
-        'required': ['queue', 'task'],
-        'type': 'object',
+        "required": ["queue", "task"],
+        "type": "object",
     }
 
-    def __init__(
-            self, queue, task, **kwargs):
+    def __init__(self, queue: str, task: str, **kwargs: Any) -> None:
         super(RemoveTaskRequest, self).__init__(**kwargs)
         self.queue = queue
         self.task = task
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('task')
-    def task(self):
+    @schema_property("task")
+    def task(self) -> str:
         return self._property_task
 
     @task.setter
-    def task(self, value):
+    def task(self, value: str) -> None:
         if value is None:
             self._property_task = None
             return
-
         self.assert_isinstance(value, "task", six.string_types)
         self._property_task = value
 
@@ -2000,39 +1930,37 @@ class RemoveTaskResponse(Response):
     :param removed: Number of tasks removed (0 or 1)
     :type removed: int
     """
+
     _service = "queues"
     _action = "remove_task"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'removed': {
-                'description': 'Number of tasks removed (0 or 1)',
-                'enum': [0, 1],
-                'type': ['integer', 'null'],
-            },
+        "definitions": {},
+        "properties": {
+            "removed": {
+                "description": "Number of tasks removed (0 or 1)",
+                "enum": [0, 1],
+                "type": ["integer", "null"],
+            }
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, removed=None, **kwargs):
+    def __init__(self, removed: Optional[int] = None, **kwargs: Any) -> None:
         super(RemoveTaskResponse, self).__init__(**kwargs)
         self.removed = removed
 
-    @schema_property('removed')
-    def removed(self):
+    @schema_property("removed")
+    def removed(self) -> Optional[int]:
         return self._property_removed
 
     @removed.setter
-    def removed(self, value):
+    def removed(self, value: Optional[int]) -> None:
         if value is None:
             self._property_removed = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "removed", six.integer_types)
         self._property_removed = value
 
@@ -2056,89 +1984,89 @@ class UpdateRequest(Request):
     _action = "update"
     _version = "2.9"
     _schema = {
-        'definitions': {},
-        'properties': {
-            'name': {
-                'description': 'Queue name Unique within the company.',
-                'type': 'string',
+        "definitions": {},
+        "properties": {
+            "name": {
+                "description": "Queue name Unique within the company.",
+                "type": "string",
             },
-            'queue': {'description': 'Queue id', 'type': 'string'},
-            'system_tags': {
-                'description': "System tags list. This field is reserved for system use, please don't use it.",
-                'items': {'type': 'string'},
-                'type': 'array',
+            "queue": {"description": "Queue id", "type": "string"},
+            "system_tags": {
+                "description": "System tags list. This field is reserved for system use, please don't use it.",
+                "items": {"type": "string"},
+                "type": "array",
             },
-            'tags': {
-                'description': 'User-defined tags list',
-                'items': {'type': 'string'},
-                'type': 'array',
+            "tags": {
+                "description": "User-defined tags list",
+                "items": {"type": "string"},
+                "type": "array",
             },
         },
-        'required': ['queue'],
-        'type': 'object',
+        "required": ["queue"],
+        "type": "object",
     }
 
     def __init__(
-            self, queue, name=None, tags=None, system_tags=None, **kwargs):
+        self,
+        queue: str,
+        name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        system_tags: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
         super(UpdateRequest, self).__init__(**kwargs)
         self.queue = queue
         self.name = name
         self.tags = tags
         self.system_tags = system_tags
 
-    @schema_property('queue')
-    def queue(self):
+    @schema_property("queue")
+    def queue(self) -> str:
         return self._property_queue
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str) -> None:
         if value is None:
             self._property_queue = None
             return
-
         self.assert_isinstance(value, "queue", six.string_types)
         self._property_queue = value
 
-    @schema_property('name')
-    def name(self):
+    @schema_property("name")
+    def name(self) -> Optional[str]:
         return self._property_name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: Optional[str]) -> None:
         if value is None:
             self._property_name = None
             return
-
         self.assert_isinstance(value, "name", six.string_types)
         self._property_name = value
 
-    @schema_property('tags')
-    def tags(self):
+    @schema_property("tags")
+    def tags(self) -> Optional[List[str]]:
         return self._property_tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_tags = None
             return
-
         self.assert_isinstance(value, "tags", (list, tuple))
-
         self.assert_isinstance(value, "tags", six.string_types, is_array=True)
         self._property_tags = value
 
-    @schema_property('system_tags')
-    def system_tags(self):
+    @schema_property("system_tags")
+    def system_tags(self) -> Optional[List[str]]:
         return self._property_system_tags
 
     @system_tags.setter
-    def system_tags(self, value):
+    def system_tags(self, value: Optional[List[str]]) -> None:
         if value is None:
             self._property_system_tags = None
             return
-
         self.assert_isinstance(value, "system_tags", (list, tuple))
-
         self.assert_isinstance(value, "system_tags", six.string_types, is_array=True)
         self._property_system_tags = value
 
@@ -2152,58 +2080,55 @@ class UpdateResponse(Response):
     :param fields: Updated fields names and values
     :type fields: dict
     """
+
     _service = "queues"
     _action = "update"
     _version = "2.9"
-
     _schema = {
-        'definitions': {},
-        'properties': {
-            'fields': {
-                'additionalProperties': True,
-                'description': 'Updated fields names and values',
-                'type': ['object', 'null'],
+        "definitions": {},
+        "properties": {
+            "fields": {
+                "additionalProperties": True,
+                "description": "Updated fields names and values",
+                "type": ["object", "null"],
             },
-            'updated': {
-                'description': 'Number of queues updated (0 or 1)',
-                'enum': [0, 1],
-                'type': ['integer', 'null'],
+            "updated": {
+                "description": "Number of queues updated (0 or 1)",
+                "enum": [0, 1],
+                "type": ["integer", "null"],
             },
         },
-        'type': 'object',
+        "type": "object",
     }
 
-    def __init__(
-            self, updated=None, fields=None, **kwargs):
+    def __init__(self, updated: Optional[int] = None, fields: Optional[dict] = None, **kwargs: Any) -> None:
         super(UpdateResponse, self).__init__(**kwargs)
         self.updated = updated
         self.fields = fields
 
-    @schema_property('updated')
-    def updated(self):
+    @schema_property("updated")
+    def updated(self) -> Optional[int]:
         return self._property_updated
 
     @updated.setter
-    def updated(self, value):
+    def updated(self, value: Optional[int]) -> None:
         if value is None:
             self._property_updated = None
             return
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-
         self.assert_isinstance(value, "updated", six.integer_types)
         self._property_updated = value
 
-    @schema_property('fields')
-    def fields(self):
+    @schema_property("fields")
+    def fields(self) -> Optional[dict]:
         return self._property_fields
 
     @fields.setter
-    def fields(self, value):
+    def fields(self, value: Optional[dict]) -> None:
         if value is None:
             self._property_fields = None
             return
-
         self.assert_isinstance(value, "fields", (dict,))
         self._property_fields = value
 

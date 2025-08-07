@@ -1,19 +1,19 @@
 import sys
 from itertools import product
 from random import Random as BaseRandom
-from typing import Mapping, Any, Sequence, Optional, Union
+from typing import Mapping, Sequence, Optional, Union, Any
 
 
 class RandomSeed(object):
     """
     The base class controlling random sampling for every optimization strategy.
     """
+
     _random = BaseRandom(1337)
     _seed = 1337
 
     @staticmethod
-    def set_random_seed(seed=1337):
-        # type: (int) -> ()
+    def set_random_seed(seed: int = 1337) -> ():
         """
         Set global seed for all hyperparameter strategy random number sampling.
 
@@ -23,8 +23,7 @@ class RandomSeed(object):
         RandomSeed._random = BaseRandom(seed)
 
     @staticmethod
-    def get_random_seed():
-        # type: () -> int
+    def get_random_seed() -> int:
         """
         Get the global seed for all hyperparameter strategy random number sampling.
 
@@ -37,10 +36,10 @@ class Parameter(RandomSeed):
     """
     The base hyperparameter optimization object.
     """
-    _class_type_serialize_name = 'type'
 
-    def __init__(self, name):
-        # type: (Optional[str]) -> ()
+    _class_type_serialize_name = "type"
+
+    def __init__(self, name: Optional[str]) -> ():
         """
         Create a new Parameter for hyperparameter optimization
 
@@ -48,8 +47,7 @@ class Parameter(RandomSeed):
         """
         self.name = name
 
-    def get_value(self):
-        # type: () -> Mapping[str, Any]
+    def get_value(self) -> Mapping[str, Any]:
         """
         Return a dict with the Parameter name and a sampled value for the Parameter.
 
@@ -64,8 +62,7 @@ class Parameter(RandomSeed):
         """
         pass
 
-    def to_list(self):
-        # type: () -> Sequence[Mapping[str, Any]]
+    def to_list(self) -> Sequence[Mapping[str, Any]]:
         """
         Return a list of all the valid values of the Parameter.
 
@@ -73,21 +70,19 @@ class Parameter(RandomSeed):
         """
         pass
 
-    def to_dict(self):
-        # type: () -> Mapping[str, Union[str, Parameter]]
+    def to_dict(self) -> Mapping[str, Union[str, "Parameter"]]:
         """
         Return a dict representation of the Parameter object. Used for serialization of the Parameter object.
 
         :return:  dict representation of the object (serialization).
         """
-        serialize = {self._class_type_serialize_name: str(self.__class__).split('.')[-1][:-2]}
+        serialize = {self._class_type_serialize_name: str(self.__class__).split(".")[-1][:-2]}
         # noinspection PyCallingNonCallable
-        serialize.update(dict(((k, v.to_dict() if hasattr(v, 'to_dict') else v) for k, v in self.__dict__.items())))
+        serialize.update(dict(((k, v.to_dict() if hasattr(v, "to_dict") else v) for k, v in self.__dict__.items())))
         return serialize
 
     @classmethod
-    def from_dict(cls, a_dict):
-        # type: (Mapping[str, str]) -> Parameter
+    def from_dict(cls, a_dict: Mapping[str, str]) -> "Parameter":
         """
         Construct Parameter object from a dict representation (deserialize from dict).
 
@@ -103,8 +98,12 @@ class Parameter(RandomSeed):
             return None
         instance = a_cls.__new__(a_cls)
         instance.__dict__ = dict(
-            (k, cls.from_dict(v) if isinstance(v, dict) and cls._class_type_serialize_name in v else v)
-            for k, v in a_dict.items())
+            (
+                k,
+                cls.from_dict(v) if isinstance(v, dict) and cls._class_type_serialize_name in v else v,
+            )
+            for k, v in a_dict.items()
+        )
         return instance
 
 
@@ -114,14 +113,13 @@ class UniformParameterRange(Parameter):
     """
 
     def __init__(
-            self,
-            name,  # type: str
-            min_value,  # type: float
-            max_value,  # type: float
-            step_size=None,  # type: Optional[float]
-            include_max_value=True  # type: bool
-    ):
-        # type: (...) -> ()
+        self,
+        name: str,
+        min_value: float,
+        max_value: float,
+        step_size: Optional[float] = None,
+        include_max_value: bool = True,
+    ) -> ():
         """
         Create a parameter to be sampled by the SearchStrategy
 
@@ -142,8 +140,7 @@ class UniformParameterRange(Parameter):
         self.step_size = float(step_size) if step_size is not None else None
         self.include_max = include_max_value
 
-    def get_value(self):
-        # type: () -> Mapping[str, Any]
+    def get_value(self) -> Mapping[str, Any]:
         """
         Return uniformly sampled value based on object sampling definitions.
 
@@ -154,17 +151,16 @@ class UniformParameterRange(Parameter):
         steps = (self.max_value - self.min_value) / self.step_size
         return {self.name: self.min_value + (self._random.randrange(start=0, stop=round(steps)) * self.step_size)}
 
-    def to_list(self):
-        # type: () -> Sequence[Mapping[str, float]]
+    def to_list(self) -> Sequence[Mapping[str, float]]:
         """
         Return a list of all the valid values of the Parameter. If ``self.step_size`` is not defined, return 100 points
         between min/max values.
 
         :return: list of dicts ``{name: float}``
         """
-        step_size = self.step_size or (self.max_value - self.min_value) / 100.
+        step_size = self.step_size or (self.max_value - self.min_value) / 100.0
         steps = (self.max_value - self.min_value) / step_size
-        values = [self.min_value + v*step_size for v in range(0, int(steps))]
+        values = [self.min_value + v * step_size for v in range(0, int(steps))]
         if self.include_max and (not values or values[-1] < self.max_value):
             values.append(self.max_value)
         return [{self.name: v} for v in values]
@@ -176,15 +172,14 @@ class LogUniformParameterRange(UniformParameterRange):
     """
 
     def __init__(
-            self,
-            name,  # type: str
-            min_value,  # type: float
-            max_value,  # type: float
-            base=10,  # type: float
-            step_size=None,  # type: Optional[float]
-            include_max_value=True  # type: bool
-    ):
-        # type: (...) -> ()
+        self,
+        name: str,
+        min_value: float,
+        max_value: float,
+        base: float = 10,
+        step_size: Optional[float] = None,
+        include_max_value: bool = True,
+    ) -> ():
         """
         Create a parameter to be sampled by the SearchStrategy
 
@@ -201,10 +196,16 @@ class LogUniformParameterRange(UniformParameterRange):
             - ``False`` -  Does not include.
 
         """
-        super().__init__(name, min_value, max_value, step_size=step_size, include_max_value=include_max_value)
+        super().__init__(
+            name,
+            min_value,
+            max_value,
+            step_size=step_size,
+            include_max_value=include_max_value,
+        )
         self.base = base
 
-    def get_value(self):
+    def get_value(self) -> Mapping[str, Any]:
         """
         Return uniformly logarithmic sampled value based on object sampling definitions.
 
@@ -213,9 +214,9 @@ class LogUniformParameterRange(UniformParameterRange):
         values_dict = super().get_value()
         return {self.name: self.base**v for v in values_dict.values()}
 
-    def to_list(self):
+    def to_list(self) -> Sequence[Mapping[str, float]]:
         values_list = super().to_list()
-        return [{self.name: self.base**v[self.name]} for v in values_list]
+        return [{self.name: self.base ** v[self.name]} for v in values_list]
 
 
 class UniformIntegerParameterRange(Parameter):
@@ -223,8 +224,14 @@ class UniformIntegerParameterRange(Parameter):
     Uniform randomly sampled integer Hyperparameter object.
     """
 
-    def __init__(self, name, min_value, max_value, step_size=1, include_max_value=True):
-        # type: (str, int, int, int, bool) -> ()
+    def __init__(
+        self,
+        name: str,
+        min_value: int,
+        max_value: int,
+        step_size: int = 1,
+        include_max_value: bool = True,
+    ) -> ():
         """
         Create a parameter to be sampled by the SearchStrategy.
 
@@ -245,19 +252,21 @@ class UniformIntegerParameterRange(Parameter):
         self.step_size = int(step_size) if step_size is not None else None
         self.include_max = include_max_value
 
-    def get_value(self):
-        # type: () -> Mapping[str, Any]
+    def get_value(self) -> Mapping[str, Any]:
         """
         Return uniformly sampled value based on object sampling definitions.
 
         :return: ``{self.name: random value [self.min_value, self.max_value)}``
         """
-        return {self.name: self._random.randrange(
-            start=self.min_value, step=self.step_size,
-            stop=self.max_value + (0 if not self.include_max else self.step_size))}
+        return {
+            self.name: self._random.randrange(
+                start=self.min_value,
+                step=self.step_size,
+                stop=self.max_value + (0 if not self.include_max else self.step_size),
+            )
+        }
 
-    def to_list(self):
-        # type: () -> Sequence[Mapping[str, int]]
+    def to_list(self) -> Sequence[Mapping[str, int]]:
         """
         Return a list of all the valid values of the Parameter. If ``self.step_size`` is not defined, return 100 points
         between minmax values.
@@ -275,8 +284,7 @@ class DiscreteParameterRange(Parameter):
     Discrete randomly sampled hyperparameter object.
     """
 
-    def __init__(self, name, values=()):
-        # type: (str, Sequence[Any]) -> ()
+    def __init__(self, name: str, values: Sequence[Any] = ()) -> ():
         """
         Uniformly sample values form a list of discrete options.
 
@@ -286,8 +294,7 @@ class DiscreteParameterRange(Parameter):
         super(DiscreteParameterRange, self).__init__(name=name)
         self.values = values
 
-    def get_value(self):
-        # type: () -> Mapping[str, Any]
+    def get_value(self) -> Mapping[str, Any]:
         """
         Return uniformly sampled value from the valid list of values.
 
@@ -295,8 +302,7 @@ class DiscreteParameterRange(Parameter):
         """
         return {self.name: self._random.choice(self.values)}
 
-    def to_list(self):
-        # type: () -> Sequence[Mapping[str, Any]]
+    def to_list(self) -> Sequence[Mapping[str, Any]]:
         """
         Return a list of all the valid values of the Parameter.
 
@@ -310,8 +316,10 @@ class ParameterSet(Parameter):
     Discrete randomly sampled Hyper-Parameter object.
     """
 
-    def __init__(self, parameter_combinations=()):
-        # type: (Sequence[Mapping[str, Union[float, int, str, Parameter]]]) -> ()
+    def __init__(
+        self,
+        parameter_combinations: Sequence[Mapping[str, Union[float, int, str, Parameter]]] = (),
+    ) -> ():
         """
         Uniformly sample values form a list of discrete options (combinations) of parameters.
 
@@ -338,8 +346,7 @@ class ParameterSet(Parameter):
         super(ParameterSet, self).__init__(name=None)
         self.values = parameter_combinations
 
-    def get_value(self):
-        # type: () -> Mapping[str, Any]
+    def get_value(self) -> Mapping[str, Any]:
         """
         Return uniformly sampled value from the valid list of values.
 
@@ -347,8 +354,7 @@ class ParameterSet(Parameter):
         """
         return self._get_value(self._random.choice(self.values))
 
-    def to_list(self):
-        # type: () -> Sequence[Mapping[str, Any]]
+    def to_list(self) -> Sequence[Mapping[str, Any]]:
         """
         Return a list of all the valid values of the Parameter.
 
@@ -361,7 +367,9 @@ class ParameterSet(Parameter):
                 if isinstance(v, Parameter):
                     single_option[k] = v.to_list()
                 else:
-                    single_option[k] = [{k: v}, ]
+                    single_option[k] = [
+                        {k: v},
+                    ]
 
             for state in product(*single_option.values()):
                 combinations.append(dict(kv for d in state for kv in d.items()))
@@ -369,8 +377,7 @@ class ParameterSet(Parameter):
         return combinations
 
     @staticmethod
-    def _get_value(combination):
-        # type: (dict) -> dict
+    def _get_value(combination: dict) -> dict:
         value_dict = {}
         for k, v in combination.items():
             if isinstance(v, Parameter):

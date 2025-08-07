@@ -13,8 +13,7 @@ class Monitor(object):
     Inherit to implement specific logic
     """
 
-    def __init__(self):
-        # type: () -> ()
+    def __init__(self) -> ():
         self._timestamp = None
         self._previous_timestamp = None
         self._task_name_filter = None
@@ -24,8 +23,12 @@ class Monitor(object):
         self._projects_refresh_timestamp = None
         self._clearml_apiclient = None
 
-    def set_projects(self, project_names=None, project_names_re=None, project_ids=None):
-        # type: (Optional[Sequence[str]], Optional[Sequence[str]], Optional[Sequence[str]]) -> ()
+    def set_projects(
+        self,
+        project_names: Optional[Sequence[str]] = None,
+        project_names_re: Optional[Sequence[str]] = None,
+        project_ids: Optional[Sequence[str]] = None,
+    ) -> ():
         """
         Set the specific projects to monitor, default is all projects.
 
@@ -39,8 +42,7 @@ class Monitor(object):
         if project_names:
             self._project_names_re += [exact_match_regex(name) for name in project_names]
 
-    def set_task_name_filter(self, task_name_filter=None):
-        # type: (Optional[str]) -> ()
+    def set_task_name_filter(self, task_name_filter: Optional[str] = None) -> ():
         """
         Set the task filter selection
 
@@ -49,8 +51,7 @@ class Monitor(object):
         """
         self._task_name_filter = task_name_filter or None
 
-    def monitor(self, pool_period=15.0):
-        # type: (float) -> ()
+    def monitor(self, pool_period: float = 15.0) -> ():
         """
         Main loop function, this call will never leave, it implements the main monitoring loop.
         Every loop step, `monitor_step` is called (implementing the filter/query interface)
@@ -72,18 +73,17 @@ class Monitor(object):
             try:
                 self.monitor_step()
             except Exception as ex:
-                print('Exception: {}'.format(ex))
+                print("Exception: {}".format(ex))
 
             # print I'm alive message every 15 minutes
-            if time() - last_report > 60. * 15:
-                print('Service is running')
+            if time() - last_report > 60.0 * 15:
+                print("Service is running")
                 last_report = time()
 
             # sleep until the next poll
             sleep(pool_period)
 
-    def monitor_step(self):
-        # type: () -> ()
+    def monitor_step(self) -> ():
         """
         Implement the main query / interface of the monitor class.
         In order to combine multiple Monitor objects, call `monitor_step` manually.
@@ -96,17 +96,19 @@ class Monitor(object):
         try:
             # retrieve experiments orders by last update time
             task_filter = {
-                'page_size': 100,
-                'page': 0,
-                'status_changed': ['>{}'.format(datetime.utcfromtimestamp(previous_timestamp)), ],
-                'project': self._get_projects_ids(),
+                "page_size": 100,
+                "page": 0,
+                "status_changed": [
+                    ">{}".format(datetime.utcfromtimestamp(previous_timestamp)),
+                ],
+                "project": self._get_projects_ids(),
             }
             task_filter.update(self.get_query_parameters())
 
             queried_tasks = Task.get_tasks(task_name=self._task_name_filter, task_filter=task_filter)
         except Exception as ex:
             # do not update the previous timestamp
-            print('Exception querying Tasks: {}'.format(ex))
+            print("Exception querying Tasks: {}".format(ex))
             return
 
         # process queried tasks
@@ -114,23 +116,21 @@ class Monitor(object):
             try:
                 self.process_task(task)
             except Exception as ex:
-                print('Exception processing Task ID={}:\n{}'.format(task.id, ex))
+                print("Exception processing Task ID={}:\n{}".format(task.id, ex))
 
         self._previous_timestamp = timestamp
 
-    def get_query_parameters(self):
-        # type: () -> dict
+    def get_query_parameters(self) -> dict:
         """
         Return the query parameters for the monitoring.
         This should be overloaded with specific implementation query
 
         :return dict: Example dictionary: ``{'status': ['failed'], 'order_by': ['-last_update']}``
         """
-        return dict(status=['failed'], order_by=['-last_update'])
+        return dict(status=["failed"], order_by=["-last_update"])
 
-    def process_task(self, task):
+    def process_task(self, task: Task) -> None:
         """
-        # type: (Task) -> ()
         Abstract function
 
         Called on every Task that we monitor. For example, monitoring failed Task,
@@ -140,8 +140,7 @@ class Monitor(object):
         """
         pass
 
-    def _get_projects_ids(self):
-        # type: () -> Optional[Sequence[str]]
+    def _get_projects_ids(self) -> Optional[Sequence[str]]:
         """
         Convert project names / regular expressions into project IDs
 
@@ -151,8 +150,11 @@ class Monitor(object):
             return None
 
         # refresh project ids every 5 minutes
-        if self._projects_refresh_timestamp and self._projects is not None and \
-                time() - self._projects_refresh_timestamp < 60. * 5:
+        if (
+            self._projects_refresh_timestamp
+            and self._projects is not None
+            and time() - self._projects_refresh_timestamp < 60.0 * 5
+        ):
             return self._projects
 
         # collect specific selected IDs
@@ -167,8 +169,7 @@ class Monitor(object):
         self._projects = project_ids
         return self._projects
 
-    def _get_api_client(self):
-        # type: () -> APIClient
+    def _get_api_client(self) -> APIClient:
         """
         Return an APIClient object to directly query the clearml-server
 
@@ -178,8 +179,7 @@ class Monitor(object):
             self._clearml_apiclient = APIClient()
         return self._clearml_apiclient
 
-    def _setup(self):
-        # type: () -> ()
+    def _setup(self) -> ():
         """
         Optional add one time setup process, before starting the monitoring loop
         :return:

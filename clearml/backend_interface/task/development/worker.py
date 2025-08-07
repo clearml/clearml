@@ -1,3 +1,5 @@
+from typing import Optional, Callable, Union, Any
+
 import attr
 from threading import Thread
 
@@ -17,15 +19,19 @@ class DevWorker(object):
 
     prefix = attr.ib(type=str, default="MANUAL:")
 
-    report_stdout = deferred_config('development.worker.log_stdout', True)
+    report_stdout = deferred_config("development.worker.log_stdout", True)
     report_period = deferred_config(
-        'development.worker.report_period_sec', 30.,
-        transform=lambda x: float(max(x, 1.0)))
+        "development.worker.report_period_sec",
+        30.0,
+        transform=lambda x: float(max(x, 1.0)),
+    )
     ping_period = deferred_config(
-        'development.worker.ping_period_sec', 30.,
-        transform=lambda x: float(max(x, 1.0)))
+        "development.worker.ping_period_sec",
+        30.0,
+        transform=lambda x: float(max(x, 1.0)),
+    )
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._dev_stop_signal = None
         self._thread = None
         self._exit_event = SafeEvent()
@@ -36,7 +42,7 @@ class DevWorker(object):
         self._abort_cb_timeout = None
         self._cb_completed = None
 
-    def ping(self, timestamp=None):
+    def ping(self, timestamp: Optional[Any] = None) -> bool:
         try:
             if self._task:
                 self._task.send(tasks.PingRequest(self._task.id))
@@ -44,12 +50,12 @@ class DevWorker(object):
             return False
         return True
 
-    def register(self, task, stop_signal_support=None):
+    def register(self, task: Any, stop_signal_support: Optional[bool] = None) -> bool:
         if self._thread:
             return True
         if (stop_signal_support is None and TaskStopSignal.enabled) or stop_signal_support is True:
             self._dev_stop_signal = TaskStopSignal(task=task)
-        self._support_ping = hasattr(tasks, 'PingRequest')
+        self._support_ping = hasattr(tasks, "PingRequest")
         # if there is nothing to monitor, leave
         if not self._support_ping and not self._dev_stop_signal:
             return
@@ -60,7 +66,12 @@ class DevWorker(object):
         self._thread.start()
         return True
 
-    def register_abort_callback(self, callback_function, execution_timeout, poll_freq):
+    def register_abort_callback(
+        self,
+        callback_function: Callable,
+        execution_timeout: Union[float, int],
+        poll_freq: Union[float, int, None],
+    ) -> None:
         if not self._task:
             return
 
@@ -74,13 +85,15 @@ class DevWorker(object):
             return
 
         # noinspection PyProtectedMember
-        self._task._set_runtime_properties({
-            self.property_abort_callback_timeout: float(execution_timeout),
-            self.property_abort_poll_freq: float(poll_freq),
-            self.property_abort_callback_completed: "",
-        })
+        self._task._set_runtime_properties(
+            {
+                self.property_abort_callback_timeout: float(execution_timeout),
+                self.property_abort_poll_freq: float(poll_freq),
+                self.property_abort_callback_completed: "",
+            }
+        )
 
-    def _inner_abort_cb_wrapper(self):
+    def _inner_abort_cb_wrapper(self) -> None:
         # store the task object because we might nullify it
         task = self._task
         # call the user abort callback
@@ -94,20 +107,19 @@ class DevWorker(object):
             return
         except BaseException as ex:  # noqa
             if task and task.log:
-                task.log.warning(
-                    "### TASK STOPPING - USER ABORTED - CALLBACK EXCEPTION: {} ###".format(ex))
+                task.log.warning("### TASK STOPPING - USER ABORTED - CALLBACK EXCEPTION: {} ###".format(ex))
 
         # set runtime property, abort completed for the agent to know we are done
         if task:
             # noinspection PyProtectedMember
             task._set_runtime_properties({self.property_abort_callback_completed: 1})
 
-    def _launch_abort_cb(self):
-        timeout = self._abort_cb_timeout or 300.
+    def _launch_abort_cb(self) -> None:
+        timeout = self._abort_cb_timeout or 300.0
         if self._task and self._task.log:
             self._task.log.warning(
-                "### TASK STOPPING - USER ABORTED - "
-                "LAUNCHING CALLBACK (timeout {} sec) ###".format(timeout))
+                "### TASK STOPPING - USER ABORTED - LAUNCHING CALLBACK (timeout {} sec) ###".format(timeout)
+            )
 
         tic = time()
         timed_out = False
@@ -126,9 +138,12 @@ class DevWorker(object):
         if self._task and self._task.log:
             self._task.log.warning(
                 "### TASK STOPPING - USER ABORTED - CALLBACK {} ({:.2f} sec) ###".format(
-                    "TIMED OUT" if timed_out else ("COMPLETED" if self._cb_completed else "FAILED"), time()-tic))
+                    "TIMED OUT" if timed_out else ("COMPLETED" if self._cb_completed else "FAILED"),
+                    time() - tic,
+                )
+            )
 
-    def _daemon(self):
+    def _daemon(self) -> None:
         last_ping = time()
         while self._task is not None:
             try:
@@ -154,7 +169,7 @@ class DevWorker(object):
             except Exception:  # noqa
                 pass
 
-    def unregister(self):
+    def unregister(self) -> bool:
         self._dev_stop_signal = None
         self._task = None
         self._thread = None

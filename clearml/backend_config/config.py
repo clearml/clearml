@@ -8,7 +8,7 @@ import sys
 import warnings
 from fnmatch import fnmatch
 from os.path import expanduser
-from typing import Any
+from typing import Any, Optional, List, Union
 
 import six
 from pathlib2 import Path
@@ -42,8 +42,7 @@ try:
     from typing import Text
 except ImportError:
     # windows conda-less hack
-    Text = Any
-
+    Text = object
 
 log = logger(__file__)
 
@@ -51,17 +50,14 @@ log = logger(__file__)
 class ConfigEntry(Entry):
     logger = None
 
-    def __init__(self, config, *keys, **kwargs):
-        # type: (Config, Text, Any) -> None
+    def __init__(self, config: "Config", *keys: Text, **kwargs: Any) -> None:
         super(ConfigEntry, self).__init__(*keys, **kwargs)
         self.config = config
 
-    def _get(self, key):
-        # type: (Text) -> Any
+    def _get(self, key: Text) -> Any:
         return self.config.get(key, NotSet)
 
-    def error(self, message):
-        # type: (Text) -> None
+    def error(self, message: Text) -> None:
         log.error(message.capitalize())
 
 
@@ -71,14 +67,14 @@ class Config(object):
 
     def __init__(
         self,
-        config_folder=None,
-        env=None,
-        verbose=None,
-        relative_to=None,
-        app=None,
-        is_server=False,
-        **_
-    ):
+        config_folder: str = None,
+        env: str = None,
+        verbose: bool = None,
+        relative_to: str = None,
+        app: str = None,
+        is_server: bool = False,
+        **_: Any,
+    ) -> None:
         self._app = app
         self._verbose = verbose if verbose is not None else CONFIG_VERBOSE.get()
         self._folder_name = config_folder or DEFAULT_CONFIG_FOLDER
@@ -93,41 +89,39 @@ class Config(object):
             print("Config env:%s" % str(self._env))
 
         if not self._env:
-            raise ValueError(
-                "Missing environment in either init of environment variable"
-            )
+            raise ValueError("Missing environment in either init or environment variable")
         if self._env not in get_options(Environment):
             raise ValueError("Invalid environment %s" % env)
         if relative_to is not None:
             self.load_relative_to(relative_to)
 
     @property
-    def root(self):
+    def root(self) -> Optional[Path]:
         return self.roots[0] if self.roots else None
 
     @property
-    def roots(self):
+    def roots(self) -> List[Path]:
         return self._roots
 
     @roots.setter
-    def roots(self, value):
+    def roots(self, value: list) -> None:
         self._roots = value
 
     @property
-    def env(self):
+    def env(self) -> Text:
         return self._env
 
-    def logger(self, path=None):
+    def logger(self, path: Text = None) -> logging.Logger:
         return logger(path)
 
-    def load_relative_to(self, *module_paths):
-        def normalize(p):
+    def load_relative_to(self, *module_paths: Any) -> None:
+        def normalize(p: Any) -> Path:
             return Path(os.path.abspath(str(p))).with_name(self._folder_name)
 
         self.roots = list(map(normalize, module_paths))
         self.reload()
 
-    def _reload(self):
+    def _reload(self) -> ConfigTree:
         env = self._env
         config = self._config.copy()
 
@@ -156,7 +150,9 @@ class Config(object):
         if LOCAL_CONFIG_PATHS:
             config = functools.reduce(
                 lambda cfg, path: ConfigTree.merge_configs(
-                    cfg, self._read_recursive(path, verbose=self._verbose), copy_trees=True
+                    cfg,
+                    self._read_recursive(path, verbose=self._verbose),
+                    copy_trees=True,
                 ),
                 LOCAL_CONFIG_PATHS,
                 config,
@@ -181,9 +177,7 @@ class Config(object):
 
         if self._overrides_configs:
             config = functools.reduce(
-                lambda cfg, override: ConfigTree.merge_configs(
-                    cfg, override, copy_trees=True
-                ),
+                lambda cfg, override: ConfigTree.merge_configs(cfg, override, copy_trees=True),
                 self._overrides_configs,
                 config,
             )
@@ -191,13 +185,13 @@ class Config(object):
         config["env"] = env
         return config
 
-    def replace(self, config):
+    def replace(self, config: ConfigTree) -> None:
         self._config = config
 
-    def reload(self):
+    def reload(self) -> None:
         self.replace(self._reload())
 
-    def initialize_logging(self):
+    def initialize_logging(self) -> bool:
         logging_config = self._config.get("logging", None)
         if not logging_config:
             return False
@@ -230,11 +224,11 @@ class Config(object):
         # remove dependency in deleted handlers
         root_logger = logging_config.get("root", None)
         loggers = list(loggers.values()) + ([root_logger] if root_logger else [])
-        for logger in loggers:
-            handlers = logger.get("handlers", None)
+        for logger_ in loggers:
+            handlers = logger_.get("handlers", None)
             if not handlers:
                 continue
-            logger["handlers"] = [h for h in handlers if h not in deleted]
+            logger_["handlers"] = [h for h in handlers if h not in deleted]
 
         extra = None
         if self._app:
@@ -243,7 +237,7 @@ class Config(object):
         return True
 
     @staticmethod
-    def _logger_exists(name):
+    def _logger_exists(name: str) -> bool:
         """
         Check if logger by this name exists.
         If not already created, it will either not appear in logging.Logger.manager.loggerDict or will have a type
@@ -255,31 +249,25 @@ class Config(object):
         except Exception:
             pass
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Text) -> Any:
         return self._config[key]
 
-    def get(self, key, default=_MISSING):
+    def get(self, key: Text, default: Any = _MISSING) -> Any:
         value = self._config.get(key, default)
         if value is self._MISSING:
-            raise KeyError(
-                "Unable to find value for key '{}' and default value was not provided.".format(
-                    key
-                )
-            )
+            raise KeyError("Unable to find value for key '{}' and default value was not provided.".format(key))
         return value
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return self._config.as_plain_ordered_dict()
 
-    def as_json(self):
+    def as_json(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
 
-    def _read_recursive_for_env(self, root_path_str, env, verbose=True):
+    def _read_recursive_for_env(self, root_path_str: str, env: str, verbose: bool = True) -> ConfigTree:
         root_path = Path(root_path_str)
         if root_path.exists():
-            default_config = self._read_recursive(
-                root_path / Environment.default, verbose=verbose
-            )
+            default_config = self._read_recursive(root_path / Environment.default, verbose=verbose)
             if (root_path / env) != (root_path / Environment.default):
                 env_config = self._read_recursive(
                     root_path / env, verbose=verbose
@@ -292,7 +280,7 @@ class Config(object):
 
         return config
 
-    def _read_recursive(self, conf_root, verbose=True):
+    def _read_recursive(self, conf_root: Union[str, Path], verbose: bool = True) -> ConfigTree:
         conf = ConfigTree()
         if not conf_root:
             return conf
@@ -306,7 +294,6 @@ class Config(object):
         if verbose:
             print("Loading config from %s" % str(conf_root))
         for root, dirs, files in os.walk(str(conf_root)):
-
             rel_dir = str(Path(root).relative_to(conf_root))
             if rel_dir == ".":
                 rel_dir = ""
@@ -328,7 +315,7 @@ class Config(object):
         return conf
 
     @staticmethod
-    def _read_single_file(file_path, verbose=True):
+    def _read_single_file(file_path: Text, verbose: bool = True) -> ConfigTree:
         if not file_path or not Path(file_path).is_file():
             return ConfigTree()
 
@@ -338,23 +325,27 @@ class Config(object):
         try:
             return ConfigFactory.parse_file(file_path)
         except ParseSyntaxException as ex:
-            msg = "Failed parsing {0} ({1.__class__.__name__}): " \
-                  "(at char {1.loc}, line:{1.lineno}, col:{1.column})".format(file_path, ex)
+            msg = (
+                "Failed parsing {0} ({1.__class__.__name__}): "
+                "(at char {1.loc}, line:{1.lineno}, col:{1.column})".format(file_path, ex)
+            )
             six.reraise(
                 ConfigurationError,
                 ConfigurationError(msg, file_path=file_path),
                 sys.exc_info()[2],
             )
         except (ParseException, ParseFatalException, RecursiveGrammarException) as ex:
-            msg = "Failed parsing {0} ({1.__class__.__name__}): {1}".format(
-                file_path, ex
-            )
+            msg = "Failed parsing {0} ({1.__class__.__name__}): {1}".format(file_path, ex)
             six.reraise(ConfigurationError, ConfigurationError(msg), sys.exc_info()[2])
         except Exception as ex:
             print("Failed loading %s: %s" % (file_path, ex))
             raise
 
-    def get_config_for_bucket(self, base_url, extra_configurations=None):
+    def get_config_for_bucket(
+        self,
+        base_url: str,
+        extra_configurations: Optional[List[S3BucketConfig]] = None,
+    ) -> S3BucketConfig:
         """
         Get the credentials for an AWS S3 bucket from the config
         :param base_url: URL of bucket
@@ -370,7 +361,7 @@ class Config(object):
         if extra_configurations:
             configs.extend(extra_configurations)
 
-        def find_match(host=None, bucket=None):
+        def find_match(host: str = None, bucket: str = None) -> S3BucketConfig:
             if not host and not bucket:
                 raise ValueError("host or bucket required")
             try:
@@ -379,18 +370,11 @@ class Config(object):
                         config
                         for config in configs
                         if (config.host and fnmatch(host, config.host))
-                        and (
-                            not bucket
-                            or not config.bucket
-                            or fnmatch(bucket.lower(), config.bucket.lower())
-                        )
+                        and (not bucket or not config.bucket or fnmatch(bucket.lower(), config.bucket.lower()))
                     }
                 else:
                     res = {
-                        config
-                        for config in configs
-                        if config.bucket
-                        and fnmatch(bucket.lower(), config.bucket.lower())
+                        config for config in configs if config.bucket and fnmatch(bucket.lower(), config.bucket.lower())
                     }
                 return next(iter(res))
             except StopIteration:
@@ -435,9 +419,11 @@ class Config(object):
             extra_args=self.get("sdk.aws.s3.extra_args", None),
         )
 
-    def set_overrides(self, *dicts):
-        """ Set several override dictionaries or ConfigTree objects which should be merged onto the configuration """
-        self._overrides_configs = [
-            d if isinstance(d, ConfigTree) else ConfigFactory.from_dict(d) for d in dicts
-        ]
+    def set_overrides(self, *dicts: Any) -> None:
+        """Set several override dictionaries or ConfigTree objects which should be merged onto the configuration"""
+        self._overrides_configs = [d if isinstance(d, ConfigTree) else ConfigFactory.from_dict(d) for d in dicts]
         self.reload()
+
+    @property
+    def MISSING(self) -> None:
+        return self._MISSING

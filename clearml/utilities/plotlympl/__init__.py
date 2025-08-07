@@ -11,10 +11,7 @@ Most of the functionality should be accessed through the parent directory's
 """
 from __future__ import absolute_import
 
-from .renderer import PlotlyRenderer
 from .mplexporter import Exporter
+from .renderer import PlotlyRenderer
 
-__all__ = [
-    "PlotlyRenderer",
-    "Exporter"
-]
+__all__ = ["PlotlyRenderer", "Exporter"]
