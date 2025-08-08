@@ -9,6 +9,7 @@ import time
 from argparse import ArgumentParser
 from logging import getLogger
 from tempfile import mkstemp, mkdtemp
+from typing import TypeAlias
 from zipfile import ZipFile, ZIP_DEFLATED
 
 try:
@@ -161,7 +162,7 @@ class Task(_Task):
         Task. Creating a sub-task always creates a new Task with a new  Task ID.
     """
 
-    TaskTypes = _Task.TaskTypes
+    TaskTypes = _Task.TaskTypes  # type: TypeAlias
 
     NotSet = object()
 
