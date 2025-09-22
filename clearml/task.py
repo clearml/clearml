@@ -1,3 +1,5 @@
+import itertools
+
 import numpy
 import copy
 import json
@@ -1963,7 +1965,11 @@ class Task(_Task):
         if isinstance(tags, six.string_types):
             tags = tags.split(" ")
 
-        self.data.tags = list(set((self.data.tags or []) + tags))
+        self.data.tags = list(
+            set(
+                itertools.chain(self.data.tags or [], tags)
+            )
+        )
         self._edit(tags=self.data.tags)
 
     def connect(
