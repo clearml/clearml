@@ -120,6 +120,7 @@ class AutoScaler(object):
 
         self.api_client = APIClient()
         self._stop_event = Event()
+        self._log_monitoring_stop_events = {}
         self.state = State.READY
 
     def set_auth(self, session: Session) -> None:
@@ -257,7 +258,9 @@ class AutoScaler(object):
                 resource = out[0]
                 try:
                     self.logger.info("Spinning down stuck worker: %r", worker_id)
-                    self.driver.spin_down_worker(WorkerId(worker_id).cloud_id)
+                    cloud_id = WorkerId(worker_id).cloud_id
+                    self.driver.spin_down_worker(cloud_id)
+                    self._stop_log_monitoring(cloud_id)
                     up_machines[resource] -= 1
                 except Exception as err:
                     self.logger.info("Cannot spin down %r: %r", worker_id, err)
@@ -350,6 +353,8 @@ class AutoScaler(object):
                     wid = WorkerId(worker_id)
                     cloud_id = wid.cloud_id
                     self.driver.spin_down_worker(cloud_id)
+                    self._stop_log_monitoring(cloud_id)
+                    self.api_client.workers.unregister(worker_id)
                     up_machines[wid.name] -= 1
                     self.logger.info("Spin down instance cloud id %r", cloud_id)
                     idle_workers.pop(worker_id, None)
@@ -415,22 +420,48 @@ class AutoScaler(object):
 
     def instance_log_thread(self, instance_id: str) -> None:
         start = time()
-        # The driver will return the log content from the start on every call,
-        # we keep record to avoid logging the same line twice
-        # TODO: Find a cross cloud way to get incremental logs
-        last_lnum = 0
-        while time() - start <= self.max_spin_up_time_min * MINUTE:
-            self.logger.info("getting startup logs for %r", instance_id)
-            data = self.driver.console_log(instance_id)
-            lines = data.splitlines()
-            if not lines:
-                self.logger.info("not startup logs for %r", instance_id)
-            else:
-                last_lnum, lines = latest_lines(lines, last_lnum)
-                for line in lines:
-                    self.logger.info("%r STARTUP LOG: %s", instance_id, line)
-            sleep(MINUTE)
+        stop_event = self._register_log_monitoring(instance_id)
+        try:
+            # The driver will return the log content from the start on every call,
+            # we keep record to avoid logging the same line twice
+            # TODO: Find a cross cloud way to get incremental logs
+            last_lnum = 0
+            while self._should_continue_log_monitoring(instance_id, start, stop_event):
+                self.logger.info("getting startup logs for %r", instance_id)
+                data = self.driver.console_log(instance_id)
+                lines = data.splitlines()
+                if not lines:
+                    self.logger.info("not startup logs for %r", instance_id)
+                else:
+                    last_lnum, lines = latest_lines(lines, last_lnum)
+                    for line in lines:
+                        self.logger.info("%r STARTUP LOG: %s", instance_id, line)
+        finally:
+            self._unregister_log_monitoring(instance_id)
 
+    def _register_log_monitoring(self, instance_id: str) -> Event:
+        """Register and return stop event for log monitoring."""
+        stop_event = Event()
+        self._log_monitoring_stop_events[instance_id] = stop_event
+        return stop_event
+
+    def _unregister_log_monitoring(self, instance_id: str) -> None:
+        """Clean up log monitoring resources."""
+        self._log_monitoring_stop_events.pop(instance_id, None)
+
+    def _should_continue_log_monitoring(self, instance_id: str, start_time: float, stop_event: Event) -> bool:
+        """Check if log monitoring should continue."""
+        if time() - start_time > self.max_spin_up_time_min * MINUTE:
+            return False
+        if stop_event.wait(timeout=MINUTE):
+            self.logger.info("Log monitoring stopped for %r", instance_id)
+            return False
+        return True
+
+    def _stop_log_monitoring(self, instance_id: str) -> None:
+        """Signal log monitoring to stop for a specific instance"""
+        if instance_id in self._log_monitoring_stop_events:
+            self._log_monitoring_stop_events[instance_id].set()
 
 def latest_lines(lines: List[str], last: int) -> Tuple[int, List[str]]:
     """Return lines after last and not empty
