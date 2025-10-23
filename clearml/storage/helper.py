@@ -564,6 +564,7 @@ class _Boto3Driver(_Driver):
     _connect_timeout = deferred_config("aws.boto3.connect_timeout", 60)
     _read_timeout = deferred_config("aws.boto3.read_timeout", 60)
     _signature_version = deferred_config("aws.boto3.signature_version", None)
+    _addressing_style = deferred_config("aws.boto3.addressing_style", "path")
 
     _stream_download_pool_connections = deferred_config("aws.boto3.stream_connections", 128)
     _stream_download_pool = None
@@ -643,6 +644,7 @@ class _Boto3Driver(_Driver):
                 connect_timeout=int(_Boto3Driver._connect_timeout),
                 read_timeout=int(_Boto3Driver._read_timeout),
                 signature_version=_Boto3Driver._signature_version,
+                s3={"addressing_style": _Boto3Driver._addressing_style},
             ),
         }
         if not cfg.use_credentials_chain:
