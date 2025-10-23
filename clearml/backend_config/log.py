@@ -7,6 +7,7 @@ from pathlib2 import Path
 
 
 def logger(path: Optional[str] = None) -> logging.Logger:
+    """Get a ClearML Python logging.Logger named according to the parent path or stem of the file path provided"""
     name = "clearml"
     if path:
         p = Path(path)

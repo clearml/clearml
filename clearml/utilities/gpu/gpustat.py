@@ -38,6 +38,9 @@ class GPUStat(object):
 
     def keys(self) -> Any:
         return self.entry.keys()
+    
+    def get(self, key: Any, default: Any = None) -> Any:
+        return self.entry.get(key, default)
 
     def __getitem__(self, key: Any) -> Any:
         return self.entry[key]

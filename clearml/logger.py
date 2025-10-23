@@ -279,7 +279,7 @@ class Logger(object):
         mode: Optional[str] = None,
         data_args: Optional[dict] = None,
         extra_layout: Optional[dict] = None,
-    ) -> ():
+    ) -> None:
         """
         For explicit reporting, plot a (default grouped) histogram.
         Notice this function will not calculate the histogram,
@@ -603,7 +603,7 @@ class Logger(object):
         fill: bool = False,
         comment: Optional[str] = None,
         extra_layout: Optional[dict] = None,
-    ) -> ():
+    ) -> None:
         """
         For explicit reporting, plot a 3d scatter graph (with markers).
 
@@ -1569,7 +1569,7 @@ class Logger(object):
         """
         return self._tensorboard_series_force_prefix
 
-    def _set_tensorboard_series_prefix(self, prefix: Optional[str]) -> ():
+    def _set_tensorboard_series_prefix(self, prefix: Optional[str]) -> None:
         """
         :param str prefix: Set a string prefix to put in front of every report combing from tensorboard
         """

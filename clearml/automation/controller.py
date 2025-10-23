@@ -1362,7 +1362,7 @@ class PipelineController(object):
         timeout: Optional[float] = None,
         mark_failed: bool = False,
         mark_aborted: bool = False,
-    ) -> ():
+    ) -> None:
         """
         Stop the pipeline controller and the optimization thread.
         If mark_failed and mark_aborted are False (default) mark the pipeline as completed,
@@ -1509,7 +1509,7 @@ class PipelineController(object):
         """
         return {k: n for k, n in self._nodes.items() if k in self._running_nodes}
 
-    def update_execution_plot(self) -> ():
+    def update_execution_plot(self) -> None:
         """
         Update sankey diagram of the current pipeline
         """
@@ -2064,7 +2064,7 @@ class PipelineController(object):
         self._experiment_created_cb = step_task_created_callback
         self._experiment_completed_cb = step_task_completed_callback
 
-    def _serialize_pipeline_task(self) -> (dict, dict):
+    def _serialize_pipeline_task(self) -> Tuple[dict, dict]:
         """
         Serialize current pipeline state into the main Task
 
@@ -2225,7 +2225,7 @@ class PipelineController(object):
 
         return dag
 
-    def _deserialize(self, dag_dict: dict, force: bool = False) -> ():
+    def _deserialize(self, dag_dict: dict, force: bool = False) -> None:
         """
         Restore the DAG from a dictionary.
         This will be used to create the DAG from the dict stored on the Task, when running remotely.
@@ -2823,7 +2823,7 @@ class PipelineController(object):
         parsed_queue_name = self._parse_step_ref(node.queue)
         node.job.launch(queue_name=parsed_queue_name or self._default_execution_queue)
 
-    def _launch_node(self, node: "PipelineController.Node") -> ():
+    def _launch_node(self, node: "PipelineController.Node") -> bool:
         """
         Launch a single node (create and enqueue a ClearmlJob)
 
@@ -2921,7 +2921,7 @@ class PipelineController(object):
 
         return True
 
-    def _update_execution_plot(self) -> ():
+    def _update_execution_plot(self) -> None:
         """
         Update sankey diagram of the current pipeline
         Also update the controller Task artifact storing the DAG state (with all the nodes states)
@@ -3156,7 +3156,7 @@ class PipelineController(object):
         return color_lookup.get(node.status, "")
 
     def _update_nodes_status(self) -> None:
-        # type () -> ()
+        # type () -> None
         """
         Update the status of all nodes in the pipeline
         """
@@ -3175,7 +3175,7 @@ class PipelineController(object):
             self._update_node_status(node)
 
     def _update_node_status(self, node: "PipelineController.Node") -> None:
-        # type (self.Node) -> ()
+        # type (self.Node) -> None
         """
         Update the node status entry based on the node/job state
         :param node: A node in the pipeline
@@ -3235,7 +3235,7 @@ class PipelineController(object):
                     "Failed calling the status change callback for node '{}'. Error is '{}'".format(node.name, e)
                 )
 
-    def _update_dag_state_artifact(self) -> ():
+    def _update_dag_state_artifact(self) -> None:
         pipeline_dag = self._serialize()
         self._task.upload_artifact(
             name=self._state_artifact_name,
@@ -3244,7 +3244,7 @@ class PipelineController(object):
             preview=json.dumps(pipeline_dag, indent=1),
         )
 
-    def _force_task_configuration_update(self) -> ():
+    def _force_task_configuration_update(self) -> None:
         pipeline_dag = self._serialize()
         if self._task:
             # noinspection PyProtectedMember
@@ -3256,7 +3256,7 @@ class PipelineController(object):
                 force=True,
             )
 
-    def _update_progress(self) -> ():
+    def _update_progress(self) -> None:
         """
         Update progress of the pipeline every PipelineController._update_progress_interval seconds.
         Progress is calculated as the mean of the progress of each step in the pipeline.
@@ -3270,7 +3270,7 @@ class PipelineController(object):
             self._task.set_progress(int(sum(job_progress) / len(job_progress)))
         self._last_progress_update_time = time()
 
-    def _daemon(self) -> ():
+    def _daemon(self) -> None:
         """
         The main pipeline execution loop. This loop is executed on its own dedicated thread.
         :return:
@@ -3758,7 +3758,7 @@ class PipelineController(object):
                 )
         return prev_step
 
-    def __parse_step_reference(self, step_ref_string: str) -> str:
+    def __parse_step_reference(self, step_ref_string: str) -> Optional[str]:
         """
         return the adjusted value for "${step...}"
         :param step_ref_string: reference string of the form ${step_name.type.value}"
@@ -3957,7 +3957,7 @@ class PipelineDecorator(PipelineController):
         skip_global_imports: bool = False,
         working_dir: Optional[str] = None,
         enable_local_imports: bool = True,
-    ) -> ():
+    ) -> None:
         """
         Create a new pipeline controller. The newly created object will launch and monitor the new experiments.
 
@@ -4091,7 +4091,7 @@ class PipelineDecorator(PipelineController):
         # map eager steps task id to the new step name
         self._eager_steps_task_id: Dict[str, str] = {}
 
-    def _daemon(self) -> ():
+    def _daemon(self) -> None:
         """
         The main pipeline execution loop. This loop is executed on its own dedicated thread.
         override the daemon function, we only need to update the state
@@ -4230,7 +4230,7 @@ class PipelineDecorator(PipelineController):
             except Exception:
                 pass
 
-    def update_execution_plot(self) -> ():
+    def update_execution_plot(self) -> None:
         """
         Update sankey diagram of the current pipeline
         """
@@ -5286,7 +5286,7 @@ class PipelineDecorator(PipelineController):
         cls._default_execution_queue = str(default_execution_queue) if default_execution_queue else None
 
     @classmethod
-    def run_locally(cls) -> ():
+    def run_locally(cls) -> None:
         """
         Set local mode, run all functions locally as subprocess
 
@@ -5298,7 +5298,7 @@ class PipelineDecorator(PipelineController):
         cls._debug_execute_step_function = False
 
     @classmethod
-    def debug_pipeline(cls) -> ():
+    def debug_pipeline(cls) -> None:
         """
         Set debugging mode, run all functions locally as functions (serially)
         Run the full pipeline DAG locally, where steps are executed as functions

@@ -1,0 +1,902 @@
+[
+  {
+    "question": "What is ClearML? (variant 1)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 2)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 3)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 4)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 5)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 6)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 7)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 8)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 9)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 10)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 11)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 12)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 13)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 14)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 15)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 16)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 17)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 18)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 19)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 20)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 21)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 22)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 23)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 24)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 25)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 26)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 27)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 28)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 29)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 30)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 31)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 32)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 33)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 34)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 35)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 36)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 37)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 38)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 39)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 40)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 41)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 42)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 43)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 44)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 45)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 46)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 47)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 48)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 49)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 50)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 51)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 52)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 53)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 54)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 55)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 56)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 57)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 58)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 59)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 60)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 61)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 62)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 63)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 64)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 65)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 66)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 67)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 68)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 69)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 70)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 71)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 72)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 73)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 74)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 75)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 76)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 77)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 78)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 79)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 80)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 81)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 82)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 83)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 84)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 85)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 86)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 87)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 88)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 89)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 90)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What is ClearML? (variant 91)",
+    "answer": "ClearML is an open-source platform for experiment management and MLOps.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "What is a HyperDataset? (variant 92)",
+    "answer": "A HyperDataset is a ClearML construct for versioned structured data entries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "How do I upload local files into a HyperDataset? (variant 93)",
+    "answer": "Provide upload destinations or let sub-entries define one, then call add_data_entries().",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "Why use embeddings with HyperDatasets? (variant 94)",
+    "answer": "Embeddings enable semantic search and similarity queries.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "What is vector search? (variant 95)",
+    "answer": "Vector search finds similar entries using distance metrics in embedding space.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  },
+  {
+    "question": "What does the --embed flag do? (variant 96)",
+    "answer": "It generates embeddings for each Q&A pair before uploading.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_0"
+    ]
+  },
+  {
+    "question": "Which model is used by default for embeddings? (variant 97)",
+    "answer": "sentence-transformers/all-MiniLM-L6-v2 is the default model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_1"
+    ]
+  },
+  {
+    "question": "Can I change the embedding model? (variant 98)",
+    "answer": "Yes, pass a different identifier with --embedding-model.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_2"
+    ]
+  },
+  {
+    "question": "How do I normalize embeddings? (variant 99)",
+    "answer": "Use the --normalize flag to enable L2 normalization.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_3"
+    ]
+  },
+  {
+    "question": "Where are embeddings stored? (variant 100)",
+    "answer": "They are stored in the entry metadata under the configured vector field.",
+    "reference": "https://clear.ml/docs",
+    "tags": [
+      "demo",
+      "group_4"
+    ]
+  }
+]

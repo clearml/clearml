@@ -120,9 +120,8 @@ class ProgressReport(object):
             # make sure we do not spill over due to rounding
             if round(float(current_mb), 2) >= _tqdm.total:
                 _tqdm.update(
-                    max(min(
-                        _tqdm.total - getattr(_tqdm, "n", self.last_reported), _tqdm.total - self.last_reported),
-                        0))
+                    max(min(_tqdm.total - getattr(_tqdm, "n", self.last_reported), _tqdm.total - self.last_reported), 0)
+                )
             else:
                 _tqdm.update(current_mb - self.last_reported)
         else:

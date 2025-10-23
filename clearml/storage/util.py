@@ -4,7 +4,7 @@ import json
 import os
 import re
 import sys
-from typing import Optional, Union, Sequence, Dict, Callable, List, Any
+from typing import Optional, Union, Sequence, Dict, Callable, List, Any, Tuple
 from zlib import crc32
 
 import six
@@ -47,14 +47,14 @@ def quote_url(url: str, valid_schemes: Sequence[str] = ("http", "https")) -> str
     if parsed.scheme not in valid_schemes:
         return url
     parsed = parsed._replace(path=quote(parsed.path))
-    return urlunparse(parsed)
+    return str(urlunparse(parsed))
 
 
 def encode_string_to_filename(text: str) -> str:
     return quote(text, safe=" ")
 
 
-def sha256sum(filename: str, skip_header: int = 0, block_size: int = 65536) -> (Optional[str], Optional[str]):
+def sha256sum(filename: str, skip_header: int = 0, block_size: int = 65536) -> Tuple[Optional[str], Optional[str]]:
     # create sha2 of the file, notice we skip the header of the file (32 bytes)
     # because sometimes that is the only change
     h = hashlib.sha256()
@@ -149,7 +149,7 @@ def format_size(
     use_b_instead_of_bytes: bool = False,
 ) -> str:
     """
-    Return the size in human readable format (string)
+    Return the size in human-readable format (string)
     Matching humanfriendly.format_size outputs
 
     :param size_in_bytes: number of bytes
@@ -197,10 +197,10 @@ def format_size(
 
 def parse_size(size: Union[str, float, int], binary: bool = False) -> int:
     """
-    Parse a human readable data size and return the number of bytes.
+    Parse a human-readable data size and return the number of bytes.
     Match humanfriendly.parse_size
 
-    :param size: The human readable file size to parse (a string).
+    :param size: The human-readable file size to parse (a string).
     :param binary: :data:`True` to use binary multiples of bytes (base-2) for
                    ambiguous unit symbols and names, :data:`False` to use
                    decimal multiples of bytes (base-10).

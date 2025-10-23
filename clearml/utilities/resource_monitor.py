@@ -320,7 +320,7 @@ class ResourceMonitor(BackgroundMonitor):
         """
         :return: machine stats dictionary, all values expressed in megabytes
         """
-        cpu_usage = [float(v) for v in psutil.cpu_percent(percpu=True)]
+        cpu_usage = [self._safe_cast(v, float) for v in psutil.cpu_percent(percpu=True)]
         stats = {
             "cpu_usage": sum(cpu_usage) / float(len(cpu_usage)),
         }
@@ -344,7 +344,7 @@ class ResourceMonitor(BackgroundMonitor):
                 warnings.simplefilter("ignore", category=RuntimeWarning)
             sensor_stat = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
         if "coretemp" in sensor_stat and len(sensor_stat["coretemp"]):
-            stats["cpu_temperature"] = max([float(t.current) for t in sensor_stat["coretemp"]])
+            stats["cpu_temperature"] = max([self._safe_cast(t.current, float) for t in sensor_stat["coretemp"]])
 
         # protect against permission issues
         # update cached measurements
@@ -521,10 +521,10 @@ class ResourceMonitor(BackgroundMonitor):
             # only monitor the active gpu's, if none were selected, monitor everything
             if self._skip_nonactive_gpu(g):
                 continue
-            if g["temperature.gpu"] is not None:
-                stats["gpu_%d_temperature" % i] = float(g["temperature.gpu"])
-            if g["utilization.gpu"] is not None:
-                stats["gpu_%d_utilization" % i] = float(g["utilization.gpu"])
+            if g.get("temperature.gpu") is not None:
+                stats["gpu_%d_temperature" % i] = self._safe_cast(g["temperature.gpu"], float)
+            if g.get("utilization.gpu") is not None:
+                stats["gpu_%d_utilization" % i] = self._safe_cast(g["utilization.gpu"], float)
             else:
                 stats["gpu_%d_utilization" % i] = self._default_gpu_utilization
                 if not self._gpu_utilization_warning_sent:
@@ -542,11 +542,18 @@ class ResourceMonitor(BackgroundMonitor):
                             )
                         )
                     self._gpu_utilization_warning_sent = True
-            stats["gpu_%d_mem_usage" % i] = 100.0 * float(g["memory.used"]) / float(g["memory.total"])
-            # already in MBs
-            stats["gpu_%d_mem_free_gb" % i] = float(g["memory.total"] - g["memory.used"]) / 1024
-            # use previously sampled process gpu memory, or global if it does not exist
-            stats["gpu_%d_mem_used_gb" % i] = float(gpu_mem[i] if gpu_mem and i in gpu_mem else g["memory.used"]) / 1024
+
+            if g.get("memory.used") is not None:
+                # use previously sampled process gpu memory, or global if it does not exist
+                stats["gpu_%d_mem_used_gb" % i] = self._safe_cast(gpu_mem[i] if gpu_mem and i in gpu_mem else g["memory.used"], float) / 1024
+                if g.get("memory.total") is not None:
+                    if self._safe_cast(g["memory.total"], float) != 0.0:
+                        stats["gpu_%d_mem_usage" % i] = 100.0 * self._safe_cast(g["memory.used"], float) / self._safe_cast(g["memory.total"], float, default=1.0)
+                    # already in MBs
+                    stats["gpu_%d_mem_free_gb" % i] = (self._safe_cast(g["memory.total"], float) - self._safe_cast(g["memory.used"], float)) / 1024
+            if g.get("power.draw") is not None:
+                # power draw in Watts
+                stats["gpu_%d_power_draw" % i] = self._safe_cast(g["power.draw"], int, default=0)
 
         return stats
 
@@ -581,6 +588,14 @@ class ResourceMonitor(BackgroundMonitor):
             pass
 
         return specs
+
+    def _safe_cast(self, value, type_=float, default=0.0):
+        try:
+            return type_(value)
+        except (ValueError, TypeError) as e:
+            if self._debug_mode:
+                print("Failed casting {} to {}: {}".format(value, type_, e))
+        return default
 
     @property
     def resource_monitor_instances(self) -> None:

@@ -1,3 +1,5 @@
+import itertools
+
 import numpy
 import copy
 import json
@@ -144,6 +146,7 @@ if TYPE_CHECKING:
 
 # Forward declaration to help linters
 TaskInstance = TypeVar("TaskInstance", bound="Task")
+DEFAULT_ENDPOINT_NAME = ""
 
 
 class Task(_Task):
@@ -936,6 +939,21 @@ class Task(_Task):
             self._http_router = HttpRouter(self)
         return self._http_router
 
+    @staticmethod
+    def _compose_runtime_key(base_key: str, suffix: Optional[str]) -> str:
+        return base_key if not suffix else "{}__{}".format(base_key, suffix)
+
+    def _collect_endpoint_suffixes(self, protocol: str, runtime_props: Mapping[str, Any]) -> Dict[str, Any]:
+        port_key = self._external_endpoint_port_map[protocol]
+        prefix = port_key + "__"
+        results: Dict[str, Any] = {}
+        for key, value in runtime_props.items():
+            if key == port_key:
+                results[DEFAULT_ENDPOINT_NAME] = value
+            elif key.startswith(prefix):
+                results[key[len(prefix) :]] = value
+        return results
+
     def request_external_endpoint(
         self,
         port: int,
@@ -943,7 +961,8 @@ class Task(_Task):
         wait: bool = False,
         wait_interval_seconds: float = 3.0,
         wait_timeout_seconds: float = 90.0,
-        static_route: Optional[str] = None
+        static_route: Optional[str] = None,
+        endpoint_name: Optional[str] = None,
     ) -> Optional[Dict]:
         """
         Request an external endpoint for an application
@@ -958,6 +977,8 @@ class Task(_Task):
             When set, the external endpoint requested will use this route
             instead of generating it based on the task ID. Useful for creating
             persistent, load balanced routes.
+        :param endpoint_name: Optional identifier for this endpoint. Useful to distinguish
+            between multiple endpoints. If not provided, the endpoint_name is auto-generated
 
         :return: If wait is False, this method will return None.
             If no endpoint could be found while waiting, this method returns None.
@@ -966,6 +987,7 @@ class Task(_Task):
           - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
           - port - the port exposed by the application
           - protocol - the protocol used by the endpoint
+          - name - the identifier used for this endpoint
         """
         Session.verify_feature_set("advanced")
         if protocol not in self._external_endpoint_port_map.keys():
@@ -973,28 +995,22 @@ class Task(_Task):
         if static_route:
             self._validate_static_route(static_route)
 
-        # sync with router - get data from Task
-        if not self._external_endpoint_ports.get(protocol):
-            self.reload()
-            internal_port = self._get_runtime_properties().get(self._external_endpoint_internal_port_map[protocol])
-            if internal_port:
-                self._external_endpoint_ports[protocol] = internal_port
+        self.reload()
+        runtime_props = self._get_runtime_properties()
+        suffix_map = self._collect_endpoint_suffixes(protocol, runtime_props)
+        resolved_suffix = DEFAULT_ENDPOINT_NAME
+        if endpoint_name is not None:
+            resolved_suffix = str(endpoint_name)
+        elif DEFAULT_ENDPOINT_NAME in suffix_map:
+            index = 1
+            while str(index) in suffix_map:
+                index += 1
+            resolved_suffix = str(index)
 
-            # notice this applies for both raw tcp and http, it is so that we can
-            # detect the host machine exposed ports, and register them on the router
-            external_host_port_mapping = self._get_runtime_properties().get(
-                self._external_endpoint_host_tcp_port_mapping["tcp_host_mapping"]
-            )
-            self._external_endpoint_ports["tcp_host_mapping"] = external_host_port_mapping
-
-        # check if we need to parse the port mapping, only if running on "bare-metal" host machine.
-        if self._external_endpoint_ports.get("tcp_host_mapping"):
-            external_host_port_mapping = self._external_endpoint_ports.get("tcp_host_mapping")
-            # format is docker standard port mapping format:
-            # example: "out:in,out_range100-out_range102:in_range0-in_range2"
-            # notice `out` in this context means the host port, the one that
-            # the router will route external traffic to
-            # noinspection PyBroadException
+        external_host_port_mapping = runtime_props.get(
+            self._external_endpoint_host_tcp_port_mapping["tcp_host_mapping"]
+        )
+        if external_host_port_mapping:
             out_port = None
             # noinspection PyBroadException
             try:
@@ -1003,65 +1019,64 @@ class Task(_Task):
                     out_range = out_range.split("-")
                     in_range = in_range.split("-")
                     if int(in_range[0]) <= port <= int(in_range[-1]):
-                        # we found a match:
+                        # we found a match
                         out_port = int(out_range[0]) + (port - int(in_range[0]))
                         print(
                             "INFO: Task.request_external_endpoint(...) changed requested external port to {}, "
                             "conforming to mapped external host ports [{} -> {}]".format(out_port, port, port_range)
                         )
                         break
-
-                if not out_port:
-                    raise ValueError("match not found defaulting to original port")
             except Exception:
                 print(
                     "WARNING: Task.request_external_endpoint(...) failed matching requested port to "
-                    "mapped external host port [{} to {}], "
-                    "proceeding with original port {}".format(port, external_host_port_mapping, port)
+                    "mapped external host port [{} to {}], proceeding with original port {}".format(
+                        port, external_host_port_mapping, port
+                    )
                 )
-
-            # change the requested port to the one we have on the machine
             if out_port:
                 port = out_port
 
-        # check if we are trying to change the port - currently not allowed
-        if self._external_endpoint_ports.get(protocol):
-            if self._external_endpoint_ports.get(protocol) == port:
-                # we already set this endpoint, but we will set the values again, because maybe IP changed?!
-                pass
-            else:
-                raise ValueError(
-                    "Only one endpoint per protocol can be requested at the moment. "
-                    "Port already exposed is: {}".format(self._external_endpoint_ports.get(protocol))
-                )
+        runtime_key_suffix = None if resolved_suffix == DEFAULT_ENDPOINT_NAME else resolved_suffix
+        runtime_properties_to_set: Dict[str, Union[str, int]] = {
+            self._compose_runtime_key("_SERVICE", runtime_key_suffix): self._external_endpoint_service_map[protocol],
+            self._compose_runtime_key(
+                self._external_endpoint_address_map[protocol], runtime_key_suffix
+            ): HOST_MACHINE_IP.get() or get_private_ip(),
+            self._compose_runtime_key(self._external_endpoint_port_map[protocol], runtime_key_suffix): port,
+        }
+        internal_port_key = self._external_endpoint_internal_port_map.get(protocol)
+        if internal_port_key and internal_port_key != self._external_endpoint_port_map[protocol]:
+            runtime_properties_to_set[
+                self._compose_runtime_key(internal_port_key, runtime_key_suffix)
+            ] = port
 
-        # mark for the router our request
+        if static_route:
+            runtime_properties_to_set.update(
+                {
+                    self._compose_runtime_key("_ROUTER_ENDPOINT_MODE", runtime_key_suffix): "path",
+                    self._compose_runtime_key("_ROUTER_ENDPOINT_MODE_PARAM", runtime_key_suffix): static_route,
+                }
+            )
+
         # noinspection PyProtectedMember
-        self._set_runtime_properties(
-            {
-                "_SERVICE": self._external_endpoint_service_map[protocol],
-                self._external_endpoint_address_map[protocol]: HOST_MACHINE_IP.get() or get_private_ip(),
-                self._external_endpoint_port_map[protocol]: port,
-                **(
-                    {"_ROUTER_ENDPOINT_MODE": "path", "_ROUTER_ENDPOINT_MODE_PARAM": static_route}
-                    if static_route
-                    else {}
-                ),
-            }
-        )
+        self._set_runtime_properties(runtime_properties_to_set)
         # required system_tag for the router to catch the routing request
         self.set_system_tags(list(set((self.get_system_tags() or []) + ["external_service"])))
-        self._external_endpoint_ports[protocol] = port
         if wait:
             return self.wait_for_external_endpoint(
                 wait_interval_seconds=wait_interval_seconds,
                 wait_timeout_seconds=wait_timeout_seconds,
                 protocol=protocol,
+                endpoint_name=None if runtime_key_suffix is None else runtime_key_suffix,
             )
         return None
 
     def wait_for_external_endpoint(
-        self, wait_interval_seconds: float = 3.0, wait_timeout_seconds: float = 90.0, protocol: Optional[str] = "http"
+        self,
+        wait_interval_seconds: float = 3.0,
+        wait_timeout_seconds: float = 90.0,
+        protocol: Optional[str] = "http",
+        endpoint_name: Optional[str] = None,
     ) -> Union[Optional[Dict], List[Optional[Dict]]]:
         """
         Wait for an external endpoint to be assigned
@@ -1071,6 +1086,7 @@ class Task(_Task):
             the method will no longer wait
         :param protocol: `http` or `tcp`. Wait for an endpoint to be assigned based on the protocol.
             If None, wait for all supported protocols
+        :param endpoint_name: Optional identifier of the endpoint to wait on.
 
         :return: If no endpoint could be found while waiting, this method returns None.
             If a protocol has been specified, it returns a dictionary containing the following values:
@@ -1078,15 +1094,19 @@ class Task(_Task):
           - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
           - port - the port exposed by the application
           - protocol - the protocol used by the endpoint
+          - name - the identifier used for this endpoint
             If not protocol is specified, it returns a list of dictionaries containing the values above,
             for each protocol requested and waited
         """
         Session.verify_feature_set("advanced")
+        if protocol is None and endpoint_name is not None:
+            raise ValueError("Endpoint name can only be specified when waiting on a specific protocol")
         if protocol:
             return self._wait_for_external_endpoint(
                 wait_interval_seconds=wait_interval_seconds,
                 wait_timeout_seconds=wait_timeout_seconds,
                 protocol=protocol,
+                endpoint_name=endpoint_name,
                 warn=True,
             )
         results = []
@@ -1098,6 +1118,7 @@ class Task(_Task):
                 wait_interval_seconds=wait_interval_seconds,
                 wait_timeout_seconds=wait_timeout_seconds,
                 protocol=protocol_,
+                endpoint_name=None,
                 warn=False,
             )
             elapsed = time.time() - start_time
@@ -1118,47 +1139,64 @@ class Task(_Task):
         wait_interval_seconds=3.0,
         wait_timeout_seconds=90.0,
         protocol="http",
+        endpoint_name: Optional[str] = None,
         warn=True,
     ):
-        if not self._external_endpoint_ports.get(protocol):
-            self.reload()
-            internal_port = self._get_runtime_properties().get(self._external_endpoint_internal_port_map[protocol])
-            if internal_port:
-                self._external_endpoint_ports[protocol] = internal_port
-        if not self._external_endpoint_ports.get(protocol):
-            if warn:
-                LoggerRoot.get_base_logger().warning("No external {} endpoints have been requested".format(protocol))
-            return None
+        resolved_suffix = DEFAULT_ENDPOINT_NAME if endpoint_name is None else str(endpoint_name)
+        first_iteration = True
         start_time = time.time()
         while True:
             self.reload()
             runtime_props = self._get_runtime_properties()
+            registry = self._collect_endpoint_suffixes(protocol, runtime_props)
+            if resolved_suffix not in registry:
+                if warn and first_iteration:
+                    if resolved_suffix == DEFAULT_ENDPOINT_NAME:
+                        LoggerRoot.get_base_logger().warning(
+                            "No external {} endpoints have been requested".format(protocol)
+                        )
+                    else:
+                        LoggerRoot.get_base_logger().warning(
+                            "No external {} endpoint named '{}' has been requested".format(protocol, resolved_suffix)
+                        )
+                return None
             endpoint, browser_endpoint = None, None
+            runtime_key_suffix = None if resolved_suffix == DEFAULT_ENDPOINT_NAME else resolved_suffix
             if protocol == "http":
-                endpoint = runtime_props.get("endpoint")
-                browser_endpoint = runtime_props.get("browser_endpoint")
+                endpoint = runtime_props.get(self._compose_runtime_key("endpoint", runtime_key_suffix))
+                browser_endpoint = runtime_props.get(self._compose_runtime_key("browser_endpoint", runtime_key_suffix))
             elif protocol == "tcp":
-                health_check = runtime_props.get("upstream_task_port")
+                health_check = runtime_props.get(
+                    self._compose_runtime_key(self._external_endpoint_internal_port_map[protocol], runtime_key_suffix)
+                )
                 if health_check:
-                    endpoint = (
-                        runtime_props.get(self._external_endpoint_address_map[protocol])
-                        + ":"
-                        + str(runtime_props.get(self._external_endpoint_port_map[protocol]))
+                    address_value = runtime_props.get(
+                        self._compose_runtime_key(self._external_endpoint_address_map[protocol], runtime_key_suffix)
                     )
+                    port_value = runtime_props.get(
+                        self._compose_runtime_key(self._external_endpoint_port_map[protocol], runtime_key_suffix)
+                    )
+                    if address_value and port_value:
+                        endpoint = "{}:{}".format(address_value, port_value)
             if endpoint or browser_endpoint:
+                port_value = registry.get(resolved_suffix)
                 return {
                     "endpoint": endpoint,
                     "browser_endpoint": browser_endpoint,
-                    "port": self._external_endpoint_ports[protocol],
+                    "port": port_value,
                     "protocol": protocol,
+                    "name": None if runtime_key_suffix is None else runtime_key_suffix,
                 }
             if time.time() >= start_time + wait_timeout_seconds:
                 if warn:
-                    LoggerRoot.get_base_logger().warning(
-                        "Timeout exceeded while waiting for {} endpoint".format(protocol)
+                    warning_message = "Timeout exceeded while waiting for {} endpoint{}".format(
+                        protocol,
+                        "" if runtime_key_suffix is None else " '{}'".format(runtime_key_suffix),
                     )
+                    LoggerRoot.get_base_logger().warning(warning_message)
                 return None
             time.sleep(wait_interval_seconds)
+            first_iteration = False
 
     def list_external_endpoints(self, protocol: Optional[str] = None) -> List[Dict]:
         """
@@ -1173,38 +1211,48 @@ class Task(_Task):
           - browser_endpoint - endpoint to be used in browser. Authentication will be handled via the browser
           - port - the port exposed by the application
           - protocol - the protocol used by the endpoint
+          - name - the identifier used for this endpoint
         """
         Session.verify_feature_set("advanced")
         runtime_props = self._get_runtime_properties()
         results = []
         protocols = [protocol] if protocol is not None else ["http", "tcp"]
         for protocol in protocols:
-            internal_port = runtime_props.get(self._external_endpoint_internal_port_map[protocol])
-            if internal_port:
-                self._external_endpoint_ports[protocol] = internal_port
-            else:
-                continue
-            endpoint, browser_endpoint = None, None
-            if protocol == "http":
-                endpoint = runtime_props.get("endpoint")
-                browser_endpoint = runtime_props.get("browser_endpoint")
-            elif protocol == "tcp":
-                health_check = runtime_props.get("upstream_task_port")
-                if health_check:
-                    endpoint = (
-                        runtime_props.get(self._external_endpoint_address_map[protocol])
-                        + ":"
-                        + str(runtime_props.get(self._external_endpoint_port_map[protocol]))
+            registry = self._collect_endpoint_suffixes(protocol, runtime_props)
+            for endpoint_name in sorted(registry.keys(), key=lambda name: (name != DEFAULT_ENDPOINT_NAME, str(name))):
+                port_value = registry.get(endpoint_name)
+                endpoint_value, browser_endpoint_value = None, None
+                runtime_key_suffix = None if endpoint_name == DEFAULT_ENDPOINT_NAME else endpoint_name
+                if protocol == "http":
+                    endpoint_value = runtime_props.get(self._compose_runtime_key("endpoint", runtime_key_suffix))
+                    browser_endpoint_value = runtime_props.get(
+                        self._compose_runtime_key("browser_endpoint", runtime_key_suffix)
                     )
-            if endpoint or browser_endpoint:
-                results.append(
-                    {
-                        "endpoint": endpoint,
-                        "browser_endpoint": browser_endpoint,
-                        "port": internal_port,
-                        "protocol": protocol,
-                    }
-                )
+                elif protocol == "tcp":
+                    health_check = runtime_props.get(
+                        self._compose_runtime_key(
+                            self._external_endpoint_internal_port_map[protocol], runtime_key_suffix
+                        )
+                    )
+                    if health_check:
+                        address_value = runtime_props.get(
+                            self._compose_runtime_key(self._external_endpoint_address_map[protocol], runtime_key_suffix)
+                        )
+                        external_port_value = runtime_props.get(
+                            self._compose_runtime_key(self._external_endpoint_port_map[protocol], runtime_key_suffix)
+                        )
+                        if address_value and external_port_value:
+                            endpoint_value = "{}:{}".format(address_value, external_port_value)
+                if endpoint_value or browser_endpoint_value:
+                    results.append(
+                        {
+                            "endpoint": endpoint_value,
+                            "browser_endpoint": browser_endpoint_value,
+                            "port": port_value,
+                            "protocol": protocol,
+                            "name": None if endpoint_name == DEFAULT_ENDPOINT_NAME else endpoint_name,
+                        }
+                    )
         return results
 
     @classmethod
@@ -1963,7 +2011,11 @@ class Task(_Task):
         if isinstance(tags, six.string_types):
             tags = tags.split(" ")
 
-        self.data.tags = list(set((self.data.tags or []) + tags))
+        self.data.tags = list(
+            set(
+                itertools.chain(self.data.tags or [], tags)
+            )
+        )
         self._edit(tags=self.data.tags)
 
     def connect(

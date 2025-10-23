@@ -2666,6 +2666,33 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             return dict()
         return dict(**self.data.runtime) if self.data.runtime else dict()
 
+    # ---------------------- HyperDatasets DataView helpers ----------------------
+    def set_dataview(self, dataview) -> None:
+        """
+        Store a HyperDatasets DataView definition into this Task using task properties
+        (i.e. under `input.*`), so the DataView appears in the UI, without using
+        runtime properties.
+
+        - If `dataview` is a string id, the backend is queried to fetch its full
+          definition and it is serialized into the task's `input` section.
+        - If `dataview` is a `DataView`, its current state is serialized
+          into the task's `input` section.
+
+        :param dataview: DataView instance or dataview id string
+        """
+        from ...hyperdatasets import util as _hyperdataset_util
+
+        _hyperdataset_util.set_dataview(self, dataview)
+
+    def get_dataviews(self) -> Dict[str, Any]:
+        """
+        Return a dictionary of HyperDatasets DataView objects reconstructed from this Task
+        task properties (primarily from `input.*`). Keys are arbitrary labels.
+        """
+        from ...hyperdatasets import util as _hyperdataset_util
+
+        return _hyperdataset_util.get_dataviews(self)
+
     def _clear_task(
         self,
         system_tags: Optional[Sequence[str]] = None,

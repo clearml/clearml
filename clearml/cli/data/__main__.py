@@ -19,7 +19,7 @@ def check_null_id(args: Any) -> None:
         raise ValueError("Dataset ID not specified, add --id <dataset_id>")
 
 
-def print_args(args: Any, exclude: Sequence[str] = ("command", "func", "verbose")) -> ():
+def print_args(args: Any, exclude: Sequence[str] = ("command", "func", "verbose")) -> None:
     if not getattr(args, "verbose", None):
         return
     for arg in args.__dict__:

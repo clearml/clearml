@@ -8,6 +8,7 @@ from .logger import Logger
 from .storage import StorageManager
 from .errors import UsageError
 from .datasets import Dataset
+from .hyperdatasets import HyperDataset, DataView, DataEntry, DataSubEntry, DataEntryImage, DataSubEntryImage, HyperDatasetManagement, HyperDatasetQuery
 
 TaskTypes = Task.TaskTypes
 
@@ -32,6 +33,14 @@ if not PY2:
         "PipelineController",
         "PipelineDecorator",
         "browser_login",
+        "DataEntry",
+        "DataSubEntry",
+        "DataEntryImage",
+        "DataSubEntryImage",
+        "HyperDataset",
+        "HyperDatasetManagement",
+        "DataView",
+        "HyperDatasetQuery",
     ]
 else:
     __all__ = [

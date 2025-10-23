@@ -100,6 +100,7 @@ class SessionWithTimeout(requests.Session):
         super(SessionWithTimeout, self).__init__(*args, **kwargs)
 
     def send(self, request: requests.models.PreparedRequest, **kwargs: Any) -> requests.Response:
+        """Overrides the send request in case a Content-Length headers exists"""
         if (
             isinstance(request, requests.models.PreparedRequest)
             and request.headers

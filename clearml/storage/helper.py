@@ -6,6 +6,7 @@ import itertools
 import json
 import logging
 import mimetypes
+import hashlib
 import os
 import platform
 import shutil
@@ -15,10 +16,11 @@ import uuid
 from _socket import gethostname
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, CancelledError
 from copy import copy
 from datetime import datetime
 from multiprocessing.pool import ThreadPool, AsyncResult
+from multiprocessing import Lock
 from tempfile import mkstemp
 from time import time
 from types import GeneratorType
@@ -38,7 +40,7 @@ from typing import (
 
 import numpy
 import requests
-import six
+from urllib.request import url2pathname
 from attr import attrs, attrib, asdict
 
 if TYPE_CHECKING:
@@ -48,9 +50,12 @@ from furl import furl
 from pathlib2 import Path
 from requests import codes as requests_codes
 from requests.exceptions import ConnectionError
-from six import binary_type, StringIO
-from six.moves.queue import Queue, Empty
-from six.moves.urllib.parse import urlparse
+from io import StringIO, BytesIO, FileIO
+from queue import Queue, Empty
+from urllib.parse import urlparse, quote
+from os.path import expandvars, expanduser
+from heapq import heapify, heappush, heappop
+from psutil import disk_usage
 
 from clearml.utilities.requests_toolbelt import (
     MultipartEncoderMonitor,
@@ -68,10 +73,17 @@ from ..backend_config.bucket_config import (
     AzureContainerConfig,
     S3BucketConfig,
 )
+from .util import format_size
 from ..config import config, deferred_config
 from ..debugging import get_logger
 from ..errors import UsageError
 from ..utilities.process.mp import ForkSafeRLock, SafeEvent
+
+from ..config import config, SESSION_CACHE_FILE, CLEARML_CACHE_DIR, DEFAULT_CACHE_DIR
+from ..storage.util import get_config_object_matcher
+from ..utilities.config import get_percentage, get_human_size_default
+from ..utilities.process.mp import ForkSafeRLock
+from ..backend_config.environment import EnvEntry
 
 
 class StorageError(Exception):
@@ -81,9 +93,7 @@ class StorageError(Exception):
 class DownloadError(Exception):
     pass
 
-
-@six.add_metaclass(ABCMeta)
-class _Driver(object):
+class _Driver(metaclass=ABCMeta):
     _certs_cache_context = "certs"
     _file_server_hosts = None
 
@@ -125,7 +135,7 @@ class _Driver(object):
         pass
 
     @abstractmethod
-    def get_direct_access(self, remote_path: str, **kwargs: Any) -> str:
+    def get_direct_access(self, remote_path: str, **kwargs: Any) -> Optional[str]:
         pass
 
     @abstractmethod
@@ -172,7 +182,7 @@ class _Driver(object):
         if cls._file_server_hosts is None:
             hosts = [Session.get_files_server_host()] + (Session.legacy_file_servers or [])
             for host in hosts[:]:
-                substituted = StorageHelper._apply_url_substitutions(host)
+                substituted = _StorageHelper._apply_url_substitutions(host)
                 if substituted not in hosts:
                     hosts.append(substituted)
             cls._file_server_hosts = hosts
@@ -485,7 +495,7 @@ class _Stream(object):
                 try:
                     chunck = next(self._input_iterator)
                     # make sure we always return bytes
-                    if isinstance(chunck, six.string_types):
+                    if isinstance(chunck, str):
                         chunck = chunck.encode("utf-8")
                     return chunck
                 except StopIteration:
@@ -506,7 +516,7 @@ class _Stream(object):
         try:
             data = self.next() if self._leftover is None else self._leftover
         except StopIteration:
-            return six.b("")
+            return b""
 
         self._leftover = None
         try:
@@ -897,7 +907,7 @@ class _Boto3Driver(_Driver):
             boto_kwargs = _Boto3Driver._get_boto_resource_kwargs_from_config(conf)
             boto_resource = boto_session.resource("s3", **boto_kwargs)
             bucket = boto_resource.Bucket(bucket_name)
-            bucket.put_object(Key=filename, Body=six.b(json.dumps(data)))
+            bucket.put_object(Key=filename, Body=json.dumps(data).encode("utf-8"))
 
             region = cls._get_bucket_region(conf=conf, log=log, report_info=True)
             if region and ((conf.region and region != conf.region) or (not conf.region and region != "us-east-1")):
@@ -2167,17 +2177,15 @@ class _FileStorageDriver(_Driver):
         >= Python 3. This should speed things up a bit and reduce memory usage.
         """
         chunk_size = chunk_size or _FileStorageDriver.CHUNK_SIZE
-        if six.PY3:
-            from io import FileIO as file
 
-        if isinstance(iterator, file):
+        if isinstance(iterator, FileIO):
             get_data = iterator.read
             args = (chunk_size,)
         else:
             get_data = next
             args = (iterator,)
 
-        data = bytes(b"")
+        data = b""
         empty = False
 
         while not empty or len(data) > 0:
@@ -2193,7 +2201,7 @@ class _FileStorageDriver(_Driver):
 
             if len(data) == 0:
                 if empty and yield_empty:
-                    yield bytes("")
+                    yield b""
 
                 return
 
@@ -2203,11 +2211,13 @@ class _FileStorageDriver(_Driver):
                     data = data[chunk_size:]
             else:
                 yield data
-                data = bytes("")
+                data = b""
 
-    def get_direct_access(self, remote_path: str, **_: Any) -> str:
+    def get_direct_access(self, remote_path: str, **_: Any) -> Optional[str]:
+        if bool(StorageHelper.use_disk_space_file_size_strategy):
+            return None
         # this will always make sure we have full path and file:// prefix
-        full_url = StorageHelper.conform_url(remote_path)
+        full_url = _StorageHelper.conform_url(remote_path)
         # now get rid of the file:// prefix
         path = Path(full_url[7:])
         if not path.exists():
@@ -2221,7 +2231,7 @@ class _FileStorageDriver(_Driver):
         return os.path.isfile(object_name)
 
 
-class StorageHelper(object):
+class _StorageHelper(object):
     """Storage helper.
     Used by the entire system to download/upload files.
     Supports both local and remote files (currently local files, network-mapped files, HTTP/S and Amazon S3)
@@ -2246,7 +2256,7 @@ class StorageHelper(object):
         @classmethod
         def load_list_from_config(
             cls,
-        ) -> List["StorageHelper._PathSubstitutionRule"]:
+        ) -> List["_StorageHelper._PathSubstitutionRule"]:
             rules_list = []
             for index, sub_config in enumerate(config.get(cls.path_substitution_config, list())):
                 rule = cls(
@@ -2257,7 +2267,7 @@ class StorageHelper(object):
                 )
 
                 if any(prefix is None for prefix in (rule.registered_prefix, rule.local_prefix)):
-                    StorageHelper._get_logger().warning(
+                    cls._get_logger().warning(
                         "Illegal substitution rule configuration '{}[{}]': {}".format(
                             cls.path_substitution_config,
                             index,
@@ -2268,7 +2278,7 @@ class StorageHelper(object):
                     continue
 
                 if all((rule.replace_windows_sep, rule.replace_linux_sep)):
-                    StorageHelper._get_logger().warning(
+                    cls._get_logger().warning(
                         "Only one of replace_windows_sep and replace_linux_sep flags may be set."
                         "'{}[{}]': {}".format(
                             cls.path_substitution_config,
@@ -2363,11 +2373,11 @@ class StorageHelper(object):
         return self._base_url
 
     @classmethod
-    def get(cls, url: str, logger: Optional[logging.Logger] = None, **kwargs: Any) -> Optional["StorageHelper"]:
+    def get(cls, url: str, logger: Optional[logging.Logger] = None, **kwargs: Any) -> Optional["_StorageHelper"]:
         """
         Get a storage helper instance for the given URL
 
-        :return: A StorageHelper instance.
+        :return: A _StorageHelper instance.
         """
         # Handle URL substitution etc before locating the correct storage driver
         url = cls._canonize_url(url)
@@ -2726,7 +2736,7 @@ class StorageHelper(object):
         """
         cls._path_substitutions = list()
 
-    def get_object_size_bytes(self, remote_url: str, silence_errors: bool = False) -> [int, None]:
+    def get_object_size_bytes(self, remote_url: str, silence_errors: bool = False) -> Optional[int]:
         """
         Get size of the remote file in bytes.
 
@@ -2741,7 +2751,7 @@ class StorageHelper(object):
         obj = self.get_object(remote_url, silence_errors=silence_errors)
         return self._get_object_size_bytes(obj, silence_errors)
 
-    def _get_object_size_bytes(self, obj: Any, silence_errors: bool = False) -> [int, None]:
+    def _get_object_size_bytes(self, obj: Any, silence_errors: bool = False) -> Optional[int]:
         """
         Auxiliary function for `get_object_size_bytes`.
         Get size of the remote object in bytes.
@@ -2894,9 +2904,9 @@ class StorageHelper(object):
 
         result_dest_path = canonized_dest_path if return_canonized else dest_path
 
-        if self.scheme in StorageHelper._quotable_uri_schemes:  # TODO: fix-driver-schema
+        if self.scheme in _StorageHelper._quotable_uri_schemes:  # TODO: fix-driver-schema
             # quote link
-            result_dest_path = quote_url(result_dest_path, StorageHelper._quotable_uri_schemes)
+            result_dest_path = quote_url(result_dest_path, _StorageHelper._quotable_uri_schemes)
 
         return result_dest_path
 
@@ -2919,13 +2929,13 @@ class StorageHelper(object):
 
         result_path = canonized_dest_path if return_canonized else dest_path
 
-        if cb and self.scheme in StorageHelper._quotable_uri_schemes:  # TODO: fix-driver-schema
+        if cb and self.scheme in _StorageHelper._quotable_uri_schemes:  # TODO: fix-driver-schema
             # store original callback
             a_cb = cb
 
             # quote link
             def callback(result: bool) -> str:
-                return a_cb(quote_url(result_path, StorageHelper._quotable_uri_schemes) if result else result)
+                return a_cb(quote_url(result_path, _StorageHelper._quotable_uri_schemes) if result else result)
 
             # replace callback with wrapper
             cb = callback
@@ -2940,8 +2950,8 @@ class StorageHelper(object):
                 retries=retries,
                 return_canonized=return_canonized,
             )
-            StorageHelper._initialize_upload_pool()
-            return StorageHelper._upload_pool.apply_async(self._do_async_upload, args=(data,))
+            _StorageHelper._initialize_upload_pool()
+            return _StorageHelper._upload_pool.apply_async(self._do_async_upload, args=(data,))
         else:
             res = self._do_upload(
                 src_path=src_path,
@@ -2954,7 +2964,7 @@ class StorageHelper(object):
                 return_canonized=return_canonized,
             )
             if res:
-                result_path = quote_url(result_path, StorageHelper._quotable_uri_schemes)
+                result_path = quote_url(result_path, _StorageHelper._quotable_uri_schemes)
             return result_path
 
     def list(self, prefix: Optional[str] = None, with_metadata: bool = False) -> List[Union[str, Dict[str, Any]]]:
@@ -3019,7 +3029,7 @@ class StorageHelper(object):
         direct_access: bool = True,
     ) -> Optional[str]:
         def next_chunk(astream: Union[bytes, Iterable]) -> Tuple[Optional[bytes], Optional[Iterable]]:
-            if isinstance(astream, binary_type):
+            if isinstance(astream, (bytes, bytearray)):
                 chunk = astream
                 astream = None
             elif astream:
@@ -3194,7 +3204,7 @@ class StorageHelper(object):
                 return
 
             # TODO: ugly py3 hack, please remove ASAP
-            if six.PY3 and not isinstance(stream, GeneratorType):
+            if not isinstance(stream, GeneratorType):
                 import numpy as np
 
                 return np.frombuffer(stream, dtype=np.uint8)
@@ -3219,7 +3229,7 @@ class StorageHelper(object):
             return True
 
         try:
-            self.upload_from_stream(stream=six.BytesIO(b"clearml"), dest_path=dest_path)
+            self.upload_from_stream(stream=BytesIO(b"clearml"), dest_path=dest_path)
         except Exception:
             raise ValueError("Insufficient permissions (write failed) for {}".format(base_url))
         try:
@@ -3485,15 +3495,15 @@ class StorageHelper(object):
 
     @staticmethod
     def _initialize_upload_pool() -> None:
-        if not StorageHelper._upload_pool or StorageHelper._upload_pool_pid != os.getpid():
-            StorageHelper._upload_pool_pid = os.getpid()
-            StorageHelper._upload_pool = ThreadPool(processes=1)
+        if not _StorageHelper._upload_pool or _StorageHelper._upload_pool_pid != os.getpid():
+            _StorageHelper._upload_pool_pid = os.getpid()
+            _StorageHelper._upload_pool = ThreadPool(processes=1)
 
     @staticmethod
     def close_async_threads() -> None:
-        if StorageHelper._upload_pool:
-            pool = StorageHelper._upload_pool
-            StorageHelper._upload_pool = None
+        if _StorageHelper._upload_pool:
+            pool = _StorageHelper._upload_pool
+            _StorageHelper._upload_pool = None
             # noinspection PyBroadException
             try:
                 pool.terminate()
@@ -3516,6 +3526,974 @@ class StorageHelper(object):
             return remote_url
         absoulte_path = os.path.abspath(remote_url)
         return base_url + absoulte_path
+
+
+CLEARML_SECONDARY_CACHE_DIR = EnvEntry("CLEARML_SECONDARY_CACHE_DIR", type=str)
+
+
+# configuration constants
+_DISK_STRATEGY_SECTION = "disk_space_file_size_strategy"
+_CONFIG_MISSING = object()
+
+
+# Simplified urlsplit tailored for ClearML usage
+def fast_urlsplit(remote_path, *_, **__):
+    """Return (scheme, netloc, path, query, fragment) without pulling in urllib."""
+    scheme, sep, rest = remote_path.partition('://')
+    if not sep:
+        scheme, rest = '', remote_path
+
+    netloc, sep, rest = rest.partition('/')
+    if not sep:
+        netloc, rest = '', netloc
+
+    path_section, sep, fragment = rest.partition('#')
+    if not sep:
+        fragment = ''
+
+    path, sep, query = path_section.partition('?')
+    if not sep:
+        query = ''
+
+    return scheme, netloc, path, query, fragment
+
+
+class StorageHelper(_StorageHelper):
+    """ Cached File Storage helper.
+        Overloads the standard StorageHelper and provides local caching support for calls to download_to_file().
+    """
+    use_disk_space_file_size_strategy = deferred_config(
+        "storage.cache.{}.enabled".format(_DISK_STRATEGY_SECTION),
+        False,
+        transform=bool,
+    )
+
+    class CacheConfigs(object):
+        configs = {}
+
+        class Defaults(object):
+            cache_name = None
+            cache_base_dir = None
+            cleanup_seconds_threshold = None
+            max_cleanup_attempts = None
+            cache_size_max_used_bytes = None
+            cache_size_min_free_bytes = None
+            cache_cleanup_margin_pct = None
+            cache_zero_file_size_check = None
+            cache_file_entry_lookup_size = None
+            cache_matchers = None
+            direct_access_matchers = None
+
+            @classmethod
+            def init(cls):
+                cls.cache_name = "local"
+                cls.cache_base_dir = _get_cache_dir()
+                cls.cleanup_seconds_threshold = _config("cleanup_seconds_threshold", default=20.0)
+                cls.max_cleanup_attempts = _config("max_cleanup_attempts", default=5)
+                cls.cache_size_max_used_bytes = _disk_config("size", "max_used_bytes", default=-1)
+                cls.cache_size_min_free_bytes = _disk_config("size", "min_free_bytes", default="10GB")
+                cls.cache_cleanup_margin_pct = _disk_config("size", "cleanup_margin_percent", default=0.05)
+                cls.cache_zero_file_size_check = _disk_config("zero_file_size_check", default=False)
+                cls.cache_file_entry_lookup_size = _disk_config("file_entry_lookup_size", default=0)
+                cls.cache_matchers = _config("enable", default=[{"url": "*"}])
+                cls.direct_access_matchers = config.get("storage.direct_access", [{"url": "file://"}])
+
+        def __init__(self, cache_name=None):
+            self.cache_name = cache_name if cache_name is not None else self.Defaults.cache_name
+            self.cache_base_dir = (_get_cache_dir(cache_name=cache_name) or self.Defaults.cache_base_dir) / "storage"
+            self.cleanup_seconds_threshold = _config(
+                "cleanup_seconds_threshold", default=self.Defaults.cleanup_seconds_threshold, cache_name=cache_name
+            )
+            self.max_cleanup_attempts = int(
+                max(
+                    1,
+                    _config("max_cleanup_attempts", default=self.Defaults.max_cleanup_attempts, cache_name=cache_name),
+                )
+            )
+            self.cache_size_max_used_bytes = _disk_config_human_size(
+                "size", "max_used_bytes", default=self.Defaults.cache_size_max_used_bytes, cache_name=cache_name
+            )
+            self.cache_size_min_free_bytes = _disk_config_human_size(
+                "size", "min_free_bytes", default=self.Defaults.cache_size_min_free_bytes, cache_name=cache_name
+            )
+            self.cache_cleanup_margin_pct = _disk_config_percentage(
+                "size", "cleanup_margin_percent", default=self.Defaults.cache_cleanup_margin_pct, cache_name=cache_name
+            )
+            self.cache_zero_file_size_check = _disk_config(
+                "zero_file_size_check", default=self.Defaults.cache_zero_file_size_check, cache_name=cache_name
+            )
+            self.cache_file_entry_lookup_size = _disk_config(
+                "file_entry_lookup_size", default=self.Defaults.cache_file_entry_lookup_size, cache_name=cache_name
+            )
+            self.cache_matchers = [
+                get_config_object_matcher(**entry)
+                for entry in _config("enable", default=self.Defaults.cache_matchers, cache_name=cache_name)
+            ]
+            self.direct_access_matchers = [
+                get_config_object_matcher(**entry)
+                for entry in config.get("storage.direct_access", self.Defaults.direct_access_matchers)
+            ]
+
+        @classmethod
+        def get(cls, cache_name=None):
+            # We consider the absence of the cache_name to refer to the local cache
+            return cls.configs.get(cache_name if cache_name is not None else cls.Defaults.cache_name)
+
+        @classmethod
+        def create(cls, cache_name=None):
+            if cache_name not in cls.configs:
+                # We consider the absence of the cache_name to refer to the local cache
+                cls.configs[cache_name if cache_name is not None else cls.Defaults.cache_name] = cls(
+                    cache_name=cache_name
+                )
+
+    _helpers = {}  # cache of helper instances
+    _pre_delete_hooks = {}
+
+    _has_secondary = False
+    _inited_configs = False
+
+    common_cache_matchers = []
+
+    class _NotDirectOrCached(Exception):
+        pass
+
+    @classmethod
+    def init_configs(cls):
+        if cls._inited_configs:
+            return
+        cls._inited_configs = True
+        cls.CacheConfigs.Defaults.init()
+        names = [None, "secondary"]
+        for name in names:
+            if _get_cache_dir(cache_name=name):
+                cls.CacheConfigs.create(cache_name=name)
+                if name == "secondary":
+                    cls._has_secondary = True
+
+    @property
+    def cache_dir(self):
+        """
+        :return: Base cache folder used for all local copies
+        """
+        return self.cache_base_dir
+
+    def __init__(self, *args, **kwargs):
+        if not bool(self.use_disk_space_file_size_strategy):
+            return super(StorageHelper, self).__init__(*args, **kwargs)
+
+        self.__class__.init_configs()
+
+        configs = kwargs.get("configs")
+        if not configs:
+            configs = self.__class__.CacheConfigs.get()
+
+        super(StorageHelper, self).__init__(*args, **kwargs)
+
+        self._cleanup_seconds_threshold = configs.cleanup_seconds_threshold
+        self._cache_clean_in_progress = Lock()
+        self._cache_size_lock = ForkSafeRLock()
+        self._cache_size = 0
+        self._synced_cache_time = None
+        self._cache_file_entry_lookup_table = {}
+
+        self._cache_adjustment_lock = ForkSafeRLock()
+        self._path_locks = {}
+        self._path_locks_cnt = {}
+        self._reused_locks = []
+        self._reused_min_locks = 32
+
+        self.clean_cache_executor = ThreadPoolExecutor(max_workers=1)
+        self.max_cleanup_attempts = configs.max_cleanup_attempts
+        self.cache_base_dir = configs.cache_base_dir
+        self.cache_size_max_used_bytes = configs.cache_size_max_used_bytes
+        self.cache_size_min_free_bytes = configs.cache_size_min_free_bytes
+        self.cache_cleanup_margin_pct = configs.cache_cleanup_margin_pct
+        self.cache_zero_file_size_check = configs.cache_zero_file_size_check
+        self.cache_file_entry_lookup_size = configs.cache_file_entry_lookup_size
+        if self.cache_file_entry_lookup_size <= 0:
+            self._cache_file_entry_lookup_table = None
+        self.direct_access_matchers = configs.direct_access_matchers
+        self.cache_matchers = configs.cache_matchers
+
+        try:
+            self.cache_base_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as ex:
+            raise StorageError(
+                "Failed creating cache folder {}: {}".format(self.cache_base_dir, ex)
+            )
+
+    @classmethod
+    def register_pre_delete_hook(cls, client_name, hook, override=False):
+        if (client_name in cls._pre_delete_hooks) and not override:
+            return
+
+        if not callable(hook):
+            raise TypeError("Pre-delete hook must be a callable object")
+
+        cls._pre_delete_hooks[client_name] = hook
+
+    @staticmethod
+    def register_cache_matcher(**kwargs):
+        """
+        Add a matcher for files that should use the cache.
+        Files that don't match any matcher will cause an exception.
+        The matcher will be used for all instances of StorageHelper.
+
+        :param kwargs: The matcher argument. Currently only content_type and url
+            are supported. The values are glob like patterns.
+        """
+        StorageHelper.common_cache_matchers.append(get_config_object_matcher(**kwargs))
+
+    def register_cache_matcher_for_instance(self, **kwargs):
+        """
+        Add a matcher for files that should use the cache.
+        Files that don't match any matcher will cause an exception.
+        The matcher will be used only for the current instance of StorageHelper.
+
+        :param kwargs: The matcher argument. Currently only content_type and url
+            are supported. The values are glob like patterns.
+        """
+        self.cache_matchers.append(get_config_object_matcher(**kwargs))
+
+    def download_as_stream(self, remote_path, chunk_size=None, force_content_type=None, force_cache=False):
+        """
+        Download remote_path as a stream using the cache. Cache is used if caching is enabled for the remote_path, based
+            on the cache configuration. Direct access paths (which are mapped directly to their remote path) are
+            returned as they are (assuming they exist, otherwise None is returned)
+
+        :param remote_path: see StorageHelper.download_as_stream()
+        :param chunk_size: download chunk size (request size)
+        :param force_content_type: force using a specific content type when checking if caching is enabled for this path
+            (otherwise content type is guessed based on the path)
+        :param force_cache: force caching for this path, regardless of configuration
+        :return:
+        """
+        if not bool(self.use_disk_space_file_size_strategy):
+            return super().download_as_stream(remote_path=remote_path, chunk_size=chunk_size)
+
+        try:
+            local_file = self._multi_cache_download(
+                remote_path,
+                force_content_type,
+                force_cache=force_cache,
+            )
+
+            try:
+                result = Path(local_file).open('rb').read()
+            except OSError:
+                # if the file was just downloaded and we could not read it,
+                # we probably deleted it in cache cleanup
+                # try one more time to access it
+                result = None
+
+            # on the second try, we must raise exception if we still can't access the file
+            if result is None:
+                local_file = self._multi_cache_download(
+                    remote_path,
+                    force_content_type,
+                    force_cache=force_cache,
+                )
+
+                result = Path(local_file).open('rb').read()
+
+            return result
+        except self._NotDirectOrCached:
+            return super(StorageHelper, self).download_as_stream(remote_path, chunk_size)
+
+    def download_to_file(
+        self,
+        remote_path,
+        local_path=None,
+        overwrite_existing=False,
+        delete_on_failure=True,
+        verbose=None,
+        force_content_type=None,
+        force_cache=False,
+        skip_zero_size_check=False,
+        silence_errors=False,
+        direct_access=False
+    ):
+        """
+        Download remote_path to a local, cached file. Cache is used if caching is enabled for the remote_path, based on
+            the cache configuration. Direct access paths (which are mapped directly to their remote path)
+            are returned as they are.
+
+        :param remote_path: see StorageHelper.download_to_file()
+        :param local_path: local path where the file should be stored. If the file is not cached, this parameter
+            is required. The download location is based on the remote path (for example, s3://bucket/path/to/file
+            will be stored in /<cache-dir>/path/to/file)
+        :param overwrite_existing: overwrite an existing cached file if exists
+        :param delete_on_failure: see StorageHelper.download_to_file()
+        :param force_content_type: force using a specific content type when checking if caching is enabled for this path
+            (otherwise content type is guessed based on the path)
+        :param verbose: Override default verbosity (boolean).
+        :param force_cache: force caching for this path, regardless of configuration
+        :param skip_zero_size_check: If True will return also files size zero bytes.
+        :param silence_errors: If True, don't log erors
+        :param direct_access: The parameter is not used, and is present here only for compatibility reasons
+        :return:
+        """
+        if not bool(self.use_disk_space_file_size_strategy):
+            return super().download_to_file(
+                remote_path=remote_path,
+                local_path=local_path,
+                overwrite_existing=overwrite_existing,
+                delete_on_failure=delete_on_failure,
+                verbose=verbose,
+                skip_zero_size_check=skip_zero_size_check,
+                silence_errors=silence_errors,
+                direct_access=direct_access,
+            )
+
+        try:
+            download_path = self._multi_cache_download(
+                remote_path=remote_path,
+                force_content_type=force_content_type,
+                overwrite_existing=overwrite_existing,
+                verbose=verbose,
+                force_cache=force_cache,
+                delete_on_failure=delete_on_failure,
+                skip_size_check=skip_zero_size_check,
+                silence_errors=silence_errors,
+            )
+            if local_path:
+                # noinspection PyBroadException
+                try:
+                    helper = super().get(download_path)
+                    helper.download_to_file(
+                        download_path,
+                        local_path,
+                        overwrite_existing=overwrite_existing,
+                        delete_on_failure=delete_on_failure,
+                        verbose=verbose,
+                        skip_zero_size_check=skip_zero_size_check,
+                        silence_errors=silence_errors,
+                        direct_access=False,
+                    )
+                except Exception:
+                    if not silence_errors:
+                        self._log.error(
+                            "Could not download {} to local path. Note that the download to the cache succeeded".format(
+                                remote_path
+                            )
+                        )
+            return download_path
+        except self._NotDirectOrCached:
+            if not local_path:
+                raise ValueError("Object is not cached, local_path is required (%s)" % remote_path)
+            return super(StorageHelper, self).download_to_file(
+                remote_path, local_path, overwrite_existing, delete_on_failure
+            )
+
+    @classmethod
+    def get(cls, url, logger=None, **kwargs):
+        """
+        Get a cached storage helper instance for the given URL
+
+        :return: StorageHelper instance
+        """
+        return super(StorageHelper, cls).get(url, logger=logger, **kwargs)
+
+    def get_free_bytes(self):
+        stats = disk_usage(str(self.cache_base_dir))
+        return stats.free
+
+    @classmethod
+    def get_local_copy(cls, remote_url, skip_zero_size_check=False, force_download=False):
+        """
+        Download a file from remote URL to a local storage, and return path to local copy,
+
+        :param remote_url: Remote URL. Example: https://example.com/file.jpg s3://bucket/folder/file.mp4 etc.
+        :return: Path to local copy of the downloaded file. None if error occurred.
+        """
+        if not bool(cls.use_disk_space_file_size_strategy):
+            return super().get_local_copy(remote_url=remote_url, skip_zero_size_check=skip_zero_size_check)
+        helper = cls.get(remote_url)
+        if not helper:
+            return None
+        return helper.download_to_file(remote_url, overwrite_existing=force_download)
+
+    def get_direct_access(self, remote_path):
+        # type: (str) -> Optional[str]
+        """
+        Return a direct access path to the requested file.
+        If remote_url is not a direct access url, return None
+        :param remote_path: URL to local file
+        :return: string path to existing direct access file
+        """
+        direct_path, _, _ = self._get_direct_access_path(remote_path)
+        if not direct_path or not os.path.isfile(direct_path):
+            return None
+        return direct_path
+
+    def _get_direct_access_path(self, remote_path):
+        remote_path = self._canonize_url(remote_path)
+        absolute_url = self._absolute_object_name(remote_path)
+        direct_access = any(True for matcher in self.direct_access_matchers if matcher(url=absolute_url))
+        if not direct_access:
+            return None, remote_path, absolute_url
+        # we do not cache locally stored files (local drive or network mapped)
+        scheme, netloc, filename, query, fragment = fast_urlsplit(remote_path, allow_fragments=False)
+        # on windows without "file://" prefix, netloc is "C:" make sure we add / at the end to get "C:/"
+        return os.path.join('/', (netloc+'/') if netloc else '', filename.lstrip('/')), remote_path, absolute_url
+
+    def _get_cache_path(self, canonized_url, force_content_type=None, base_local_path=None, force_cache=False):
+        # canonized_url = self._canonize_url(remote_path)
+
+        scheme, netloc, filename, query, fragment = fast_urlsplit(canonized_url, allow_fragments=False)
+        if query:
+            filename = filename.split('/')
+            filename[-1] = '{}.{}'.format(hashlib.md5(query.encode()).hexdigest(), filename[-1])
+            filename = '/'.join(filename if filename[0] else filename[1:])
+        else:
+            filename = str(Path(filename.lstrip("/")))
+
+        if scheme == 'http':
+            scheme = 'https'
+        netloc = netloc.replace(":", ".") if netloc else ''
+        # notice that os.path will handle '/' in windows as if it was backslash '\\'
+        return os.path.join(
+            str(self.cache_dir),
+            self.__class__._safe_os_join(base_local_path or "", scheme or "", netloc, filename),
+        )
+
+    def _multi_cache_download(
+        self,
+        remote_path,
+        force_content_type,
+        overwrite_existing=False,
+        verbose=None,
+        delete_on_failure=True,
+        force_cache=False,
+        skip_size_check=False,
+        silence_errors=False
+    ):
+        # NOTE: In this function, we mention "downloading" a file. Downloading means:
+        # checking if the file exists or if is should be overwritten, then fetching the
+        # content of the downloaded file to a temp file, then atomically renaming that file
+        # to the target location
+
+        # If we don't have a secondary cache, we will just download it
+        if not self.__class__._has_secondary:
+            return self._download(
+                remote_path,
+                force_content_type,
+                overwrite_existing=overwrite_existing,
+                verbose=verbose,
+                delete_on_failure=delete_on_failure,
+                force_cache=force_cache,
+                skip_size_check=skip_size_check,
+                silence_errors=silence_errors
+            )
+
+        # We have a secondary cache. Create it
+        secondary_cache = self.__class__.get(
+            remote_path, configs=self.__class__.CacheConfigs.get("secondary")
+        )
+        # Check if the file exists in the secondary cache and download it from there
+        _, canonized_url, _ = secondary_cache._get_direct_access_path(remote_path)
+        secondary_cache_path = secondary_cache._get_cache_path(
+            canonized_url, force_content_type, force_cache=force_cache
+        )
+        if (
+            not overwrite_existing
+            and os.path.exists(secondary_cache_path)
+            and (skip_size_check or os.path.getsize(secondary_cache_path) != 0)
+        ):
+            if verbose:
+                self._log.info("{} found in the secondary cache. Downloading to local cache".format(remote_path))
+            secondary_to_local_cache_fetcher = self.__class__.get(secondary_cache_path)
+            local_path = os.path.join(
+                str(secondary_to_local_cache_fetcher.cache_dir),
+                os.path.relpath(secondary_cache_path, str(secondary_cache.cache_dir)),
+            )
+            return secondary_to_local_cache_fetcher._download(
+                secondary_cache_path,
+                force_content_type,
+                overwrite_existing=overwrite_existing,
+                verbose=verbose,
+                delete_on_failure=delete_on_failure,
+                force_cache=force_cache,
+                skip_size_check=skip_size_check,
+                allow_direct_access=False,
+                cache_path=local_path
+            )
+
+        # We got here, which means don't have the file in the secondary cache
+        # or we need to overwrite it
+        # We first download the file to the local cache
+        local_path = self._download(
+            remote_path,
+            force_content_type,
+            overwrite_existing=overwrite_existing,
+            verbose=verbose,
+            delete_on_failure=delete_on_failure,
+            force_cache=force_cache,
+            skip_size_check=skip_size_check,
+            allow_direct_access=False,
+            silence_errors=silence_errors
+        )
+
+        # Then download from the local cache to the secondary cache
+        # Note that the cache path needs to be calculated manually,
+        # to have the same relative paths in both caches
+        secondary_cache = self.__class__.get(
+            local_path, configs=self.__class__.CacheConfigs.get("secondary")
+        )
+        secondary_cache_path = os.path.join(
+            str(secondary_cache.cache_dir), os.path.relpath(local_path, str(self.cache_dir))
+        )
+        secondary_cache._download(
+            local_path,
+            force_content_type,
+            overwrite_existing=overwrite_existing,
+            verbose=verbose,
+            delete_on_failure=delete_on_failure,
+            force_cache=force_cache,
+            skip_size_check=skip_size_check,
+            allow_direct_access=False,
+            cache_path=secondary_cache_path,
+            silence_errors=silence_errors
+        )
+
+        # We return the path to the file in the local cache
+        return local_path
+
+    def _download(
+        self,
+        remote_path,
+        force_content_type,
+        overwrite_existing=False,
+        verbose=None,
+        delete_on_failure=True,
+        force_cache=False,
+        skip_size_check=False,
+        allow_direct_access=True,
+        cache_path=None,
+        silence_errors=False
+    ):
+        direct_path, canonized_url, absolute_url = self._get_direct_access_path(remote_path)
+        if direct_path and allow_direct_access:
+            if not os.path.isfile(direct_path) and not silence_errors:
+                self._log.error("Direct access path does not exist " +
+                                ("%s" % remote_path if remote_path == direct_path else
+                                 "(%s => %s)" % (remote_path, direct_path)))
+                return None
+            return str(direct_path)
+        # don't bother checking, look for the entry on the cache lookup table
+        if self._cache_file_entry_lookup_table is not None:
+            if not cache_path:
+                cache_path = self._cache_file_entry_lookup_table.get(canonized_url)
+            if cache_path and os.path.isfile(cache_path):
+                self._update_cache_file(cache_path, log=self.log)
+                return str(cache_path)
+        if not cache_path:
+            cache_path = self._get_cache_path(canonized_url, force_content_type, force_cache=force_cache)
+        if cache_path:
+            # update file lookup cache table
+            if self._cache_file_entry_lookup_table is not None:
+                if len(self._cache_file_entry_lookup_table) >= self.cache_file_entry_lookup_size:
+                    self._cache_file_entry_lookup_table.clear()
+                self._cache_file_entry_lookup_table[canonized_url] = cache_path
+            # return the cached file is it's valid
+            if not overwrite_existing and os.path.isfile(cache_path) and (
+                    not self.cache_zero_file_size_check or os.path.getsize(cache_path) > 0):
+                self._update_cache_file(cache_path, log=self.log)
+                return str(cache_path)
+
+            if not force_cache:
+                # check if we can actually download the file (i.e. a matcher might say we cannot
+                absolute_url = self._absolute_object_name(remote_path)
+                content_type = (force_content_type or mimetypes.guess_type(remote_path)[0])
+                do_cache = force_cache or any(
+                    True
+                    for matcher in (self.cache_matchers + self.__class__.common_cache_matchers)
+                    if matcher(content_type=content_type, url=absolute_url)
+                )
+                if not do_cache:
+                    raise self._NotDirectOrCached()
+
+            # make needed dirs
+            cache_path = Path(cache_path)
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            # make sure the cache is clean enough
+            self._clean_cache()
+            # try to download to cache
+            key = str(cache_path)
+
+            # prevent multiple downloads of the same file
+            with self._cache_adjustment_lock:
+                locks = self._path_locks
+                if key not in locks:
+                    # atomic access
+                    try:
+                        locks[key] = self._reused_locks.pop(0)
+                    except IndexError:
+                        locks[key] = ForkSafeRLock()
+                lock = locks[key]
+                self._path_locks_cnt[key] = 1 + self._path_locks_cnt.get(key, 0)
+
+            try:
+                lock.acquire()
+                # check if we still need to download the file (someone might already have done that)
+                if not overwrite_existing and cache_path.is_file() and cache_path.stat().st_size > 0:
+                    self._update_cache_file(cache_path, log=self.log)
+                    return str(cache_path)
+
+                # download the file
+                # at this point, we no longer allow direct access because
+                # the path didn't match the `direct_access` config
+                # (checked at the beggining of this function)
+                res = super(StorageHelper, self).download_to_file(
+                    remote_path=remote_path,
+                    local_path=key,
+                    overwrite_existing=overwrite_existing,
+                    delete_on_failure=delete_on_failure,
+                    verbose=verbose,
+                    skip_zero_size_check=skip_size_check,
+                    direct_access=False,
+                )
+                if res:
+                    # Update cache size according to file size
+                    self._update_cache_file(cache_path, downloaded=True, log=self.log)
+                    return str(cache_path)
+                return None
+            finally:
+                # remove lock from list
+                with self._cache_adjustment_lock:
+                    self._path_locks_cnt[key] -= 1
+                    if not self._path_locks_cnt[key]:
+                        self._path_locks_cnt.pop(key, None)
+                        try:
+                            locks.pop(key, None)
+                        except (KeyError, Exception):
+                            pass
+                        self._reused_locks.append(lock)
+
+                # now release the lock, if someone was waiting on the lock
+                # by the time they get it, the file should be in cache
+                lock.release()
+
+        # Not direct access or cached, raise this in order to allow callers to differentiate between this state and
+        # an error that returns None (maintains StorageHelper behavior)
+        raise self._NotDirectOrCached()
+
+    def _clean_cache(self):
+        # if this is the first time we need to clean the cache (first download) we should scan the current cached files
+        if self._synced_cache_time is not None:
+            # Check if we need to clean the cache
+            if ((self.cache_size_max_used_bytes <= 0 or self._cache_size < self.cache_size_max_used_bytes) and
+                    (self.cache_size_min_free_bytes <= 0 or self.get_free_bytes() > self.cache_size_min_free_bytes)):
+                return
+
+        # check if someone is already cleaning the cache
+        if self._cache_clean_in_progress.acquire(block=False):
+            try:
+                future = self.clean_cache_executor.submit(self._do_clean_cache, self.log)
+                future.result(timeout=0)
+            except (TimeoutError, CancelledError, Exception):
+                pass
+
+    def _update_cache_file(self, file_path, downloaded=False, log=None):
+        """ Update cache size with integer value or file size (if a filename is provided) """
+        # Update file access
+
+        # it's actually slower to push into the ThreadPool than to touch the file ourselves.
+        # cls.cache_touch_executor.submit(cls._do_touch_file, file_path)
+
+        file_path = str(file_path)
+
+        # update the access time of the file
+        os.utime(file_path, (time(), os.path.getmtime(file_path)))
+
+        # if downloaded (i.e. added to cache), update total cache size
+        # Notice! we need to have the total size and cached files in sync, so we lock both
+        if downloaded:
+            if log:
+                log.debug('Updating cache size for %s' % file_path)
+            try:
+                file_size = os.path.getsize(file_path)
+            except OSError as e:
+                file_size = 0
+                if log:
+                    log.warning('Failed updating file size for %s: %s' % (file_path, e))
+            # update the total cache size
+            self._update_cache_size(file_size)
+
+    def _do_clean_cache(self, log=None):
+        """ Clean cache until size constraints are satisfied. Not error is raised in case constraints are not satisfied,
+            we'll just do our very best.
+        """
+        try:
+            used_bytes_limit_enabled = self.cache_size_max_used_bytes > 0
+            free_bytes_limit_enabled = self.cache_size_min_free_bytes > 0
+
+            if log:
+                log.debug('Checking cache size: size=%s, limit=%s' % (
+                    self._cache_size if self._cache_size is not None else "N/A",
+                    self.cache_size_max_used_bytes
+                ))
+
+            # last cache sync/cleanup
+            first_cleanup_scan = self._synced_cache_time is None
+            self._synced_cache_time = time()
+
+            # check if we need to run the cache cleanup
+            def get_cache_size_str():
+                format_size(self._cache_size) if self._cache_size is not None else "N/A"
+
+            if first_cleanup_scan and used_bytes_limit_enabled:
+                # if this is the first time we need to clean the cache (first download)
+                # we should need to scan the files if we have a max cache size limit
+                pass
+            elif ((not used_bytes_limit_enabled or self._cache_size < self.cache_size_max_used_bytes)
+                    and (not free_bytes_limit_enabled or self.get_free_bytes() > self.cache_size_min_free_bytes)):
+                # cache limit not exceeded, leave
+                return
+
+            # Calculate cleanup targets
+            max_used_bytes_target = self.cache_size_max_used_bytes
+            min_free_bytes_target = self.cache_size_min_free_bytes
+            if self.cache_cleanup_margin_pct and used_bytes_limit_enabled:
+                max_used_bytes_target *= 1.0 - min(0.99, max(0, self.cache_cleanup_margin_pct))
+            if self.cache_cleanup_margin_pct and free_bytes_limit_enabled:
+                min_free_bytes_target *= 1.0 + min(0.99, max(0, self.cache_cleanup_margin_pct))
+
+            if log:
+                log.warning(
+                    "Cleaning cache: max_used_bytes=%s, min_free_bytes=%s, free_space=%s"
+                    % (
+                        format_size(max_used_bytes_target),
+                        format_size(min_free_bytes_target),
+                        format_size(self.get_free_bytes()),
+                    )
+                )
+                log.warning(
+                    "Cache cleanup started (clearing %s)"
+                    % (
+                        "scan"
+                        if first_cleanup_scan
+                        else format_size(self._cache_size - max_used_bytes_target)
+                        if used_bytes_limit_enabled
+                        else format_size(self.cache_size_min_free_bytes - self.get_free_bytes())
+                    )
+                )
+
+            # Calc and store cache size
+            cleanup_session_timestamp = time()
+            sorted_cached_files, cache_size = self._update_cache_dir_size()
+            with self._cache_size_lock:
+                self._cache_size = cache_size
+
+            # Delete files until targets are reached
+            while (sorted_cached_files and
+                   ((used_bytes_limit_enabled and self._cache_size >= max_used_bytes_target)
+                    or (free_bytes_limit_enabled and self.get_free_bytes() <= min_free_bytes_target))):
+
+                # Delete a single file (allow for several failures)
+                time_stamp, candidate, size = heappop(sorted_cached_files)
+
+                # check if the last access time is too close to when we started this session,
+                # we should quite before we start deleting our own downloads
+                if cleanup_session_timestamp - time_stamp < self._cleanup_seconds_threshold:
+                    if log:
+                        log.warning('Leaving cache cleanup [%d remaining] before starting '
+                                    'to clean current downloads, file candidate accessed %.3f sec ago' %
+                                    (len(sorted_cached_files), cleanup_session_timestamp - time_stamp))
+                    break
+
+                # check if we are currently downloading this file
+                # (no need for thread safety, worst case we are not synced)
+                if candidate in self._path_locks:
+                    continue
+                elif candidate.endswith(self._temp_download_suffix):
+                    # check if name is in path locks (it will be the non-temp filename)
+                    if [f for f in self._path_locks.keys() if f.startswith(candidate)]:
+                        continue
+
+                for client_name in self._pre_delete_hooks:
+                    try:
+                        self._pre_delete_hooks[client_name](candidate)
+                    except Exception as exc:
+                        if log:
+                            log.error("Pre delete hook of client {} failed: {}".format(client_name, exc))
+
+                try:
+                    # Remove file and update cache size
+                    os.remove(candidate)
+                except FileNotFoundError:
+                    # probably someone else deleted it.
+                    pass
+                except Exception as e:
+                    if log:
+                        log.debug("Failed cleaning file from cache: %s" % str(e))
+
+                # No need to lock cache_size we already locked all cache access
+                self._update_cache_size(-size)
+
+            if log:
+                if free_bytes_limit_enabled and self.get_free_bytes() <= self.cache_size_min_free_bytes:
+                    log.warning("Cache free bytes limit not satisfied after cleaning entire cache (limit is %s)"
+                                % format_size(self.cache_size_min_free_bytes))
+                log.warning("Cache cleanup done, current size %s" % (format_size(self._cache_size)))
+        finally:
+            self._cache_clean_in_progress.release()
+
+    def _update_cache_dir_size(self):
+        # we should only actually run this update once
+        total_size = 0
+        cached_files = []
+        heapify(cached_files)
+
+        start_path = str(self.cache_base_dir)
+        for dirpath, dirnames, filenames in os.walk(start_path):
+            for f in filenames:
+                # remove session file from cache list, so we do not delete it
+                if dirpath == start_path and f == SESSION_CACHE_FILE:
+                    continue
+
+                fp = os.path.join(dirpath, f)
+                try:
+                    atime = os.path.getatime(fp)
+                    size = os.path.getsize(fp)
+                    heappush(cached_files, (atime, fp, size))
+                    total_size += size
+                except OSError:
+                    continue
+
+        return cached_files, total_size
+
+    def _update_cache_size(self, value):
+        """ Update cache size with integer value or file size (if a filename is provided) """
+        if not value:
+            return
+        try:
+            self._cache_size_lock.acquire()
+            if self._cache_size is not None:
+                self._cache_size += value
+        finally:
+            self._cache_size_lock.release()
+
+    @staticmethod
+    def _do_touch_file(file_path):
+        Path(file_path).touch()
+
+    @staticmethod
+    def _safe_os_join(*paths):
+        return os.path.join(*[StorageHelper._limit_folder_name(p) for p in paths])
+
+    @staticmethod
+    def _limit_folder_name(folder_path):
+        # type (Optional[str]) -> Optional[str]
+        # make sure if the folder names are too large we encode them within the file system 255 characters limit
+        # assume / separator in folder folder_path
+
+        folder_path = quote(folder_path, safe="/\\=[]!~()#@$&%'+,;+") if folder_path else folder_path
+
+        # optimize, nothing to do if the entire path is short enough
+        if not folder_path or len(folder_path) <= 255:
+            return folder_path
+
+        sep = '/'
+        return sep.join(
+            [f if len(f) <= 255 else '{}.{}'.format(hashlib.md5(f.encode()).hexdigest(), f[-200:])
+             for f in folder_path.split(sep)])
+
+
+class _FileStorageDriverDiskSpaceFileSizeStrategy(_FileStorageDriver):
+    def get_direct_access(self, remote_path: str, **_: Any) -> Optional[str]:
+        return None
+    
+
+class StorageHelperDiskSpaceFileSizeStrategy(StorageHelper):
+    use_disk_space_file_size_strategy = True
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if isinstance(self._driver, _FileStorageDriver):
+            self._driver = _FileStorageDriverDiskSpaceFileSizeStrategy(self._driver.base_path)
+
+def _config(*keys, default=None, cache_name=None):
+    storage_key = "storage.cache"
+    if cache_name is not None:
+        storage_key += ".{}".format(cache_name)
+    primary_key = ".".join(filter(None, (storage_key, *keys)))
+    if cache_name == "secondary":
+        nested_key = _secondary_disk_config_key(*keys)
+        value = config.get(nested_key, _CONFIG_MISSING)
+        if value is not _CONFIG_MISSING:
+            return value
+    return config.get(primary_key, default)
+
+
+def _disk_config_key(cache_name, *keys):
+    storage_key = "storage.cache"
+    if cache_name is not None:
+        storage_key += ".{}".format(cache_name)
+    return ".".join(filter(None, (storage_key, _DISK_STRATEGY_SECTION, *keys)))
+
+
+def _secondary_disk_config_key(*keys):
+    return ".".join(filter(None, ("storage.cache", _DISK_STRATEGY_SECTION, "secondary", *keys)))
+
+
+def _disk_config(*keys, default=None, cache_name=None):
+    if cache_name == "secondary":
+        value = config.get(_secondary_disk_config_key(*keys), _CONFIG_MISSING)
+        if value is not _CONFIG_MISSING:
+            return default if value is None else value
+    return config.get(_disk_config_key(cache_name, *keys), default)
+
+
+def _disk_config_human_size(*keys, default=None, cache_name=None):
+    if cache_name == "secondary":
+        value = config.get(_secondary_disk_config_key(*keys), _CONFIG_MISSING)
+        if value is not _CONFIG_MISSING:
+            if value is None:
+                return default
+            return get_human_size_default({"value": value}, "value", default)
+    return get_human_size_default(config, _disk_config_key(cache_name, *keys), default)
+
+
+def _disk_config_percentage(*keys, default=None, cache_name=None):
+    if cache_name == "secondary":
+        value = config.get(_secondary_disk_config_key(*keys), _CONFIG_MISSING)
+        if value is not _CONFIG_MISSING:
+            if value is None:
+                return default
+            return get_percentage({"value": value}, "value", required=False, default=default)
+    return get_percentage(config, _disk_config_key(cache_name, *keys), required=False, default=default)
+
+
+def _get_cache_dir(cache_name=None):
+    config_key = "storage.cache"
+    if cache_name:
+        config_key += ".{}".format(cache_name)
+    env_var = None
+    default_cache_dir = None
+    if cache_name is None:
+        env_var = CLEARML_CACHE_DIR.get()
+        default_cache_dir = DEFAULT_CACHE_DIR
+    if cache_name == "secondary":
+        env_var = CLEARML_SECONDARY_CACHE_DIR.get()
+        nested_default = config.get(
+            "{}.{}.secondary.default_base_dir".format("storage.cache", _DISK_STRATEGY_SECTION),
+            None,
+        )
+    else:
+        nested_default = None
+    cache_base_dir = (
+        env_var
+        or nested_default
+        or config.get("{}.default_base_dir".format(config_key), None)
+        or default_cache_dir
+    )
+    if cache_base_dir is None:
+        return None
+    cache_base_dir = expandvars(expanduser(cache_base_dir))
+    parsed = urlparse(cache_base_dir)
+    return Path(os.path.abspath(os.path.join(parsed.netloc, url2pathname(parsed.path))))  # noqa: F405
 
 
 def normalize_local_path(local_path: str) -> Path:

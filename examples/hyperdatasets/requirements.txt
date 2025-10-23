@@ -1,5 +1,7 @@
-allegroai~=3.5.7
-clearml>=1.14.4
-numpy
+clearml>=2.1.0
+accelerate>=1.11.0
+peft>=0.17.1
 Pillow
-torch
+torch>=2.9.0
+transformers>=4.31.0
+luqum

@@ -11,7 +11,7 @@ from pathlib2 import Path
 
 from .cache import CacheManager
 from .callbacks import ProgressReport
-from .helper import StorageHelper
+from .helper import StorageHelper, StorageHelperDiskSpaceFileSizeStrategy
 from .util import encode_string_to_filename, safe_extract, create_zip_directories
 from ..config import deferred_config
 from ..debugging.log import LoggerRoot
@@ -23,8 +23,9 @@ class StorageManager(object):
     Support remote servers: http(s)/S3/GS/Azure/File-System-Folder
     Cache is enabled by default for all downloaded remote urls/files
     """
-
     _file_upload_retries = deferred_config("network.file_upload_retries", 3)
+
+    storage_helper = StorageHelper
 
     @classmethod
     def get_local_copy(
@@ -34,7 +35,7 @@ class StorageManager(object):
         extract_archive: bool = True,
         name: Optional[str] = None,
         force_download: bool = False,
-    ) -> [str, None]:
+    ) -> Optional[str]:
         """
         Get a local copy of the remote file. If the remote URL is a direct file access,
         the returned link is the same, otherwise a link to a local copy of the url file is returned.
@@ -51,6 +52,23 @@ class StorageManager(object):
         :param bool force_download: download file from remote even if exists in local cache
         :return: Full path to local copy of the requested url. Return None on Error.
         """
+        if bool(cls.storage_helper.use_disk_space_file_size_strategy):
+            cached_file = cls.storage_helper.get_local_copy(remote_url=remote_url, force_download=force_download)
+            if cached_file:
+                # noinspection PyProtectedMember
+                CacheManager._add_remote_url(remote_url=remote_url, local_copy_path=cached_file)
+
+            if not extract_archive or not cached_file:
+                return cached_file
+
+            cache = CacheManager.get_cache_manager(cache_context=cache_context)
+            cache_path_encoding = Path(cached_file).parent / cache.get_hashed_url_file(remote_url)
+            return cls._extract_to_cache(
+                cached_file,
+                name='cache',
+                cache_context=cache_context,
+                cache_path_encoding=cache_path_encoding.as_posix()
+            )
         cache = CacheManager.get_cache_manager(cache_context=cache_context)
         cached_file = cache.get_local_copy(remote_url=remote_url, force_download=force_download)
         if extract_archive and cached_file:
@@ -260,7 +278,7 @@ class StorageManager(object):
             return
         local_folder = str(Path(local_folder))
         results = []
-        helper = StorageHelper.get(remote_url)
+        helper = cls.storage_helper.get(remote_url)
         with ThreadPool() as pool:
             for path in Path(local_folder).rglob(match_wildcard or "*"):
                 if not path.is_file():
@@ -323,13 +341,13 @@ class StorageManager(object):
                 return target_str[len(prefix_to_be_removed) :]
             return target_str
 
-        longest_configured_url = StorageHelper._resolve_base_url(remote_url)  # noqa
+        longest_configured_url = cls.storage_helper._resolve_base_url(remote_url)  # noqa
         bucket_path = remove_prefix_from_str(remote_url[len(longest_configured_url) :], "/")
 
         if not local_folder:
             local_folder = CacheManager.get_cache_manager().get_cache_folder()
         local_path = str(Path(local_folder).expanduser().absolute() / bucket_path)
-        helper = StorageHelper.get(remote_url)
+        helper = cls.storage_helper.get(remote_url)
 
         return helper.download_to_file(
             remote_url,
@@ -354,13 +372,13 @@ class StorageManager(object):
         try:
             if remote_url.endswith("/"):
                 return False
-            helper = StorageHelper.get(remote_url)
+            helper = cls.storage_helper.get(remote_url)
             return helper.exists_file(remote_url)
         except Exception:
             return False
 
     @classmethod
-    def get_file_size_bytes(cls, remote_url: str, silence_errors: bool = False) -> [int, None]:
+    def get_file_size_bytes(cls, remote_url: str, silence_errors: bool = False) -> Optional[int]:
         """
         Get size of the remote file in bytes.
 
@@ -372,7 +390,7 @@ class StorageManager(object):
         :return: The size of the file in bytes.
             None if the file could not be found or an error occurred.
         """
-        helper = StorageHelper.get(remote_url)
+        helper = cls.storage_helper.get(remote_url)
         return helper.get_object_size_bytes(remote_url, silence_errors)
 
     @classmethod
@@ -428,7 +446,7 @@ class StorageManager(object):
         else:
             local_folder = CacheManager.get_cache_manager().get_cache_folder()
 
-        helper = StorageHelper.get(remote_url)
+        helper = cls.storage_helper.get(remote_url)
         results = []
 
         with ThreadPool(processes=max_workers) as pool:
@@ -483,7 +501,7 @@ class StorageManager(object):
         :return: The paths of all the objects the storage base path under prefix or the dictionaries containing the objects' metadata, relative to the base path.
             None in case of list operation is not supported (http and https protocols for example)
         """
-        helper = StorageHelper.get(remote_url)
+        helper = cls.storage_helper.get(remote_url)
         try:
             helper_list_result = helper.list(prefix=remote_url, with_metadata=with_metadata)
         except Exception as ex:
@@ -516,7 +534,7 @@ class StorageManager(object):
 
         :return: A dict containing the metadata of the remote object. In case of an error, `None` is returned
         """
-        helper = StorageHelper.get(remote_url)
+        helper = cls.storage_helper.get(remote_url)
         obj = helper.get_object(remote_url)
         if not obj:
             return None
@@ -527,7 +545,7 @@ class StorageManager(object):
         return metadata
 
     @classmethod
-    def set_report_upload_chunk_size(cls, chunk_size_mb: int) -> ():
+    def set_report_upload_chunk_size(cls, chunk_size_mb: int) -> None:
         """
         Set the upload progress report chunk size (in MB). The chunk size
         determines how often the progress reports are logged:
@@ -541,7 +559,7 @@ class StorageManager(object):
         ProgressReport.report_upload_chunk_size_mb = int(chunk_size_mb)
 
     @classmethod
-    def set_report_download_chunk_size(cls, chunk_size_mb: int) -> ():
+    def set_report_download_chunk_size(cls, chunk_size_mb: int) -> None:
         """
         Set the download progress report chunk size (in MB). The chunk size
         determines how often the progress reports are logged:
@@ -553,3 +571,7 @@ class StorageManager(object):
         :param chunk_size_mb: The chunk size, in megabytes
         """
         ProgressReport.report_download_chunk_size_mb = int(chunk_size_mb)
+
+
+class StorageManagerDiskSpaceFileSizeStrategy(StorageManager):
+    storage_helper = StorageHelperDiskSpaceFileSizeStrategy

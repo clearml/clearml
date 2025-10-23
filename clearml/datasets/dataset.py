@@ -455,6 +455,7 @@ class Dataset(object):
             recursive=recursive,
             verbose=verbose,
             max_workers=max_workers,
+            previous_version_file_entries=self._dataset_file_entries
         )
 
         # update the task script
@@ -654,6 +655,8 @@ class Dataset(object):
         # Path().as_posix() will never end with /
         relative_prefix = (Path(dataset_path).as_posix() + "/") if dataset_path else ""
 
+        # remove files (keep a snapshot for potential de-duplication by content)
+        prev_file_entries = copy(self._dataset_file_entries)
         # remove files
         num_files = len(self._dataset_file_entries)
         self._dataset_file_entries = {k: f for k, f in self._dataset_file_entries.items() if filter_f(f)}
@@ -663,7 +666,11 @@ class Dataset(object):
 
         # add remaining files, state is updated in _add_files
         num_added, num_modified = self._add_files(
-            path=local_path, dataset_path=dataset_path, recursive=True, verbose=verbose
+            path=local_path,
+            dataset_path=dataset_path,
+            recursive=True,
+            verbose=verbose,
+            previous_version_file_entries=prev_file_entries,
         )
 
         # How many of the files were modified? AKA have the same name but a different hash
@@ -2118,6 +2125,7 @@ class Dataset(object):
         recursive: bool = True,
         verbose: bool = False,
         max_workers: Optional[int] = None,
+        previous_version_file_entries: Optional[Dict[str, FileEntry]] = None,
     ) -> Tuple[int, int]:
         """
         Add a folder into the current dataset. calculate file hash,
@@ -2131,6 +2139,8 @@ class Dataset(object):
         :param recursive: If True, match all wildcard files recursively
         :param verbose: If True, print to console added files
         :param max_workers: The number of threads to add the files with. Defaults to the number of logical cores
+        :param previous_version_file_entries: Optional mapping of previous file entries used for hash-based de-dup.
+            Example use existing self._dataset_link_entries for dedup feature, None-> no de-dup
         """
         max_workers = max_workers or psutil.cpu_count()
         if dataset_path:
@@ -2196,6 +2206,19 @@ class Dataset(object):
             ]
         )
 
+        # build a lookup table for de-duplication by content hash from previous entries (if provided)
+        prev_hash_lookup: Dict[str, FileEntry] = {}
+        if previous_version_file_entries:
+            try:
+                # In case the dict contains non-FileEntry objects, guard with getattr
+                prev_hash_lookup = {
+                    fe.hash: fe
+                    for fe in previous_version_file_entries.values()
+                    if getattr(fe, "hash", None)
+                }
+            except Exception:
+                prev_hash_lookup = {}
+
         # merge back into the dataset
         count = 0
         for f in file_entries:
@@ -2206,6 +2229,16 @@ class Dataset(object):
                     and f.size == self._dataset_link_entries[f.relative_path].size
                 ):
                     continue
+                # de-duplication: if a previous file (possibly removed earlier in sync) has the same content hash,
+                # reuse its storage reference to avoid re-uploading
+                if f.hash and f.hash in prev_hash_lookup:
+                    prev_fe = prev_hash_lookup[f.hash]
+                    # copy parent/artifact refs so storage is reused when available
+                    f.parent_dataset_id = prev_fe.parent_dataset_id or f.parent_dataset_id
+                    f.artifact_name = prev_fe.artifact_name
+                    # if the previous entry already pointed to uploaded content (no local_path), skip uploading again
+                    if getattr(prev_fe, "local_path", None) is None and prev_fe.artifact_name:
+                        f.local_path = None
                 if verbose:
                     self._task.get_logger().report_text("Add {}".format(f.relative_path))
                 self._dataset_file_entries[f.relative_path] = f

@@ -36,6 +36,7 @@ _nameToLevel = {
 
 
 def resolve_logging_level(level: Union[str, int]) -> Optional[int]:
+    """Resolve an integer or string log level into python logging level"""
     # noinspection PyBroadException
     try:
         level = int(level)
