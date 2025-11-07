@@ -2745,7 +2745,7 @@ def tweak_step(step: Union[int, Any]) -> int:
     try:
         step = int(step.numpy()) if not isinstance(step, int) else step
         # unlike other frameworks, tensorflow already accounts for the iteration number
-        # when continuing the training. we substract the smallest iteration such that we
+        # when continuing the training. we subtract the smallest iteration such that we
         # don't increment the step twice number
         return step - EventTrainsWriter._current_task.get_initial_iteration()
     except Exception:

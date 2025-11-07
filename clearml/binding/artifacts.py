@@ -1243,7 +1243,7 @@ class Artifacts(object):
                     break
                 except PermissionError:
                     LoggerRoot.get_base_logger().warning(
-                        "Failed to replace {} with {}. Attemps left: {}".format(
+                        "Failed to replace {} with {}. Attempts left: {}".format(
                             local_filename,
                             temp_filename,
                             self._max_tmp_file_replace_attemps - i,

@@ -1386,7 +1386,7 @@ class GetQueueMetricsResponse(Response):
     Response of queues.get_queue_metrics endpoint.
 
     :param queues: List of the requested queues with their metrics. If no queue ids
-        were requested then 'all' queue is returned with the metrics averaged accross
+        were requested then 'all' queue is returned with the metrics averaged across
         all the company queues.
     :type queues: Sequence[QueueMetrics]
     """
@@ -1423,7 +1423,7 @@ class GetQueueMetricsResponse(Response):
         },
         "properties": {
             "queues": {
-                "description": "List of the requested queues with their metrics. If no queue ids were requested then 'all' queue is returned with the metrics averaged accross all the company queues.",
+                "description": "List of the requested queues with their metrics. If no queue ids were requested then 'all' queue is returned with the metrics averaged across all the company queues.",
                 "items": {"$ref": "#/definitions/queue_metrics"},
                 "type": ["array", "null"],
             }

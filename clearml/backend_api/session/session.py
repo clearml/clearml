@@ -609,7 +609,7 @@ class Session(TokenManager):
                     # skip the payload that could not be sent
                     size = req_data[cur:].find("\n") + 1
                     if size == 0:
-                        # error occured on the last package
+                        # error occurred on the last package
                         break
             if slice:
                 res = self.send_request(

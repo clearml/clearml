@@ -1191,7 +1191,7 @@ class ParamKey(NonStrictDataModel):
     """
     :param section: Section that the parameter belongs to
     :type section: str
-    :param name: Name of the parameter. If the name is ommitted then the
+    :param name: Name of the parameter. If the name is omitted then the
         corresponding operation is performed on the whole section
     :type name: str
     """
@@ -1199,7 +1199,7 @@ class ParamKey(NonStrictDataModel):
     _schema = {
         "properties": {
             "name": {
-                "description": "Name of the parameter. If the name is ommitted then the corresponding operation is performed on the whole section",
+                "description": "Name of the parameter. If the name is omitted then the corresponding operation is performed on the whole section",
                 "type": ["string", "null"],
             },
             "section": {
@@ -3776,7 +3776,7 @@ class DeleteHyperParamsRequest(Request):
             "param_key": {
                 "properties": {
                     "name": {
-                        "description": "Name of the parameter. If the name is ommitted then the corresponding operation is performed on the whole section",
+                        "description": "Name of the parameter. If the name is omitted then the corresponding operation is performed on the whole section",
                         "type": ["string", "null"],
                     },
                     "section": {
@@ -6748,8 +6748,8 @@ class GetConfigurationsRequest(Request):
 
     :param tasks: Task IDs
     :type tasks: Sequence[str]
-    :param names: Names of the configuration items to retreive. If not passed or
-        empty then all the configurations will be retreived.
+    :param names: Names of the configuration items to retrieve. If not passed or
+        empty then all the configurations will be retrieved.
     :type names: Sequence[str]
     """
 
@@ -6760,7 +6760,7 @@ class GetConfigurationsRequest(Request):
         "definitions": {},
         "properties": {
             "names": {
-                "description": "Names of the configuration items to retreive. If not passed or empty then all the configurations will be retreived.",
+                "description": "Names of the configuration items to retrieve. If not passed or empty then all the configurations will be retrieved.",
                 "items": {"type": "string"},
                 "type": "array",
             },

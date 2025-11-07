@@ -708,7 +708,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             return res.response.task
 
     def _reload_field(self, field: str) -> Any:
-        """Reload the task specific field, dot seperated for nesting"""
+        """Reload the task specific field, dot separated for nesting"""
         with self._edit_lock:
             if self._offline_mode:
                 task_object = self._reload()

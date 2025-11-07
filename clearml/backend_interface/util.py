@@ -76,7 +76,7 @@ def rename_project(session: Any, project_name: str, new_project_name: str) -> bo
     :param project_name: Name of the project you want to rename
     :param new_project_name: New name for the project
 
-    :return: True if the rename succeded and False otherwise
+    :return: True if the rename succeeded and False otherwise
     """
     project_id = get_existing_project(session, project_name)
     if not project_id:

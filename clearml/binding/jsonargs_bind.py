@@ -117,7 +117,7 @@ class PatchJsonArgParse(object):
             cls._current_task.set_parameter(
                 cls._section_name + cls._args_sep + cls._ignore_ui_overrides,
                 False,
-                description="If True, values in the config file will be overriden by values found in the UI. Otherwise, the values in the config file have priority",
+                description="If True, values in the config file will be overridden by values found in the UI. Otherwise, the values in the config file have priority",
                 # noqa
             )
 
