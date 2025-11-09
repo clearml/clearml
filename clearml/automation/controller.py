@@ -438,6 +438,9 @@ class PipelineController(object):
         if self._task and not self._pipeline_as_sub_project():
             self._task.add_tags([self._tag])
 
+        # make sure the task is updated with UI changes of hyper-parameters so self.get_parameters() fetches them properly
+        self._serialize_pipeline_task()
+
         self._monitored_nodes: Dict[str, dict] = {}
         self._abort_running_steps_on_failure = abort_on_failure
         self._def_max_retry_on_failure = retry_on_failure if isinstance(retry_on_failure, int) else 0
