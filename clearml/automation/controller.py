@@ -4133,8 +4133,8 @@ class PipelineDecorator(PipelineController):
                     continue
                 if node.job.is_stopped(aborted_nonresponsive_as_running=self._aborted_nonresponsive_as_running):
                     node_failed = node.job.is_failed()
-                    node_aborted = node.job.is_aborted()
-                    if node_failed or node_aborted:
+                    node_crushed = node.job.is_forced_stopped_non_responsive()
+                    if node_failed or node_crushed:
                         if self._call_retries_callback(node):
                             self._relaunch_node(node)
                             continue
@@ -4142,7 +4142,7 @@ class PipelineDecorator(PipelineController):
                             self._final_failure[node.name] = True
 
                     completed_jobs.append(j)
-                    if node_aborted:
+                    if node.job.is_aborted():
                         node.executed = node.job.task_id() if not node.skip_children_on_abort else False
                     elif node_failed:
                         node.executed = node.job.task_id() if not node.skip_children_on_fail else False
