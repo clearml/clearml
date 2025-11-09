@@ -519,7 +519,8 @@ class PipelineController(object):
         recursively_parse_parameters: bool = False,
         output_uri: Optional[Union[str, bool]] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
+        update_execution_plot: bool = False
     ) -> bool:
         """
         Add a step to the pipeline execution DAG.
@@ -777,7 +778,7 @@ class PipelineController(object):
         if status_change_callback:
             self._status_change_callbacks[name] = status_change_callback
 
-        if self._task and not self._task.running_locally():
+        if self._task and not self._task.running_locally() and update_execution_plot:
             self.update_execution_plot()
 
         return True
