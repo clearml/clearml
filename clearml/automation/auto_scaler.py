@@ -17,6 +17,8 @@ from ..backend_api.session import defs
 from ..backend_api.session.client import APIClient
 from ..debugging import get_logger
 
+from .aws_driver import InsufficientCapacityError
+
 # Worker's id in clearml would be composed of prefix, name, instance_type and cloud_id separated by ":"
 # Example: 'test:m1:g4dn.4xlarge:i-07cf7d6750455cb62'
 # cloud_id might be missing
@@ -120,6 +122,7 @@ class AutoScaler(object):
 
         self.api_client = APIClient()
         self._stop_event = Event()
+        self._failed_resources_cooldown = {}
         self.state = State.READY
 
     def set_auth(self, session: Session) -> None:
@@ -294,6 +297,13 @@ class AutoScaler(object):
                     for resource, max_instances in queue_resources:
                         if len(spin_up_resources) >= spin_up_count:
                             break
+
+                        # Check if this resource is in the cooldown penalty box
+                        cooldown_time = self._failed_resources_cooldown.get(resource)
+                        if cooldown_time and time() < cooldown_time:
+                            self.logger.info(f"Skipping resource {resource}, in capacity cooldown.")
+                            continue  # Skip this resource, it failed recently
+
                         # check if we can add instances to `resource`
                         currently_running_workers = len(
                             [worker for worker in all_workers if WorkerId(worker.id).name == resource]
@@ -329,6 +339,18 @@ class AutoScaler(object):
                     self.logger.info("New instance ID: %s", instance_id)
                     spun_workers[worker_id] = (resource, time())
                     up_machines[resource] += 1
+
+
+                except InsufficientCapacityError as ex:
+                    self.logger.warning(
+                        f"Capacity unavailable for {resource}: {ex}. Adding to cooldown for "
+                        f"{self.polling_interval_time_min * 2} minutes."
+                    )
+                    # Add to penalty box: current time + (2 * polling interval)
+                    cooldown_period = self.polling_interval_time_min * MINUTE * 2
+                    self._failed_resources_cooldown[resource] = time() + cooldown_period
+
+
                 except Exception as ex:
                     self.logger.exception(
                         "Failed to start new instance (resource %r), Error: %s",

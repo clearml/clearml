@@ -21,6 +21,10 @@ except ImportError as err:
     ) from err
 
 
+class InsufficientCapacityError(Exception):
+    pass
+
+
 @attr.s
 class AWSDriver(CloudDriver):
     """AWS Driver"""
@@ -114,9 +118,15 @@ class AWSDriver(CloudDriver):
             encoded_user_data = base64.b64encode(user_data.encode("ascii")).decode("ascii")
             launch_specification["UserData"] = encoded_user_data
             ConfigTree.merge_configs(launch_specification, resource_conf.get("extra_configurations", {}))
-
-            instances = ec2.request_spot_instances(LaunchSpecification=launch_specification)
-
+            try:
+                instances = ec2.request_spot_instances(LaunchSpecification=launch_specification)
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
+                    raise InsufficientCapacityError(
+                        f"Not enough On-Demand capacity for {resource_conf.get('instance_type')} "
+                        f"in subnet {resource_conf.get('subnet_id')}"
+                    ) from e
+                raise           
             # Wait until spot request is fulfilled
             request_id = instances["SpotInstanceRequests"][0]["SpotInstanceRequestId"]
             waiter = ec2.get_waiter("spot_instance_request_fulfilled")
@@ -134,9 +144,15 @@ class AWSDriver(CloudDriver):
                 InstanceInitiatedShutdownBehavior="terminate",
             )
             ConfigTree.merge_configs(launch_specification, resource_conf.get("extra_configurations", {}))
-
-            instances = ec2.run_instances(**launch_specification)
-
+            try: 
+                instances = ec2.run_instances(**launch_specification)
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
+                    raise InsufficientCapacityError(
+                        f"Not enough On-Demand capacity for {resource_conf.get('instance_type')} "
+                        f"in subnet {resource_conf.get('subnet_id')}"
+                    ) from e
+                raise
             # Get the instance object for later use
             instance_id = instances["Instances"][0]["InstanceId"]
 
