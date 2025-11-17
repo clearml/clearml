@@ -17,6 +17,7 @@ from ..backend_api.session import defs
 from ..backend_api.session.client import APIClient
 from ..debugging import get_logger
 
+# Make sure this import matches your file structure
 from .aws_driver import InsufficientCapacityError
 
 # Worker's id in clearml would be composed of prefix, name, instance_type and cloud_id separated by ":"
@@ -107,6 +108,9 @@ class AutoScaler(object):
         # make sure we have our own unique prefix, in case we have multiple dynamic auto-scalers
         # they will mix each others instances
         self.workers_prefix = config.workers_prefix
+
+        # --- CUSTOM LOG: Show configured idle time on startup ---
+        self.logger.info(f"=== CONFIGURATION: Max Idle Time: {self.max_idle_time_min} min | Polling Interval: {self.polling_interval_time_min} min ===")
 
         session = Session()
         self.set_auth(session)
@@ -215,15 +219,6 @@ class AutoScaler(object):
     def supervisor(self) -> None:
         """
         Spin up or down resources as necessary.
-        - For every queue in self.queues do the following:
-            1. Check if there are tasks waiting in the queue.
-            2. Check if there are enough idle workers available for those tasks.
-            3. In case more instances are required, and we haven't reached max instances allowed,
-               create the required instances with regards to the maximum number defined in self.queues
-               Choose which instance to create according to their order in self.queues. Won't create more instances
-               if maximum number defined has already reached.
-        - spin down instances according to their idle time. instance which is idle for more than self.max_idle_time_min
-        minutes would be removed.
         """
         self.ensure_queues()
 
@@ -272,8 +267,12 @@ class AutoScaler(object):
             # Check if we have tasks waiting on one of the designated queues
             for queue in self.queues:
                 entries = self.api_client.queues.get_by_id(queue_name_to_id[queue]).entries
-                self.logger.info("Found %d tasks in queue %r", len(entries), queue)
+                # self.logger.info("Found %d tasks in queue %r", len(entries), queue)
+
                 if entries and len(entries) > 0:
+                    # --- CUSTOM LOG: Tasks detected in queue ---
+                    self.logger.info(f"TRIGGER: Found {len(entries)} pending tasks in queue '{queue}'. Checking resources...")
+
                     queue_resources = self.queues[queue]
 
                     # If we have an idle worker matching the required resource,
@@ -323,6 +322,10 @@ class AutoScaler(object):
                         resource = WorkerId(worker_id).name
 
                     queue = self.resource_to_queue[resource]
+                    
+                    # --- CUSTOM LOG: Explicit start action ---
+                    self.logger.info(f"ACTION: Starting new machine '{resource}' for queue '{queue}' to handle pending tasks.")
+
                     suffix = ", task_id={!r}".format(task_id) if task_id else ""
                     self.logger.info(
                         "Spinning new instance resource=%r, prefix=%r, queue=%r%s",
@@ -366,11 +369,18 @@ class AutoScaler(object):
                     continue
                 # Remove from both cloud and clearml all instances that are idle for longer than MAX_IDLE_TIME_MIN
                 if time() - timestamp > self.max_idle_time_min * MINUTE:
+                    # --- CUSTOM LOG: Shutdown decision with duration ---
+                    idle_duration_min = (time() - timestamp) / 60.0
+                    self.logger.info(f"CHECK: Worker {worker_id} has been idle for {idle_duration_min:.2f} minutes (Limit: {self.max_idle_time_min} min).")
+
                     if not self.is_worker_still_idle(worker_id):
                         # Skip worker if no more idle
                         continue
                     wid = WorkerId(worker_id)
                     cloud_id = wid.cloud_id
+                    
+                    self.logger.info(f"ACTION: Terminating worker {worker_id} (Cloud ID: {cloud_id}) due to inactivity.")
+                    
                     self.driver.spin_down_worker(cloud_id)
                     up_machines[wid.name] -= 1
                     self.logger.info("Spin down instance cloud id %r", cloud_id)
@@ -399,6 +409,10 @@ class AutoScaler(object):
                     resource_name = WorkerId(worker.id).name
                     worker_time = worker_last_time(worker)
                     idle_workers[worker.id] = (worker_time, resource_name, worker)
+                    
+                    # --- CUSTOM LOG: Machine entering idle mode ---
+                    self.logger.info(f"STATUS: Worker {worker.id} entered IDLE state. (Last activity: {worker_time})")
+                    
             elif worker.id in idle_workers:
                 idle_workers.pop(worker.id, None)
 
