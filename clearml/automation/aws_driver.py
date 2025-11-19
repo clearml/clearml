@@ -186,7 +186,13 @@ class AWSDriver(CloudDriver):
         return creds
 
     def instance_id_command(self) -> str:
-        return "curl http://169.254.169.254/latest/meta-data/instance-id"
+            # Use IMDSv2 (Token-based) which is required for Ubuntu 24.04+
+            return (
+                "TOKEN=`curl -X PUT 'http://169.254.169.254/latest/api/token' "
+                "-H 'X-aws-ec2-metadata-token-ttl-seconds: 21600'` && "
+                "curl -H \"X-aws-ec2-metadata-token: $TOKEN\" "
+                "http://169.254.169.254/latest/meta-data/instance-id"
+            )
 
     def instance_type_key(self) -> str:
         return "instance_type"

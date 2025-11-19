@@ -1,0 +1,91 @@
+hyper_params:
+  cloud_credentials_key: XXXXXXXXXXXXXXXXx
+  cloud_credentials_secret: XXXXXXXXXXXXXXXXXXXXXX
+  cloud_credentials_region: us-east-1
+  cloud_provider: ''
+  default_docker_image: nvidia/cuda:10.1-runtime-ubuntu18.04
+  git_pass: ''
+  git_user: ''
+  max_idle_time_min: 2
+  polling_interval_time_min: 1
+  max_spin_up_time_min: 30
+  workers_prefix: dynamic_worker
+
+configurations:
+  extra_clearml_conf: ''
+  extra_trains_conf: ''
+  extra_vm_bash_script: ''
+
+  queues:
+    aws_gpu_12x:
+    - - dev-g5-12x-large-a
+      - 1
+    - - dev-g5-12x-large-b
+      - 1
+    - - dev-g5-12x-large-c
+      - 1
+    - - dev-g5-12x-large-d
+      - 1
+    - - dev-g5-12x-large-e
+      - 1
+
+  resource_configurations:
+    dev-g5-12x-large-a:
+      ami_id: ami-XXXXXXXXX
+      ebs_device_name: /dev/sda1
+      ebs_volume_size: 200
+      ebs_volume_type: gp3
+      instance_type: g5.12xlarge
+      is_spot: false
+      key_name: g5-test
+      security_group_ids:
+      - sg-XXXXXXXXXXXXX
+      subnet_id: subnet-XXXXXXXXXXXXXX
+    
+    dev-g5-12x-large-b:
+      ami_id: ami-XXXXXXXXXXXXXXX
+      ebs_device_name: /dev/sda1
+      ebs_volume_size: 200
+      ebs_volume_type: gp3
+      instance_type: g5.12xlarge
+      is_spot: false
+      key_name: g5-test
+      security_group_ids:
+      - sg-XXXXXXXXXXXXXXXX
+      subnet_id: subnet-XXXXXXXXXXXXXX
+    
+    dev-g5-12x-large-c:
+      ami_id: ami-XXXXXXXXXXXX
+      ebs_device_name: /dev/sda1
+      ebs_volume_size: 200
+      ebs_volume_type: gp3
+      instance_type: g5.12xlarge
+      is_spot: false
+      key_name: g5-test
+      security_group_ids:
+      - sg-XXXXXXXXXXXX
+      subnet_id: subnet-XXXXXXXXXXXXXXXX
+    
+    dev-g5-12x-large-d:
+      ami_id: ami-XXXXXXXXXXXXX
+      ebs_device_name: /dev/sda1
+      ebs_volume_size: 200
+      ebs_volume_type: gp3
+      instance_type: g5.12xlarge
+      is_spot: false
+      key_name: g5-test
+      security_group_ids:
+      - sg-XXXXXXXXXXX
+      subnet_id: subnet-XXXXXXXXXXXXXXX
+    
+    dev-g5-12x-large-e:
+      ami_id: ami-XXXXXXXXXXXXXX
+      ebs_device_name: /dev/sda1
+      ebs_volume_size: 200
+      ebs_volume_type: gp3
+      instance_type: g5.12xlarge
+      is_spot: false
+      key_name: g5-test
+      security_group_ids:
+      - sg-XXXXXXXXXXXXXXXX
+      subnet_id: subnet-XXXXXXXXXXXXXXXXX

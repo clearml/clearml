@@ -15,6 +15,7 @@ from clearml.utilities.wizard.user_input import (
     get_input, input_bool, input_int, input_list, multiline_input
 )
 
+
 DEFAULT_DOCKER_IMAGE = "nvidia/cuda:10.1-runtime-ubuntu18.04"
 
 
@@ -67,16 +68,7 @@ def main():
     if running_remotely():
         conf = default_config
     else:
-        print("AWS Autoscaler setup wizard\n"
-              "---------------------------\n"
-              "Follow the wizard to configure your AWS auto-scaler service.\n"
-              "Once completed, you will be able to view and change the configuration in the clearml-server web UI.\n"
-              "It means there is no need to worry about typos or mistakes :)\n")
-
-        if args.config_file.exists() and input_bool(
-            "Load configurations from config file '{}' [Y/n]? ".format(args.config_file),
-            default=True,
-        ):
+        if args.config_file.exists():
             with args.config_file.open("r") as f:
                 conf = yaml.load(f, Loader=yaml.SafeLoader)
         else:

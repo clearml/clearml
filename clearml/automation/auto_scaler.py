@@ -10,6 +10,7 @@ from typing import Tuple, Dict, Optional, List, Generator, Any
 import attr
 from attr.validators import instance_of
 
+# --- RELATIVE IMPORTS (Restored for Package Structure) ---
 from .cloud_driver import CloudDriver
 from .. import Task, Logger
 from ..backend_api import Session
@@ -17,7 +18,7 @@ from ..backend_api.session import defs
 from ..backend_api.session.client import APIClient
 from ..debugging import get_logger
 
-# Make sure this import matches your file structure
+# Import custom error from the neighbor file (aws_driver.py) in the same package
 from .aws_driver import InsufficientCapacityError
 
 # Worker's id in clearml would be composed of prefix, name, instance_type and cloud_id separated by ":"
@@ -43,7 +44,12 @@ class WorkerId:
         self.prefix = self.name = self.instance_type = self.cloud_id = ""
         match = _workers_pattern.match(worker_id)
         if not match:
-            raise ValueError("bad worker ID: {!r}".format(worker_id))
+            # Fallback: use the whole ID as the name if regex fails
+            self.name = worker_id
+            self.prefix = ""
+            self.instance_type = ""
+            self.cloud_id = ""
+            return 
 
         self.prefix = match["prefix"]
         self.name = match["name"]
@@ -109,7 +115,7 @@ class AutoScaler(object):
         # they will mix each others instances
         self.workers_prefix = config.workers_prefix
 
-        # --- CUSTOM LOG: Show configured idle time on startup ---
+        # --- CUSTOM LOG: Configuration (System log only at this stage) ---
         self.logger.info(f"=== CONFIGURATION: Max Idle Time: {self.max_idle_time_min} min | Polling Interval: {self.polling_interval_time_min} min ===")
 
         session = Session()
@@ -128,6 +134,26 @@ class AutoScaler(object):
         self._stop_event = Event()
         self._failed_resources_cooldown = {}
         self.state = State.READY
+        
+        # --- CUSTOM LOG: Ready (Send to UI now that we are ready) ---
+        self.send_log(f"Autoscaler initialized. Idle Limit: {self.max_idle_time_min}m, Poll: {self.polling_interval_time_min}m")
+
+    def send_log(self, message: str):
+        """
+        Logs to BOTH the system log and the ClearML UI Console.
+        """
+        # 1. Log to system (journalctl)
+        self.logger.info(message)
+
+        # 2. Log to ClearML UI (Console Tab)
+        # We use the method found in resource_monitor.py: report_text()
+        try:
+            task_logger = get_task_logger()
+            if task_logger:
+                # Prefix with 'Autoscaler:' to make it distinct in the UI
+                task_logger.report_text(f"Autoscaler: {message}")
+        except Exception:
+            pass
 
     def set_auth(self, session: Session) -> None:
         if session.access_key and session.secret_key:
@@ -159,7 +185,7 @@ class AutoScaler(object):
                 sleep(15)
 
     def stop(self) -> None:
-        self.logger.info("stopping")
+        self.send_log("Stopping Autoscaler Service")
         self._stop_event.set()
         self.state = State.STOPPED
 
@@ -195,7 +221,7 @@ class AutoScaler(object):
         now = time()
         for worker_id, (resource, spin_time) in list(spun_workers.items()):
             if now - spin_time > self.max_spin_up_time_min * MINUTE:
-                self.logger.info("Stuck spun instance %s of type %s", worker_id, resource)
+                self.send_log(f"WARNING: Stuck spun instance {worker_id} of type {resource}")
                 yield worker_id
 
     def extra_allocations(self) -> List[Any]:
@@ -210,7 +236,7 @@ class AutoScaler(object):
         )
 
     def is_worker_still_idle(self, worker_id: str) -> bool:
-        self.logger.info("Checking if worker %r is still idle", worker_id)
+        # self.logger.info("Checking if worker %r is still idle", worker_id)
         for worker in self.api_client.workers.get_all():
             if worker.id == worker_id:
                 return getattr(worker, "task", None) is None
@@ -239,13 +265,12 @@ class AutoScaler(object):
                 if worker.id not in previous_workers:
                     if not spun_workers.pop(worker.id, None):
                         if worker.id not in unknown_workers:
-                            self.logger.info(
-                                "Removed unknown worker from spun_workers: %s",
-                                worker.id,
-                            )
+                            # self.logger.info("Removed unknown worker from spun_workers: %s", worker.id)
                             unknown_workers.append(worker.id)
                     else:
                         previous_workers.add(worker.id)
+                        # --- CUSTOM LOG: Worker Came Online ---
+                        self.send_log(f"Machine Registered: {worker.id} is now online.")
 
             for worker_id in self.stale_workers(spun_workers):
                 out = spun_workers.pop(worker_id, None)
@@ -254,7 +279,7 @@ class AutoScaler(object):
                     continue
                 resource = out[0]
                 try:
-                    self.logger.info("Spinning down stuck worker: %r", worker_id)
+                    self.send_log(f"Spinning down stuck worker: {worker_id}")
                     self.driver.spin_down_worker(WorkerId(worker_id).cloud_id)
                     up_machines[resource] -= 1
                 except Exception as err:
@@ -267,10 +292,9 @@ class AutoScaler(object):
             # Check if we have tasks waiting on one of the designated queues
             for queue in self.queues:
                 entries = self.api_client.queues.get_by_id(queue_name_to_id[queue]).entries
-                # self.logger.info("Found %d tasks in queue %r", len(entries), queue)
 
                 if entries and len(entries) > 0:
-                    # --- CUSTOM LOG: Tasks detected in queue ---
+                    # --- CUSTOM LOG: Trigger ---
                     self.logger.info(f"TRIGGER: Found {len(entries)} pending tasks in queue '{queue}'. Checking resources...")
 
                     queue_resources = self.queues[queue]
@@ -296,12 +320,12 @@ class AutoScaler(object):
                     for resource, max_instances in queue_resources:
                         if len(spin_up_resources) >= spin_up_count:
                             break
-
-                        # Check if this resource is in the cooldown penalty box
+                        
+                        # Check Cooldown (AZ Failover)
                         cooldown_time = self._failed_resources_cooldown.get(resource)
                         if cooldown_time and time() < cooldown_time:
                             self.logger.info(f"Skipping resource {resource}, in capacity cooldown.")
-                            continue  # Skip this resource, it failed recently
+                            continue 
 
                         # check if we can add instances to `resource`
                         currently_running_workers = len(
@@ -323,8 +347,8 @@ class AutoScaler(object):
 
                     queue = self.resource_to_queue[resource]
                     
-                    # --- CUSTOM LOG: Explicit start action ---
-                    self.logger.info(f"ACTION: Starting new machine '{resource}' for queue '{queue}' to handle pending tasks.")
+                    # --- CUSTOM LOG: Action Spin Up ---
+                    self.send_log(f"ACTION: Spinning up new '{resource}' for queue '{queue}'.")
 
                     suffix = ", task_id={!r}".format(task_id) if task_id else ""
                     self.logger.info(
@@ -342,17 +366,11 @@ class AutoScaler(object):
                     self.logger.info("New instance ID: %s", instance_id)
                     spun_workers[worker_id] = (resource, time())
                     up_machines[resource] += 1
-
-
+                
                 except InsufficientCapacityError as ex:
-                    self.logger.warning(
-                        f"Capacity unavailable for {resource}: {ex}. Adding to cooldown for "
-                        f"{self.polling_interval_time_min * 2} minutes."
-                    )
-                    # Add to penalty box: current time + (2 * polling interval)
+                    self.send_log(f"WARNING: Capacity unavailable for {resource}. Cooldown activated.")
                     cooldown_period = self.polling_interval_time_min * MINUTE * 2
                     self._failed_resources_cooldown[resource] = time() + cooldown_period
-
 
                 except Exception as ex:
                     self.logger.exception(
@@ -367,20 +385,25 @@ class AutoScaler(object):
                 # skip resource types that might be needed
                 if resource_name in required_idle_resources:
                     continue
-                # Remove from both cloud and clearml all instances that are idle for longer than MAX_IDLE_TIME_MIN
-                if time() - timestamp > self.max_idle_time_min * MINUTE:
-                    # --- CUSTOM LOG: Shutdown decision with duration ---
-                    idle_duration_min = (time() - timestamp) / 60.0
-                    self.logger.info(f"CHECK: Worker {worker_id} has been idle for {idle_duration_min:.2f} minutes (Limit: {self.max_idle_time_min} min).")
+                
+                idle_duration = time() - timestamp
 
+                # --- CUSTOM LOG: Periodic Idle Check ---
+                # Log only if idle > 1 minute to avoid spamming
+                if idle_duration > 60:
+                     self.logger.info(f"CHECK: Worker {worker_id} has been idle for {idle_duration/60:.1f}m (Limit: {self.max_idle_time_min}m).")
+
+                # Remove from both cloud and clearml all instances that are idle for longer than MAX_IDLE_TIME_MIN
+                if idle_duration > self.max_idle_time_min * MINUTE:
                     if not self.is_worker_still_idle(worker_id):
                         # Skip worker if no more idle
                         continue
                     wid = WorkerId(worker_id)
                     cloud_id = wid.cloud_id
                     
-                    self.logger.info(f"ACTION: Terminating worker {worker_id} (Cloud ID: {cloud_id}) due to inactivity.")
-                    
+                    # --- CUSTOM LOG: Shutdown Action ---
+                    self.send_log(f"ACTION: Terminating idle worker {worker_id} (Idle {idle_duration/60:.1f}m)")
+
                     self.driver.spin_down_worker(cloud_id)
                     up_machines[wid.name] -= 1
                     self.logger.info("Spin down instance cloud id %r", cloud_id)
@@ -390,7 +413,7 @@ class AutoScaler(object):
                 self.report_app_stats(task_logger, queue_id_to_name, up_machines, idle_workers)
 
             # Nothing else to do
-            self.logger.info("Idle for %.2f seconds", self.polling_interval_time_min * MINUTE)
+            # self.logger.info("Idle for %.2f seconds", self.polling_interval_time_min * MINUTE)
             sleep(self.polling_interval_time_min * MINUTE)
 
     def update_idle_workers(
@@ -410,10 +433,12 @@ class AutoScaler(object):
                     worker_time = worker_last_time(worker)
                     idle_workers[worker.id] = (worker_time, resource_name, worker)
                     
-                    # --- CUSTOM LOG: Machine entering idle mode ---
-                    self.logger.info(f"STATUS: Worker {worker.id} entered IDLE state. (Last activity: {worker_time})")
-                    
+                    # --- CUSTOM LOG: Enter Idle Mode ---
+                    self.send_log(f"STATUS: Worker {worker.id} entered IDLE state.")
+
             elif worker.id in idle_workers:
+                # --- CUSTOM LOG: Picked up Task ---
+                self.send_log(f"STATUS: Worker {worker.id} is no longer idle (picked up task).")
                 idle_workers.pop(worker.id, None)
 
     def _running(self) -> bool:
