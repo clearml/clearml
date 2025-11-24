@@ -1,0 +1,4 @@
+clearml==1.17.0
+transformers==4.42.3
+datasets==2.20.0
+peft==0.11.1
