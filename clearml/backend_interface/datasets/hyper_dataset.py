@@ -3,12 +3,15 @@ from typing import Optional, List, Dict, Any, Sequence
 from ...backend_api.services import datasets
 from ...backend_api import Session
 from ..base import IdObjectBase
-from ..util import get_or_create_project, exact_match_regex
+from ..util import exact_match_regex
 from ..session import SendError
 from ...task import Task
 
+# handle import in offline mode
+_SaveFramesRequest = datasets.SaveFramesRequest if getattr(datasets, "SaveFramesRequest", None) else object
 
-class _SaveFramesRequestNoValidate(datasets.SaveFramesRequest):
+
+class _SaveFramesRequestNoValidate(_SaveFramesRequest):
     def validate(self, schema=None):
         pass
 

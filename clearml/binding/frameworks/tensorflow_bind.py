@@ -500,7 +500,7 @@ class EventTrainsWriter(object):
         step: int,
         img_data_np: Union[None, np.ndarray, str],
         max_keep_images: int = None,
-    ) -> ():
+    ) -> None:
         # only report images every specific interval
         if step % self.image_report_freq != 0:
             return None

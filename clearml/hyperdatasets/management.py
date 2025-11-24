@@ -1,11 +1,9 @@
-from typing import Optional, Sequence, List, Dict, Any, Type, TypeVar, TYPE_CHECKING
+from typing import Optional, Sequence, List, Dict, Any, Type, TypeVar
 
 from clearml.backend_api import Session
 from clearml.backend_interface.util import get_existing_project
 from clearml.backend_interface.datasets.hyper_dataset import HyperDatasetManagementBackend
 
-if TYPE_CHECKING:
-    from .core import HyperDataset  # pragma: no cover
 
 HD = TypeVar("HD", bound="HyperDatasetManagement")
 

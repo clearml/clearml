@@ -150,7 +150,7 @@ class HttpRouter:
             error_callback=error_callback,
         )
 
-    def remove_local_route(self, source: str) -> ():
+    def remove_local_route(self, source: str) -> None:
         """
         Remove a local route. If endpoint telemetry is enabled for that route, disable it
 

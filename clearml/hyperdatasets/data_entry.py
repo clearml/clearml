@@ -339,11 +339,6 @@ class DataEntry:
         sub_entries: List[DataSubEntry] = []
         for idx, s in enumerate(sources):
             name = _get(s, "id") or f"source_{idx}"
-            uri = _get(s, "uri")
-            preview = None
-            p = _get(s, "preview")
-            if p:
-                preview = _get(p, "uri")
             # map sub-metadata if exists under frame.meta[name]
             sub_meta_raw = raw_meta.get(name) if isinstance(raw_meta, dict) else None
             sub_meta_clean: Optional[Dict[str, Any]] = None
@@ -455,7 +450,7 @@ class DataSubEntry:
     def set_local_sources_upload_destination(self, local_sources_upload_destination):
         """
         Set an upload destination for the local sources. This will be used when uploading the data entry
-        
+
         :param local_sources_upload_destination: URL to the upload path
         """
         self._local_sources_upload_destination = local_sources_upload_destination

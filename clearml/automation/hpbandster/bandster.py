@@ -233,7 +233,7 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
         random_fraction: Optional[float] = 1 / 3.0,
         bandwidth_factor: Optional[float] = 3,
         min_bandwidth: Optional[float] = 1e-3,
-    ) -> ():
+    ) -> None:
         """
         Defaults copied from BOHB constructor, see details in BOHB.__init__
 
@@ -296,7 +296,7 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
         self._bohb_kwargs["bandwidth_factor"] = bandwidth_factor
         self._bohb_kwargs["min_bandwidth"] = min_bandwidth
 
-    def start(self) -> ():
+    def start(self) -> None:
         """
         Start the Optimizer controller function loop()
         If the calling process is stopped, the controller will stop as well.
@@ -351,7 +351,7 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
         # Step 4: if we get here, Shutdown
         self.stop()
 
-    def stop(self) -> ():
+    def stop(self) -> None:
         """
         Stop the current running optimization loop,
         Called from a different thread than the :meth:`start`.

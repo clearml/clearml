@@ -22,7 +22,7 @@ from clearml.config import running_remotely, get_remote_task_id, get_node_id, ge
 from clearml.task import Task
 from clearml.storage.manager import StorageManagerDiskSpaceFileSizeStrategy
 import logging
-from .data_entry import DataEntry, DataSubEntry, ENTRY_CLASS_KEY, _resolve_class
+from .data_entry import DataEntry, ENTRY_CLASS_KEY, _resolve_class
 from .data_entry_image import DataEntryImage
 from .management import HyperDatasetManagement
 
@@ -45,12 +45,13 @@ class HyperDatasetQuery:
         """
         if not lucene_parser:
             if not cls.lucene_parser_warning_sent:
-                logging.getLogger("DataView").warning("Could not validate lucene query because 'luqum' is not installed. "
+                logging.getLogger("DataView").warning(
+                    "Could not validate lucene query because 'luqum' is not installed. "
                     "Run 'pip install luqum' to enable query validation"
                 )
                 cls.lucene_parser_warning_sent = True
             return
-            
+
         if not lucene_query:
             return
         try:
@@ -186,6 +187,7 @@ class HyperDatasetQuery:
                     self._dataset_id, self._version_id
                 )
             )
+
 
 class DataView:
     _MAX_BATCH_SIZE = 10000
@@ -758,6 +760,7 @@ class DataView:
         - force_download: bypass local cache if True
         """
         from concurrent.futures import ThreadPoolExecutor, as_completed
+
         self._ensure_created()
 
         it = self.get_iterator(query_cache_size=query_cache_size)
@@ -782,7 +785,14 @@ class DataView:
             for data_entry in it:
                 for uri in _extract_uris(data_entry):
                     futures.append(
-                        pool.submit(StorageManagerDiskSpaceFileSizeStrategy.get_local_copy, uri, None, True, None, force_download)
+                        pool.submit(
+                            StorageManagerDiskSpaceFileSizeStrategy.get_local_copy,
+                            uri,
+                            None,
+                            True,
+                            None,
+                            force_download,
+                        )
                     )
             if wait:
                 for f in as_completed(futures):
@@ -1027,7 +1037,11 @@ class DataView:
                 self._closed = True
                 if hasattr(self, "_stop_event"):
                     self._stop_event.set()
-                if getattr(self, "_started", False) and getattr(self, "_fetch_thread", None) and self._fetch_thread.is_alive():
+                if (
+                    getattr(self, "_started", False)
+                    and getattr(self, "_fetch_thread", None)
+                    and self._fetch_thread.is_alive()
+                ):
                     self._fetch_thread.join(timeout=1)
             except Exception:
                 pass

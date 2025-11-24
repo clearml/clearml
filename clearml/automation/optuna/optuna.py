@@ -183,7 +183,7 @@ class OptimizerOptuna(SearchStrategy):
         self._study = continue_previous_study if continue_previous_study else None
         self.parameter_override_history = []
 
-    def start(self) -> ():
+    def start(self) -> None:
         """
         Start the Optimizer controller function loop()
         If the calling process is stopped, the controller will stop as well.
@@ -226,7 +226,7 @@ class OptimizerOptuna(SearchStrategy):
             n_jobs=self._num_concurrent_workers,
         )
 
-    def stop(self) -> ():
+    def stop(self) -> None:
         """
         Stop the current running optimization loop,
         Called from a different thread than the :meth:`start`.

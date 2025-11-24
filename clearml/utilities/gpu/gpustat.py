@@ -38,7 +38,7 @@ class GPUStat(object):
 
     def keys(self) -> Any:
         return self.entry.keys()
-    
+
     def get(self, key: Any, default: Any = None) -> Any:
         return self.entry.get(key, default)
 

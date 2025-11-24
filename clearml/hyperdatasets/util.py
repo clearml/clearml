@@ -301,7 +301,6 @@ def set_dataview(task: "Task", dataview) -> None:
         get_logger("task").warning("Failed applying dataview payload onto task input: {}".format(e))
 
 
-
 def get_dataviews(task: "Task") -> Dict[str, Any]:
     """
     Return a dictionary of HyperDatasets DataView objects reconstructed from this Task

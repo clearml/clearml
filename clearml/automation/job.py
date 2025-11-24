@@ -28,7 +28,7 @@ class BaseJob(object):
     _hashing_callback = None
     _last_batch_status_update_ts = 0
 
-    def __init__(self) -> ():
+    def __init__(self) -> None:
         """
         Base Job is an abstract CLearML Job
         """
@@ -91,7 +91,7 @@ class BaseJob(object):
             logger.warning("Error enqueuing Task {} to {}: {}".format(self.task, queue_name, ex))
         return False
 
-    def abort(self) -> ():
+    def abort(self) -> None:
         """
         Abort currently running job (can be called multiple times)
         """
@@ -168,7 +168,7 @@ class BaseJob(object):
         return str(self.task.data.status_message)
 
     @classmethod
-    def update_status_batch(cls, jobs: Sequence["BaseJob"]) -> ():
+    def update_status_batch(cls, jobs: Sequence["BaseJob"]) -> None:
         """
         Update the status of jobs, in batch_size
 
@@ -491,7 +491,7 @@ class BaseJob(object):
         return None
 
     @classmethod
-    def _set_task_cache_hash(cls, task: Task, task_hash: Optional[str] = None) -> ():
+    def _set_task_cache_hash(cls, task: Task, task_hash: Optional[str] = None) -> None:
         """
         Store the task state hash for later querying
         :param task: The Task object that was created
@@ -524,7 +524,7 @@ class ClearmlJob(BaseJob):
         output_uri: Optional[Union[str, bool]] = None,
         enable_local_imports: bool = True,
         **kwargs: Any,
-    ) -> ():
+    ) -> None:
         """
         Create a new Task based on a base_task_id with a different set of parameters
 
@@ -807,7 +807,7 @@ class RunningJob(BaseJob):
         self.task = existing_task if isinstance(existing_task, Task) else Task.get_task(task_id=existing_task)
         self.task_started = bool(self.task.status != Task.TaskStatusEnum.created)
 
-    def force_set_is_cached(self, cached: bool) -> ():
+    def force_set_is_cached(self, cached: bool) -> None:
         self._is_cached_task = bool(cached)
 
 
@@ -837,7 +837,7 @@ class _JobStub(object):
         task_overrides: Optional[Mapping[str, str]] = None,
         tags: Optional[Sequence[str]] = None,
         **kwargs: Any,
-    ) -> ():
+    ) -> None:
         self.task = None
         self.base_task_id = base_task_id
         self.parameter_override = parameter_override
@@ -846,12 +846,12 @@ class _JobStub(object):
         self.iteration = -1
         self.task_started = None
 
-    def launch(self, queue_name: str = None) -> ():
+    def launch(self, queue_name: str = None) -> None:
         self.iteration = 0
         self.task_started = time()
         print("launching", self.parameter_override, "in", queue_name)
 
-    def abort(self) -> ():
+    def abort(self) -> None:
         self.task_started = -1
 
     def elapsed(self) -> float:

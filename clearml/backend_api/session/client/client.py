@@ -553,7 +553,7 @@ class APIClient(object):
             services = OrderedDict((name, getattr(_api_services, name)) for name in _api_services.__all__)
         self._update_services(services)
 
-    def _update_services(self, services: Dict[str, types.ModuleType]) -> ():
+    def _update_services(self, services: Dict[str, types.ModuleType]) -> None:
         self.__dict__.update(
             dict(
                 {name: make_service_class(module)(self.session) for name, module in services.items()},
