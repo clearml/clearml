@@ -1,6 +1,6 @@
 hyper_params:
-  cloud_credentials_key: XXXXXXXXXXXXXXXXx
-  cloud_credentials_secret: XXXXXXXXXXXXXXXXXXXXXX
+  cloud_credentials_key: XXXXXXXXXXXXXXXXXX
+  cloud_credentials_secret: XXXXXXXXXXXXXXXXXX
   cloud_credentials_region: us-east-1
   cloud_provider: ''
   default_docker_image: nvidia/cuda:10.1-runtime-ubuntu18.04
@@ -19,19 +19,19 @@ configurations:
   queues:
     aws_gpu_12x:
     - - dev-g5-12x-large-a
-      - 1
+      - 2
     - - dev-g5-12x-large-b
-      - 1
+      - 2
     - - dev-g5-12x-large-c
-      - 1
+      - 2
     - - dev-g5-12x-large-d
-      - 1
+      - 2
     - - dev-g5-12x-large-e
-      - 1
+      - 2
 
   resource_configurations:
     dev-g5-12x-large-a:
-      ami_id: ami-XXXXXXXXX
+      ami_id: ami-XXXXX
       ebs_device_name: /dev/sda1
       ebs_volume_size: 200
       ebs_volume_type: gp3
@@ -39,11 +39,12 @@ configurations:
       is_spot: false
       key_name: g5-test
       security_group_ids:
-      - sg-XXXXXXXXXXXXX
-      subnet_id: subnet-XXXXXXXXXXXXXX
+      - sg-XXXXX
+      subnet_id: subnet-XXXXXXXXXX
+      tags: "Name=clearml-worker-g5-a"
     
     dev-g5-12x-large-b:
-      ami_id: ami-XXXXXXXXXXXXXXX
+      ami_id: ami-XXXXX
       ebs_device_name: /dev/sda1
       ebs_volume_size: 200
       ebs_volume_type: gp3
@@ -51,11 +52,12 @@ configurations:
       is_spot: false
       key_name: g5-test
       security_group_ids:
-      - sg-XXXXXXXXXXXXXXXX
-      subnet_id: subnet-XXXXXXXXXXXXXX
-    
+      - sg-XXXXX
+      subnet_id: subnet-XXXXX
+      tags: "Name=clearml-worker-g5-b"
+
     dev-g5-12x-large-c:
-      ami_id: ami-XXXXXXXXXXXX
+      ami_id: ami-XXXXX
       ebs_device_name: /dev/sda1
       ebs_volume_size: 200
       ebs_volume_type: gp3
@@ -63,11 +65,12 @@ configurations:
       is_spot: false
       key_name: g5-test
       security_group_ids:
-      - sg-XXXXXXXXXXXX
-      subnet_id: subnet-XXXXXXXXXXXXXXXX
+      - sg-XXXXX
+      subnet_id: subnet-XXXXX
+      tags: "Name=clearml-worker-g5-c"
     
     dev-g5-12x-large-d:
-      ami_id: ami-XXXXXXXXXXXXX
+      ami_id: ami-XXXXX
       ebs_device_name: /dev/sda1
       ebs_volume_size: 200
       ebs_volume_type: gp3
@@ -75,11 +78,12 @@ configurations:
       is_spot: false
       key_name: g5-test
       security_group_ids:
-      - sg-XXXXXXXXXXX
-      subnet_id: subnet-XXXXXXXXXXXXXXX
+      - sg-XXXXX
+      subnet_id: subnet-XXXXX
+      tags: "Name=clearml-worker-g5-d"
     
     dev-g5-12x-large-e:
-      ami_id: ami-XXXXXXXXXXXXXX
+      ami_id: ami-XXXXX
       ebs_device_name: /dev/sda1
       ebs_volume_size: 200
       ebs_volume_type: gp3
@@ -87,5 +91,6 @@ configurations:
       is_spot: false
       key_name: g5-test
       security_group_ids:
-      - sg-XXXXXXXXXXXXXXXX
-      subnet_id: subnet-XXXXXXXXXXXXXXXXX
+      - sg-XXXXX
+      subnet_id: subnet-XXXXX
+      tags: "Name=clearml-worker-g5-e"
