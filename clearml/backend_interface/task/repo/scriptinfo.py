@@ -1,7 +1,7 @@
 import os
 import sys
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import partial
 from tempfile import gettempdir, mkdtemp
 from types import TracebackType
@@ -545,7 +545,7 @@ class _JupyterObserver(object):
                                 name="notebook",
                                 artifact_object=Path(local_jupyter_filename),
                                 preview="See `notebook preview` artifact",
-                                metadata={"UPDATE": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")},
+                                metadata={"UPDATE": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")},
                                 wait_on_upload=True,
                             )
                             # noinspection PyBroadException
@@ -560,7 +560,7 @@ class _JupyterObserver(object):
                                     name="notebook preview",
                                     artifact_object=local_html,
                                     preview="Click `FILE PATH` link",
-                                    metadata={"UPDATE": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")},
+                                    metadata={"UPDATE": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")},
                                     delete_after_upload=True,
                                     wait_on_upload=True,
                                 )

@@ -18,7 +18,7 @@ from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor, TimeoutError, CancelledError
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timezone
 from multiprocessing.pool import ThreadPool, AsyncResult
 from multiprocessing import Lock
 from tempfile import mkstemp
@@ -897,7 +897,7 @@ class _Boto3Driver(_Driver):
             data = {
                 "user": getpass.getuser(),
                 "machine": gethostname(),
-                "time": datetime.utcnow().isoformat(),
+                "time": datetime.now(timezone.utc).isoformat(),
             }
 
             boto_session = boto3.Session(

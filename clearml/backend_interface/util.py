@@ -1,27 +1,8 @@
 import getpass
 import re
 from _socket import gethostname
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any
-
-try:
-    from datetime import timezone
-
-    utc_timezone = timezone.utc
-except ImportError:
-    from datetime import tzinfo, timedelta
-
-    class UTC(tzinfo):
-        def utcoffset(self, dt: datetime) -> timedelta:
-            return timedelta(0)
-
-        def tzname(self, dt: datetime) -> str:
-            return "UTC"
-
-        def dst(self, dt: datetime) -> timedelta:
-            return timedelta(0)
-
-    utc_timezone = UTC()
 
 from ..backend_api.services import projects, queues
 from ..debugging.log import get_logger, LoggerRoot
@@ -46,7 +27,7 @@ def make_message(s: str, **kwargs: Any) -> str:
     except Exception:
         host = "localhost"
 
-    args = dict(user=user, host=host, time=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
+    args = dict(user=user, host=host, time=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
     args.update(kwargs)
     return s % args
 
@@ -190,7 +171,7 @@ def get_num_enqueued_tasks(session: Any, queue_id: str) -> Optional[int]:
 
 # Hack for supporting windows
 def get_epoch_beginning_of_time(timezone_info: Optional[Any] = None) -> datetime:
-    return datetime(1970, 1, 1).replace(tzinfo=timezone_info if timezone_info else utc_timezone)
+    return datetime(1970, 1, 1).replace(tzinfo=timezone_info if timezone_info else timezone.utc)
 
 
 def get_single_result(
