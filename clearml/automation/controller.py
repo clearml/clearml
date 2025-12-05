@@ -523,7 +523,7 @@ class PipelineController(object):
         output_uri: Optional[Union[str, bool]] = None,
         continue_behaviour: Optional[dict] = None,
         stage: Optional[str] = None,
-        update_execution_plot: bool = False
+        update_execution_plot: bool = True
     ) -> bool:
         """
         Add a step to the pipeline execution DAG.
