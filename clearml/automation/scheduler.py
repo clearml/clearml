@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Thread, enumerate as enumerate_threads
 from time import sleep, time
 from typing import List, Union, Optional, Callable, Sequence, Dict, Any
@@ -144,7 +144,7 @@ class ScheduleJob(BaseScheduleJob):
 
         # make sure we have a starting time
         if not self.starting_time:
-            self.starting_time = datetime.utcnow()
+            self.starting_time = datetime.now(timezone.utc)
 
         # check if we have a specific date
         if self.year and self.year > 2000:
@@ -280,7 +280,7 @@ class ScheduleJob(BaseScheduleJob):
         if self._last_executed or self.starting_time != datetime.fromtimestamp(0):
             self._schedule_counter += 1
 
-        self._last_executed = datetime.utcnow()
+        self._last_executed = datetime.now(timezone.utc)
         if self.execution_limit_hours and task_id:
             self._execution_timeout = self._last_executed + relativedelta(
                 hours=int(self.execution_limit_hours),
@@ -682,7 +682,7 @@ class TaskScheduler(BaseScheduler):
             task_parameters=task_parameters,
             task_overrides=task_overrides,
             clone_task=not bool(reuse_task),
-            starting_time=datetime.fromtimestamp(0) if execute_immediately else datetime.utcnow(),
+            starting_time=datetime.fromtimestamp(0) if execute_immediately else datetime.now(timezone.utc),
             minute=minute,
             hour=hour,
             day=day,
@@ -754,7 +754,7 @@ class TaskScheduler(BaseScheduler):
         if timeout_job_datetime is not None:
             next_time_stamp = min(next_time_stamp, timeout_job_datetime) if next_time_stamp else timeout_job_datetime
 
-        sleep_time = (next_time_stamp - datetime.utcnow()).total_seconds()
+        sleep_time = (next_time_stamp - datetime.now(timezone.utc)).total_seconds()
         if sleep_time > 0:
             # sleep until we need to run a job or maximum sleep time
             seconds = min(sleep_time, 60.0 * self._sync_frequency_minutes)
@@ -934,13 +934,13 @@ class TaskScheduler(BaseScheduler):
                 if executed_job.task_id:
                     t = Task.get_task(task_id=executed_job.task_id)
                     if t.status not in ("in_progress", "queued"):
-                        executed_job.finished = t.data.completed or datetime.utcnow()
+                        executed_job.finished = t.data.completed or datetime.now(timezone.utc)
                 elif executed_job.thread_id:
                     # noinspection PyBroadException
                     try:
                         a_thread = [t for t in enumerate_threads() if t.ident == executed_job.thread_id]
                         if not a_thread or not a_thread[0].is_alive():
-                            executed_job.finished = datetime.utcnow()
+                            executed_job.finished = datetime.now(timezone.utc)
                     except Exception:
                         pass
 
@@ -973,7 +973,7 @@ class TaskScheduler(BaseScheduler):
         # make sure this is not a function job
         if task_job:
             self._executed_jobs.append(
-                ExecutedJob(name=job.name, task_id=task_job.task_id(), started=datetime.utcnow())
+                ExecutedJob(name=job.name, task_id=task_job.task_id(), started=datetime.now(timezone.utc))
             )
             # add timeout check
             if job.get_execution_timeout():
@@ -989,7 +989,7 @@ class TaskScheduler(BaseScheduler):
                 ExecutedJob(
                     name=job.name,
                     thread_id=str(thread_job.ident),
-                    started=datetime.utcnow(),
+                    started=datetime.now(timezone.utc),
                 )
             )
             # execution timeout is not supported with function callbacks.

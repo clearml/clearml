@@ -251,7 +251,7 @@ class GitDetector(Detector):
             commit=["git", "rev-parse", "HEAD"],
             root=["git", "rev-parse", "--show-toplevel"],
             status=["git", "status", "-s"],
-            diff=["git", "diff", "--submodule=diff", "HEAD"],
+            diff=["git", "diff", "--submodule=diff", "--default-prefix", "HEAD"],
             modified=["git", "ls-files", "-m"],
             branch_fallback=["git", "rev-parse", "--abbrev-ref", "HEAD"],
             diff_fallback=["git", "diff", "HEAD"],

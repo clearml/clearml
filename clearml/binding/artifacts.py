@@ -357,7 +357,7 @@ class Artifacts(object):
         artifact: DataFrame,
         metadata: Optional[dict] = None,
         uniqueness_columns: Union[bool, Sequence[str]] = True,
-    ) -> ():
+    ) -> None:
         """
         :param str name: name of the artifacts. Notice! it will override previous artifacts if name already exists.
         :param pandas.DataFrame artifact: artifact object, supported artifacts object types: pandas.DataFrame
@@ -376,7 +376,7 @@ class Artifacts(object):
         if metadata:
             self._artifacts_container.add_metadata(name, metadata)
 
-    def unregister_artifact(self, name: str) -> ():
+    def unregister_artifact(self, name: str) -> None:
         # Remove artifact from the watch list
         self._unregister_request.add(name)
         self.flush()
@@ -885,13 +885,13 @@ class Artifacts(object):
 
         return True
 
-    def flush(self) -> ():
+    def flush(self) -> None:
         # start the thread if it hasn't already:
         self._start()
         # flush the current state of all artifacts
         self._flush_event.set()
 
-    def stop(self, wait: bool = True) -> ():
+    def stop(self, wait: bool = True) -> None:
         # stop the daemon thread and quit
         # wait until thread exists
         self._exit_flag = True
@@ -907,7 +907,7 @@ class Artifacts(object):
                 except Exception:
                     pass
 
-    def _start(self) -> ():
+    def _start(self) -> None:
         """Start daemon thread if any artifacts are registered and thread is not up yet"""
         if not self._thread and self._artifacts_container:
             # start the daemon thread
@@ -916,7 +916,7 @@ class Artifacts(object):
             self._thread.daemon = True
             self._thread.start()
 
-    def _daemon(self) -> ():
+    def _daemon(self) -> None:
         while not self._exit_flag:
             self._flush_event.wait(self._flush_frequency_sec)
             self._flush_event.clear()
@@ -939,7 +939,7 @@ class Artifacts(object):
             # noinspection PyProtectedMember
             self._task._add_artifacts(self._task_artifact_list)
 
-    def _upload_data_audit_artifacts(self, name: str) -> ():
+    def _upload_data_audit_artifacts(self, name: str) -> None:
         logger = self._task.get_logger()
         pd_artifact = self._artifacts_container.get(name)
         pd_metadata = self._artifacts_container.get_metadata(name)

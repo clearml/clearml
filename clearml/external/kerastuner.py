@@ -19,7 +19,7 @@ else:
 
     class ClearmlTunerLogger(Logger):
         # noinspection PyTypeChecker
-        def __init__(self, task: Optional[Task] = None) -> ():
+        def __init__(self, task: Optional[Task] = None) -> None:
             super(ClearmlTunerLogger, self).__init__()
             self.task = task or Task.current_task()
             if not self.task:
@@ -29,11 +29,11 @@ else:
                 )
             self._summary = pd.DataFrame() if pd else None
 
-        def register_tuner(self, tuner_state: dict) -> ():
+        def register_tuner(self, tuner_state: dict) -> None:
             """Informs the logger that a new search is starting."""
             pass
 
-        def register_trial(self, trial_id: str, trial_state: dict) -> ():
+        def register_trial(self, trial_id: str, trial_state: dict) -> None:
             """Informs the logger that a new Trial is starting."""
             if not self.task:
                 return
@@ -46,7 +46,7 @@ else:
             self.task.get_logger()._set_tensorboard_series_prefix(trial_id + " ")
             self.report_trial_state(trial_id, trial_state)
 
-        def report_trial_state(self, trial_id: str, trial_state: dict) -> ():
+        def report_trial_state(self, trial_id: str, trial_state: dict) -> None:
             if self._summary is None or not self.task:
                 return
 

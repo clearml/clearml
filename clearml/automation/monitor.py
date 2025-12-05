@@ -13,7 +13,7 @@ class Monitor(object):
     Inherit to implement specific logic
     """
 
-    def __init__(self) -> ():
+    def __init__(self) -> None:
         self._timestamp = None
         self._previous_timestamp = None
         self._task_name_filter = None
@@ -28,7 +28,7 @@ class Monitor(object):
         project_names: Optional[Sequence[str]] = None,
         project_names_re: Optional[Sequence[str]] = None,
         project_ids: Optional[Sequence[str]] = None,
-    ) -> ():
+    ) -> None:
         """
         Set the specific projects to monitor, default is all projects.
 
@@ -42,7 +42,7 @@ class Monitor(object):
         if project_names:
             self._project_names_re += [exact_match_regex(name) for name in project_names]
 
-    def set_task_name_filter(self, task_name_filter: Optional[str] = None) -> ():
+    def set_task_name_filter(self, task_name_filter: Optional[str] = None) -> None:
         """
         Set the task filter selection
 
@@ -51,7 +51,7 @@ class Monitor(object):
         """
         self._task_name_filter = task_name_filter or None
 
-    def monitor(self, pool_period: float = 15.0) -> ():
+    def monitor(self, pool_period: float = 15.0) -> None:
         """
         Main loop function, this call will never leave, it implements the main monitoring loop.
         Every loop step, `monitor_step` is called (implementing the filter/query interface)
@@ -83,7 +83,7 @@ class Monitor(object):
             # sleep until the next poll
             sleep(pool_period)
 
-    def monitor_step(self) -> ():
+    def monitor_step(self) -> None:
         """
         Implement the main query / interface of the monitor class.
         In order to combine multiple Monitor objects, call `monitor_step` manually.
@@ -179,7 +179,7 @@ class Monitor(object):
             self._clearml_apiclient = APIClient()
         return self._clearml_apiclient
 
-    def _setup(self) -> ():
+    def _setup(self) -> None:
         """
         Optional add one time setup process, before starting the monitoring loop
         :return:

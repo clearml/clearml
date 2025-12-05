@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import enumerate as enumerate_threads
 from typing import List, Optional, Union, Callable, Set, Any
 
@@ -543,7 +543,7 @@ class TriggerScheduler(BaseScheduler):
 
         executed = False
         for trigger in self._model_triggers + self._dataset_triggers + self._task_triggers:
-            ref_time = datetime_from_isoformat(trigger.last_update or datetime.utcnow())
+            ref_time = datetime_from_isoformat(trigger.last_update or datetime.now(timezone.utc))
             objects = []
             try:
                 # noinspection PyProtectedMember
@@ -569,7 +569,7 @@ class TriggerScheduler(BaseScheduler):
                 if obj.id in trigger._triggered_instances:
                     continue
 
-                trigger._triggered_instances[obj.id] = datetime.utcnow()
+                trigger._triggered_instances[obj.id] = datetime.now(timezone.utc)
                 self._launch_job(trigger, obj.id)
 
         return executed
@@ -592,7 +592,7 @@ class TriggerScheduler(BaseScheduler):
                     ExecutedTrigger(
                         name=job.name,
                         task_id=task_job.task_id(),
-                        started=datetime.utcnow(),
+                        started=datetime.now(timezone.utc),
                         trigger=str(job.__class__.__name__),
                     )
                 )
@@ -603,7 +603,7 @@ class TriggerScheduler(BaseScheduler):
                     ExecutedTrigger(
                         name=job.name,
                         thread_id=str(thread_job.ident),
-                        started=datetime.utcnow(),
+                        started=datetime.now(timezone.utc),
                         trigger=str(job.__class__.__name__),
                     )
                 )
@@ -754,13 +754,13 @@ class TriggerScheduler(BaseScheduler):
                 if executed_job.task_id:
                     t = Task.get_task(task_id=executed_job.task_id)
                     if t.status not in ("in_progress", "queued"):
-                        executed_job.finished = t.data.completed or datetime.utcnow()
+                        executed_job.finished = t.data.completed or datetime.now(timezone.utc)
                 elif executed_job.thread_id:
                     # noinspection PyBroadException
                     try:
                         a_thread = [t for t in enumerate_threads() if t.ident == executed_job.thread_id]
                         if not a_thread or not a_thread[0].is_alive():
-                            executed_job.finished = datetime.utcnow()
+                            executed_job.finished = datetime.now(timezone.utc)
                     except Exception:
                         pass
 

@@ -287,7 +287,7 @@ class CacheManager(object):
                         pass
             return True
 
-        def lock_cache_folder(self, local_path: Union[str, Path]) -> ():
+        def lock_cache_folder(self, local_path: Union[str, Path]) -> None:
             """
             Lock a specific cache folder, making sure it will not be deleted in the next
             cache cleanup round
@@ -325,7 +325,7 @@ class CacheManager(object):
             self._folder_locks[local_path.as_posix()] = lock
             self._rlock.release()
 
-        def unlock_cache_folder(self, local_path: Union[str, Path]) -> ():
+        def unlock_cache_folder(self, local_path: Union[str, Path]) -> None:
             """
             Lock a specific cache folder, making sure it will not be deleted in the next
             cache cleanup round
@@ -378,7 +378,7 @@ class CacheManager(object):
         return CacheManager._local_to_remote_url_lookup.get(hash(conform_local_copy_path), local_copy_path)
 
     @staticmethod
-    def _add_remote_url(remote_url: str, local_copy_path: str) -> ():
+    def _add_remote_url(remote_url: str, local_copy_path: str) -> None:
         # so that we can disable the cache lookup altogether
         if CacheManager._local_to_remote_url_lookup is None:
             return
