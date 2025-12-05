@@ -58,13 +58,28 @@ class PatchFire:
     __command_args = {}
 
     @classmethod
+    def update_current_task(cls, task: Optional["Task"] = None) -> None:
+        cls._current_task = task
+        if not task:
+            # Reset accumulated state when task is None (cleanup for test isolation)
+            # Note: __patched and __default_args are NOT reset - they should persist
+            cls._args = {}
+            cls._PatchFire__remote_task_params = None
+            cls._PatchFire__remote_task_params_dict = {}
+            cls._PatchFire__groups = []
+            cls._PatchFire__commands = {}
+            cls._PatchFire__current_command = None
+            cls._PatchFire__fetched_current_command = False
+            cls._PatchFire__command_args = {}
+            return
+        cls._update_task_args()
+
+    @classmethod
     def patch(cls, task: Optional["Task"] = None) -> None:
         if fire is None:
             return
 
-        cls._current_task = task
-        if task:
-            cls._update_task_args()
+        cls.update_current_task(task)
 
         if not cls.__patched:
             cls.__patched = True
