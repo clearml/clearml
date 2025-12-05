@@ -248,7 +248,7 @@ class PipelineController(object):
         skip_global_imports: bool = False,
         working_dir: Optional[str] = None,
         enable_local_imports: bool = True,
-        aborted_nonresponsive_as_running: bool = False
+        aborted_nonresponsive_as_running: bool = True
     ) -> None:
         """
         Create a new pipeline controller. The newly created object will launch and monitor the new experiments.
