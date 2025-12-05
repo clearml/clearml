@@ -248,6 +248,7 @@ class PipelineController(object):
         skip_global_imports: bool = False,
         working_dir: Optional[str] = None,
         enable_local_imports: bool = True,
+        aborted_nonresponsive_as_running: bool = True
     ) -> None:
         """
         Create a new pipeline controller. The newly created object will launch and monitor the new experiments.
@@ -346,6 +347,8 @@ class PipelineController(object):
             script resides in (sys.path[0]).
             If False, the directory won't be appended to PYTHONPATH. Default is True.
             Ignored while running remotely.
+        :param aborted_nonresponsive_as_running: If True, treat aborted due to non-responsiveness tasks as running.
+        ️    Default is False. This is useful if you expect VM's unplanned crushes, like in spot instances.
         """
         if auto_version_bump is not None:
             warnings.warn(
@@ -384,6 +387,7 @@ class PipelineController(object):
         self._artifact_deserialization_function = artifact_deserialization_function
         self._skip_global_imports = skip_global_imports
         self._enable_local_imports = enable_local_imports
+        self._aborted_nonresponsive_as_running = aborted_nonresponsive_as_running
         if not self._task:
             pipeline_project_args = self._create_pipeline_project_args(name, project)
 
@@ -433,6 +437,9 @@ class PipelineController(object):
         # make sure we add to the main Task the pipeline tag
         if self._task and not self._pipeline_as_sub_project():
             self._task.add_tags([self._tag])
+
+        # make sure the task is updated with UI changes of hyper-parameters so self.get_parameters() fetches them properly
+        self._serialize_pipeline_task()
 
         self._monitored_nodes: Dict[str, dict] = {}
         self._abort_running_steps_on_failure = abort_on_failure
@@ -515,7 +522,8 @@ class PipelineController(object):
         recursively_parse_parameters: bool = False,
         output_uri: Optional[Union[str, bool]] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
+        update_execution_plot: bool = True
     ) -> bool:
         """
         Add a step to the pipeline execution DAG.
@@ -773,7 +781,7 @@ class PipelineController(object):
         if status_change_callback:
             self._status_change_callbacks[name] = status_change_callback
 
-        if self._task and not self._task.running_locally():
+        if self._task and not self._task.running_locally() and update_execution_plot:
             self.update_execution_plot()
 
         return True
@@ -4123,16 +4131,17 @@ class PipelineDecorator(PipelineController):
                 node = self._nodes[j]
                 if not node.job:
                     continue
-                if node.job.is_stopped(aborted_nonresponsive_as_running=True):
+                if node.job.is_stopped(aborted_nonresponsive_as_running=self._aborted_nonresponsive_as_running):
                     node_failed = node.job.is_failed()
-                    if node_failed:
+                    node_crushed = node.job.is_forced_stopped_non_responsive()
+                    if node_failed or node_crushed:
                         if self._call_retries_callback(node):
                             self._relaunch_node(node)
                             continue
                         else:
                             self._final_failure[node.name] = True
-                    completed_jobs.append(j)
 
+                    completed_jobs.append(j)
                     if node.job.is_aborted():
                         node.executed = node.job.task_id() if not node.skip_children_on_abort else False
                     elif node_failed:
