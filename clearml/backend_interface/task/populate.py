@@ -181,7 +181,7 @@ class CreateAndPopulate(object):
                 try:
                     if entry_point and Path(entry_point).is_file() and self.folder and Path(self.folder).is_dir():
                         # make sure we raise exception if this is outside the local repo folder
-                        entry_point = (Path(entry_point) / (Path(entry_point).relative_to(self.folder))).as_posix()
+                        entry_point = (Path(entry_point).parent / (Path(entry_point).relative_to(self.folder))).as_posix()
                 except ValueError:
                     entry_point = self.folder
                     stand_alone_script_outside_repo = True
