@@ -477,7 +477,7 @@ class ConfigParser(object):
             # the file can be { ... } where {} can be omitted or []
             config_expr = ZeroOrMore(comment_eol | eol) + (list_expr | root_dict_expr |
                                                            inside_root_dict_expr) + ZeroOrMore(comment_eol | eol_comma)
-            config = config_expr.parseString(content, parseAll=True)[0]
+            config = config_expr.parse_string(content, parseAll=True)[0]
 
             if resolve:
                 allow_unresolved = resolve and unresolved_value is not DEFAULT_SUBSTITUTION and \
