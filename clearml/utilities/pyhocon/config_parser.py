@@ -359,9 +359,9 @@ class ConfigParser(object):
         @contextlib.contextmanager
         def set_default_white_spaces():
             default = ParserElement.DEFAULT_WHITE_CHARS
-            ParserElement.setDefaultWhitespaceChars(' \t')
+            ParserElement.set_default_whitespace_chars(" \t")
             yield
-            ParserElement.setDefaultWhitespaceChars(default)
+            ParserElement.set_default_whitespace_chars(default)
 
         with set_default_white_spaces():
             assign_expr = Forward()
