@@ -393,10 +393,10 @@ class ConfigParser(object):
             null_expr = Keyword("null", caseless=True).set_parse_action(
                 replace_with(NoneValue())
             )
-            # key = QuotedString('"', escChar='\\', unquoteResults=False) | Word(alphanums + alphas8bit + '._- /')
+            # key = QuotedString('"', esc_char='\\', unquote_results=False) | Word(alphanums + alphas8bit + '._- /')
             regexp_numbers = r'[+-]?(\d*\.\d+|\d+(\.\d+)?)([eE][+\-]?\d+)?(?=$|[ \t]*([\$\}\],#\n\r]|//))'
             key = (
-                QuotedString('"', escChar="\\", unquoteResults=False)
+                QuotedString('"', esc_char="\\", unquote_results=False)
                 | Regex(regexp_numbers, re.DOTALL).set_parse_action(safe_convert_number)
                 | Word(alphanums + alphas8bit + "._- /")
             )
