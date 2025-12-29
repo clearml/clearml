@@ -384,45 +384,57 @@ class ConfigParser(object):
 
         with set_default_white_spaces():
             assign_expr = Forward()
-            true_expr = Keyword("true", caseless=True).setParseAction(
+            true_expr = Keyword("true", caseless=True).set_parse_action(
                 replace_with(True)
             )
-            false_expr = Keyword("false", caseless=True).setParseAction(
+            false_expr = Keyword("false", caseless=True).set_parse_action(
                 replace_with(False)
             )
-            null_expr = Keyword("null", caseless=True).setParseAction(
+            null_expr = Keyword("null", caseless=True).set_parse_action(
                 replace_with(NoneValue())
             )
             # key = QuotedString('"', escChar='\\', unquoteResults=False) | Word(alphanums + alphas8bit + '._- /')
             regexp_numbers = r'[+-]?(\d*\.\d+|\d+(\.\d+)?)([eE][+\-]?\d+)?(?=$|[ \t]*([\$\}\],#\n\r]|//))'
-            key = QuotedString('"', escChar='\\', unquoteResults=False) | \
-                Regex(regexp_numbers, re.DOTALL).setParseAction(safe_convert_number) | \
-                Word(alphanums + alphas8bit + '._- /')
+            key = (
+                QuotedString('"', escChar="\\", unquoteResults=False)
+                | Regex(regexp_numbers, re.DOTALL).set_parse_action(safe_convert_number)
+                | Word(alphanums + alphas8bit + "._- /")
+            )
 
             eol = Word('\n\r').suppress()
             eol_comma = Word('\n\r,').suppress()
             comment = (Literal('#') | Literal('//')) - SkipTo(eol | StringEnd())
             comment_eol = Suppress(Optional(eol_comma) + comment)
             comment_no_comma_eol = (comment | eol).suppress()
-            number_expr = Regex(regexp_numbers, re.DOTALL).setParseAction(convert_number)
+            number_expr = Regex(regexp_numbers, re.DOTALL).set_parse_action(
+                convert_number
+            )
 
             period_types = itertools.chain.from_iterable(cls.get_supported_period_type_map().values())
-            period_expr = Regex(r'(?P<value>\d+)\s*(?P<unit>' + '|'.join(period_types) + ')$'
-                                ).setParseAction(convert_period)
+            period_expr = Regex(
+                r"(?P<value>\d+)\s*(?P<unit>" + "|".join(period_types) + ")$"
+            ).set_parse_action(convert_period)
 
             # multi line string using """
             # Using fix described in http://pyparsing.wikispaces.com/share/view/3778969
-            multiline_string = Regex('""".*?"*"""', re.DOTALL | re.UNICODE).setParseAction(parse_multi_string)
+            multiline_string = Regex(
+                '""".*?"*"""', re.DOTALL | re.UNICODE
+            ).set_parse_action(parse_multi_string)
             # single quoted line string
-            quoted_string = Regex(r'"(?:[^"\\\n]|\\.)*"[ \t]*', re.UNICODE).setParseAction(create_quoted_string)
+            quoted_string = Regex(
+                r'"(?:[^"\\\n]|\\.)*"[ \t]*', re.UNICODE
+            ).set_parse_action(create_quoted_string)
             # unquoted string that takes the rest of the line until an optional comment
             # we support .properties multiline support which is like this:
             # line1  \
             # line2 \
             # so a backslash precedes the \n
-            unquoted_string = Regex(r'(?:[^^`+?!@*&"\[\{\s\]\}#,=\$\\]|\\.)+[ \t]*',
-                                    re.UNICODE).setParseAction(unescape_string)
-            substitution_expr = Regex(r'[ \t]*\$\{[^\}]+\}[ \t]*').setParseAction(create_substitution)
+            unquoted_string = Regex(
+                r'(?:[^^`+?!@*&"\[\{\s\]\}#,=\$\\]|\\.)+[ \t]*', re.UNICODE
+            ).set_parse_action(unescape_string)
+            substitution_expr = Regex(r"[ \t]*\$\{[^\}]+\}[ \t]*").set_parse_action(
+                create_substitution
+            )
             string_expr = multiline_string | quoted_string | unquoted_string
 
             value_expr = period_expr | number_expr | true_expr | false_expr | null_expr | string_expr
@@ -430,12 +442,17 @@ class ConfigParser(object):
             include_content = (quoted_string | ((Keyword('url') | Keyword(
                 'file')) - Literal('(').suppress() - quoted_string - Literal(')').suppress()))
             include_expr = (
-                Keyword("include", caseless=True).suppress() + (
-                    include_content | (
-                        Keyword("required") - Literal('(').suppress() - include_content - Literal(')').suppress()
+                Keyword("include", caseless=True).suppress()
+                + (
+                    include_content
+                    | (
+                        Keyword("required")
+                        - Literal("(").suppress()
+                        - include_content
+                        - Literal(")").suppress()
                     )
                 )
-            ).setParseAction(include_config)
+            ).set_parse_action(include_config)
 
             root_dict_expr = Forward()
             dict_expr = Forward()
