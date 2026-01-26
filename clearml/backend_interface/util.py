@@ -270,7 +270,5 @@ def datetime_from_isoformat(o: str) -> Optional[datetime]:
         return None
     if isinstance(o, datetime):
         return o
-    try:
-        return datetime.strptime(o.split("+")[0], "%Y-%m-%dT%H:%M:%S.%f")
-    except ValueError:
-        return datetime.strptime(o.split("+")[0], "%Y-%m-%dT%H:%M:%S")
+
+    return datetime.fromisoformat(o)
