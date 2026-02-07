@@ -4805,7 +4805,7 @@ class GetLabelKeywordsForRunningTaskResponse(Response):
     Response of datasets.get_label_keywords_for_running_task endpoint.
 
     :param labels: List of objects with properties: name - string - label name
-        count - integer - number of occurences
+        count - integer - number of occurrences
     :type labels: Sequence[dict]
     """
 
@@ -4819,7 +4819,7 @@ class GetLabelKeywordsForRunningTaskResponse(Response):
             "labels": {
                 "description": (
                     "List of objects with properties:\n                    name - string - label name\n                "
-                    "    count - integer - number of occurences"
+                    "    count - integer - number of occurrences"
                 ),
                 "items": {
                     "properties": {
