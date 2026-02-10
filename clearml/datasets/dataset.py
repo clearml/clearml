@@ -1971,6 +1971,7 @@ class Dataset(object):
         dataset_ids: Optional[Sequence[Union[str, "Dataset"]]] = None,
         dataset_project_name_pairs: Optional[Sequence[str]] = None,
         output_url: Optional[str] = None,
+        close_squashed_dataset: Optional[bool] = True,
     ) -> "Dataset":
         """
         Generate a new dataset from the squashed set of dataset versions.
@@ -1984,6 +1985,7 @@ class Dataset(object):
             Notice order does matter. The versions are merged from first to last.
         :param output_url: Target storage for the compressed dataset (default: file server)
             Examples: `s3://bucket/data`, `gs://bucket/data` , `azure://bucket/data` , `/mnt/share/data`
+        :param close_squashed_dataset: Whether the newly created dataset should be uploaded to `output_url` and finalized. 
         :return: Newly created dataset object.
         """
         if Dataset.is_offline():
@@ -2036,8 +2038,9 @@ class Dataset(object):
         squashed_ds.add_files(temp_folder)
         for ds in datasets:
             squashed_ds._dataset_link_entries.update(ds._dataset_link_entries)
-        squashed_ds.upload(output_url=output_url)
-        squashed_ds.finalize()
+        if close_squashed_dataset:
+            squashed_ds.upload(output_url=output_url)
+            squashed_ds.finalize()
         return squashed_ds
 
     @classmethod
