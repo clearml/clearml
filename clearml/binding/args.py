@@ -26,6 +26,19 @@ class PatchArgumentParser:
     _last_arg_parser = None
     _recursion_guard = False
 
+    @classmethod
+    def update_current_task(cls, task: Any) -> None:
+        cls._current_task = task
+        if not task:
+            # Reset accumulated state when task is None (cleanup for test isolation)
+            # Note: _original_* are NOT reset - they store original function references
+            cls._calling_current_task = False
+            cls._last_parsed_args = None
+            cls._last_arg_parser = None
+            cls._recursion_guard = False
+            cls._add_subparsers_counter = 0
+            return
+
     @staticmethod
     def add_subparsers(self, **kwargs: Any) -> _SubParsersAction:
         if "dest" not in kwargs:
@@ -316,7 +329,7 @@ def argparser_parseargs_called() -> bool:
 
 
 def argparser_update_currenttask(task: Any) -> None:
-    PatchArgumentParser._current_task = task
+    PatchArgumentParser.update_current_task(task)
 
 
 def get_argparser_last_args() -> List[Tuple[ArgumentParser, Any]]:
