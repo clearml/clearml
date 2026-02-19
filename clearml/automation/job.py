@@ -290,6 +290,17 @@ class BaseJob(object):
             # if we do not need to ignore the nonactive state, it means this Task stopped
             return True
 
+    def is_forced_stopped_non_responsive(self) -> bool:
+        """
+        Return True, if job was stopped by the non-responsive watchdog
+
+        :return: True the task is currently in stopped state by the non-responsive watchdog
+        """
+        if self.status() == Task.TaskStatusEnum.stopped:
+            if str(self.task.data.status_message).lower() == "forced stop (non-responsive)":
+                return True
+        return False
+
     def is_failed(self) -> bool:
         """
         Return True, if job is has executed and failed
