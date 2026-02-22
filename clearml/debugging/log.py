@@ -165,8 +165,10 @@ class LoggerRoot(object):
         loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
         for logger in loggers:
             handlers = getattr(logger, "handlers", [])
-            for handler in handlers:
+            # Iterate over a copy to avoid modifying the list while removing handlers
+            for handler in handlers[:]:
                 if isinstance(handler, ClearmlLoggerHandler):
+                    handler.close()
                     logger.removeHandler(handler)
 
 
