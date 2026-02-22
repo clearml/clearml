@@ -9,7 +9,7 @@ from ...utilities.pyhocon import ConfigTree
 from .action import Action
 
 
-class Service(object):
+class Service:
     """Service schema handler"""
 
     __jsonschema_ref_ex = re.compile("^#/definitions/(.*)$")

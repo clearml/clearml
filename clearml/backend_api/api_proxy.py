@@ -7,7 +7,7 @@ from .session import Session
 from ..utilities.check_updates import Version
 
 
-class ApiServiceProxy(object):
+class ApiServiceProxy:
     _main_services_module = "clearml.backend_api.services"
     _available_versions = None
 

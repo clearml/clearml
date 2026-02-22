@@ -96,7 +96,7 @@ class _LevelRangeFilter(logging.Filter):
         return self.min_level <= record.levelno <= self.max_level
 
 
-class LoggerRoot(object):
+class LoggerRoot:
     __base_logger = None
 
     @classmethod
@@ -270,7 +270,7 @@ def get_null_logger(name: Optional[str] = None) -> PickledLogger:
     return PickledLogger.wrapper(log, func=get_null_logger, name=name)
 
 
-class TqdmLog(object):
+class TqdmLog:
     """Tqdm (progressbar) wrapped logging class"""
 
     class _TqdmIO(BytesIO):

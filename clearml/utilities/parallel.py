@@ -15,7 +15,7 @@ from ..debugging.log import LoggerRoot
 from ..storage.util import format_size
 
 
-class _DeferredClass(object):
+class _DeferredClass:
     __slots__ = ("__queue", "__future_caller", "__future_func")
 
     def __init__(self, a_future_caller: Any, future_func: str) -> None:
@@ -98,7 +98,7 @@ class _DeferredClass(object):
         return _caller
 
 
-class FutureTaskCaller(object):
+class FutureTaskCaller:
     """
     FutureTaskCaller is used to create a class via a functions async, in another thread.
 
@@ -215,12 +215,12 @@ class FutureTaskCaller(object):
         return self.__deferred_bkg_class
 
 
-class ParallelZipper(object):
+class ParallelZipper:
     """
     Used to zip multiple files in zip chunks of a particular size, all in parallel
     """
 
-    class ZipperObject(object):
+    class ZipperObject:
         def __init__(
             self,
             chunk_size: int,

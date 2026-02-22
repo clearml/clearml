@@ -8,7 +8,7 @@ from ..config import running_remotely, config, DEBUG_SIMULATE_REMOTE_TASK
 from ..utilities.process.mp import ForkSafeRLock
 
 
-class StdStreamPatch(object):
+class StdStreamPatch:
     _stdout_proxy = None
     _stderr_proxy = None
     _stdout_original_write = None
@@ -176,7 +176,7 @@ class StdStreamPatch(object):
         return sys.stderr._original_write(*args, **kwargs)  # noqa
 
 
-class HandlerFormat(object):
+class HandlerFormat:
     def __init__(self, logger: logging.Logger) -> None:
         self._logger = logger
 
@@ -196,7 +196,7 @@ class HandlerFormat(object):
         return msg
 
 
-class PrintPatchLogger(object):
+class PrintPatchLogger:
     """
     Allowed patching a stream into the logger.
     Used for capturing and logging stdin and stderr when running in development mode pseudo worker.

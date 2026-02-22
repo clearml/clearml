@@ -15,7 +15,7 @@ def sequence_of(types: type) -> attr.validators._AndValidator:
 
 
 @attr.s
-class Action(object):
+class Action:
     name = attr.ib()
     version = attr.ib()
     service = attr.ib()

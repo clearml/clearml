@@ -141,7 +141,7 @@ class StrictSession(Session):
         return result
 
 
-class Response(object):
+class Response:
     """
     Proxy object for API result data.
     Exposes "meta" of the original result.
@@ -276,7 +276,7 @@ class TableResponse(Response):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Entity(object):
+class Entity:
     """
     Represent a server object.
     Enables calls like:
@@ -435,7 +435,7 @@ def make_action(service: "Service", request_cls: Type["APIRequest"]) -> Callable
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Service(object):
+class Service:
     """
     Superclass for action-grouping classes.
     """
@@ -511,7 +511,7 @@ class Version(Entity):
         return dict(super(Version, self)._get_default_kwargs(), **{"dataset": self.data.dataset})
 
 
-class APIClient(object):
+class APIClient:
     auth: Any = None
     queues: Any = None
     tasks: Any = None

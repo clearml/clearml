@@ -7,7 +7,7 @@ from ..backend_interface.util import exact_match_regex
 from ..task import Task
 
 
-class Monitor(object):
+class Monitor:
     """
     Base class for monitoring Tasks on the system.
     Inherit to implement specific logic

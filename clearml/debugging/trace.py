@@ -78,7 +78,7 @@ def _traced_call_method(name: str, fnc: Callable) -> Callable:
 
 
 def _traced_call_cls(name: str, fnc: Callable) -> Callable:
-    class WrapperClass(object):
+    class WrapperClass:
         @classmethod
         def _traced_call_int(cls, *args: Any, **kwargs: Any) -> Any:
             _log_stderr(name, fnc, args, kwargs, False)
@@ -96,7 +96,7 @@ def _traced_call_cls(name: str, fnc: Callable) -> Callable:
 
 
 def _traced_call_static(name: str, fnc: Callable) -> Callable:
-    class WrapperStatic(object):
+    class WrapperStatic:
         @staticmethod
         def _traced_call_int(*args: Any, **kwargs: Any) -> Any:
             _log_stderr(name, fnc, args, kwargs, False)

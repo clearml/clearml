@@ -10,7 +10,7 @@ import six
 from ...logger import Logger
 
 
-class ExitHooks(object):
+class ExitHooks:
     _orig_exit = None
     _orig_exc_handler = None
     remote_user_aborted = False

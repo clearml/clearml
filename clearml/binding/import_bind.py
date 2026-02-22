@@ -13,7 +13,7 @@ else:
     import builtins
 
 
-class PostImportHookPatching(object):
+class PostImportHookPatching:
     _patched = False
     _post_import_hooks = defaultdict(list)
 

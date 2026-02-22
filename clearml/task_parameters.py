@@ -124,7 +124,7 @@ class _AttrsMeta(type):
 
 
 @six.add_metaclass(_AttrsMeta)
-class TaskParameters(object):
+class TaskParameters:
     """
     Base class for task parameters.
 

@@ -5,12 +5,12 @@ from clearml import Task
 import fire
 
 
-class Other(object):
+class Other:
     def status(self):
         return "Other"
 
 
-class IngestionStage(object):
+class IngestionStage:
     def __init__(self):
         self.other = Other()
 
@@ -21,7 +21,7 @@ class IngestionStage(object):
         return hello_str
 
 
-class DigestionStage(object):
+class DigestionStage:
     def run(self, volume=1):
         return " ".join(["Burp!"] * volume)
 
@@ -29,7 +29,7 @@ class DigestionStage(object):
         return "Satiated."
 
 
-class Pipeline(object):
+class Pipeline:
     def __init__(self):
         self.ingestion = IngestionStage()
         self.digestion = DigestionStage()

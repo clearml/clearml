@@ -24,7 +24,7 @@ def _url_stripper(bucket: str) -> str:
 
 
 @attrs
-class S3BucketConfig(object):
+class S3BucketConfig:
     """Configuration for an S3 bucket"""
     bucket = attrib(type=str, converter=_url_stripper, default="")
     subdir = attrib(type=str, converter=_url_stripper, default="")
@@ -94,7 +94,7 @@ BucketConfig = S3BucketConfig
 
 
 @six.add_metaclass(abc.ABCMeta)
-class BaseBucketConfigurations(object):
+class BaseBucketConfigurations:
     def __init__(self, buckets: Optional[List[Any]] = None, *_: Any, **__: Any) -> None:
         self._buckets = buckets or []
         self._prefixes = None
@@ -270,7 +270,7 @@ BucketConfigurations = S3BucketConfigurations
 
 
 @attrs
-class GSBucketConfig(object):
+class GSBucketConfig:
     bucket = attrib(type=str)
     subdir = attrib(type=str, converter=_url_stripper, default="")
     project = attrib(type=str, default=None)
@@ -379,7 +379,7 @@ class GSBucketConfigurations(BaseBucketConfigurations):
 
 
 @attrs
-class AzureContainerConfig(object):
+class AzureContainerConfig:
     account_name = attrib(type=str)
     account_key = attrib(type=str)
     container_name = attrib(type=str, default=None)
@@ -395,7 +395,7 @@ class AzureContainerConfig(object):
         return self.account_name and self.container_name
 
 
-class AzureContainerConfigurations(object):
+class AzureContainerConfigurations:
     def __init__(
         self,
         container_configs: List[AzureContainerConfig] = None,

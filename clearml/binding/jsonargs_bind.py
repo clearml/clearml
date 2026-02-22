@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from jsonargparse import ArgumentParser
 
 
-class PatchJsonArgParse(object):
+class PatchJsonArgParse:
     namespace_type = "jsonargparse_namespace"
     path_type = "jsonargparse_path"
     _args = {}

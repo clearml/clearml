@@ -5,7 +5,7 @@ from clearml import Task
 import fire
 
 
-class Calculator(object):
+class Calculator:
     def add(self, x, y):
         return x + y
 

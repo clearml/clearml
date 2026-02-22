@@ -14,7 +14,7 @@ from .collections import ModelCollection
 NotSet = object()
 
 
-class BaseField(object):
+class BaseField:
     """Base class for all fields."""
 
     types = None
@@ -346,7 +346,7 @@ class EmbeddedField(BaseField):
         return value.to_struct()
 
 
-class _LazyType(object):
+class _LazyType:
     def __init__(self, path: str) -> None:
         self.path = path
 

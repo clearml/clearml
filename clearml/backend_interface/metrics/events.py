@@ -22,7 +22,7 @@ from ...utilities.process.mp import SingletonLock
 
 
 @six.add_metaclass(abc.ABCMeta)
-class MetricsEventAdapter(object):
+class MetricsEventAdapter:
     """
     Adapter providing all the base attributes required by a metrics event and defining an interface used by the
     metrics manager when batching and writing events.
@@ -37,7 +37,7 @@ class MetricsEventAdapter(object):
     _report_inf_warning_iteration = float("inf")
 
     @attrs(cmp=False, slots=True)
-    class FileEntry(object):
+    class FileEntry:
         """File entry used to report on file data that needs to be uploaded prior to sending the event"""
 
         event = attr.attrib()

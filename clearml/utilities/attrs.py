@@ -13,7 +13,7 @@ except ImportError:
     attr_version = attr.__version__
 
 
-class attrs(object):
+class attrs:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         if any(x in kwargs for x in ("eq", "order")):
             raise RuntimeError("Only `cmp` is supported for attr.attrs, not `eq` or `order`")

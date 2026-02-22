@@ -17,7 +17,7 @@ from ..utilities.locks.exceptions import LockException
 from ..utilities.locks.utils import Lock as FileLock
 
 
-class CacheManager(object):
+class CacheManager:
     __cache_managers = {}
     _default_cache_file_limit = deferred_config("storage.cache.default_cache_manager_size", 100)
     _storage_manager_folder = "storage_manager"
@@ -29,7 +29,7 @@ class CacheManager(object):
     _lockfile_prefix = ".lock."
     _lockfile_suffix = ".clearml"
 
-    class CacheContext(object):
+    class CacheContext:
         _folder_locks: Dict[str, FileLock] = dict()
         _lockfile_at_exit_cb = None
 

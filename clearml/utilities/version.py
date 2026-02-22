@@ -20,7 +20,7 @@ class InvalidVersion(ValueError):
 
 
 @attrs
-class _Version(object):
+class _Version:
     epoch = attrib()
     release = attrib()
     dev = attrib()
@@ -29,7 +29,7 @@ class _Version(object):
     local = attrib()
 
 
-class _BaseVersion(object):
+class _BaseVersion:
     def __init__(self, key: Any) -> None:
         self._key = key
 

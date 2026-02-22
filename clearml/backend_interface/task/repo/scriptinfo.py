@@ -33,7 +33,7 @@ class ScriptInfoError(Exception):
     pass
 
 
-class ScriptRequirements(object):
+class ScriptRequirements:
     _detailed_import_report = deferred_config("development.detailed_import_report", False)
     _max_requirements_size = 512 * 1024
     _packages_remove_version = ("setuptools",)
@@ -320,7 +320,7 @@ class ScriptRequirements(object):
         return _internal(installed_pkgs)
 
 
-class _JupyterObserver(object):
+class _JupyterObserver:
     _thread = None
     _exit_event = None
     _sync_event = None
@@ -648,7 +648,7 @@ class _JupyterObserver(object):
                 pass
 
 
-class ScriptInfo(object):
+class ScriptInfo:
     _sagemaker_metadata_path = "/opt/ml/metadata/resource-metadata.json"
 
     max_diff_size_bytes = 500000
@@ -1493,13 +1493,13 @@ class ScriptInfo(object):
 
 
 @attr.s
-class ScriptInfoResult(object):
+class ScriptInfoResult:
     script = attr.ib(default=None)
     warning_messages = attr.ib(factory=list)
     auxiliary_git_diff = attr.ib(default=None)
 
 
-class _JupyterHistoryLogger(object):
+class _JupyterHistoryLogger:
     _reg_replace_ipython = r"\n([ \t]*)get_ipython\(\)"
     _reg_replace_magic = r"\n([ \t]*)%"
     _reg_replace_bang = r"\n([ \t]*)!"

@@ -48,7 +48,7 @@ except ImportError:
     pass
 
 
-class DataModel(object):
+class DataModel:
     """Data Model"""
 
     _schema = None
@@ -154,7 +154,7 @@ class UnusedKwargsWarning(UserWarning):
     pass
 
 
-class NonStrictDataModelMixin(object):
+class NonStrictDataModelMixin:
     """
     NonStrictDataModelMixin
 

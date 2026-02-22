@@ -225,7 +225,7 @@ class Task(_Task):
     }
     _external_endpoint_host_tcp_port_mapping = {"tcp_host_mapping": "_external_host_tcp_port_mapping"}
 
-    class _ConnectedParametersType(object):
+    class _ConnectedParametersType:
         argparse = "argument_parser"
         dictionary = "dictionary"
         task_parameters = "task_parameters"

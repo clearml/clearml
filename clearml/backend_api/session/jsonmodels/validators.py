@@ -8,7 +8,7 @@ from .errors import ValidationError
 from . import utilities
 
 
-class Min(object):
+class Min:
     """Validator for minimum value."""
 
     def __init__(self, minimum_value: Any, exclusive: bool = False) -> None:
@@ -41,7 +41,7 @@ class Min(object):
             field_schema["exclusiveMinimum"] = True
 
 
-class Max(object):
+class Max:
     """Validator for maximum value."""
 
     def __init__(self, maximum_value: Any, exclusive: bool = False) -> None:
@@ -74,7 +74,7 @@ class Max(object):
             field_schema["exclusiveMaximum"] = True
 
 
-class Regex(object):
+class Regex:
     """Validator for regular expressions."""
 
     FLAGS = {
@@ -126,7 +126,7 @@ class Regex(object):
         field_schema["pattern"] = utilities.convert_python_regex_to_ecma(self.pattern, self.flags)
 
 
-class Length(object):
+class Length:
     """Validator for length."""
 
     def __init__(self, minimum_value: int = None, maximum_value: int = None) -> None:
@@ -171,7 +171,7 @@ class Length(object):
             field_schema["maxLength"] = self.maximum_value
 
 
-class Enum(object):
+class Enum:
     """Validator for enums."""
 
     def __init__(self, *choices: Any) -> None:

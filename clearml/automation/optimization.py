@@ -293,8 +293,8 @@ class Objective(_ObjectiveInterface):
         )
 
 
-class Budget(object):
-    class Field(object):
+class Budget:
+    class Field:
         def __init__(self, limit: Optional[float] = None) -> ():
             self.limit = limit
             self.current = {}
@@ -340,7 +340,7 @@ class Budget(object):
         return current_budget
 
 
-class SearchStrategy(object):
+class SearchStrategy:
     """
     The base search strategy class. Inherit this class to implement your custom strategy.
     """
@@ -1356,7 +1356,7 @@ class RandomSearch(SearchStrategy):
         return self.helper_create_job(base_task_id=self._base_task_id, parameter_override=parameters)
 
 
-class HyperParameterOptimizer(object):
+class HyperParameterOptimizer:
     """
     Hyperparameter search controller. Clones the base experiment, changes arguments and tries to maximize/minimize
     the defined objective.

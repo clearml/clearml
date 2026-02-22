@@ -11,7 +11,7 @@ except ImportError:
     tqdm = None
 
 
-class ProgressReport(object):
+class ProgressReport:
     report_upload_chunk_size_mb = None
     report_download_chunk_size_mb = None
 

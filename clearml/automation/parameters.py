@@ -4,7 +4,7 @@ from random import Random as BaseRandom
 from typing import Mapping, Sequence, Optional, Union, Any
 
 
-class RandomSeed(object):
+class RandomSeed:
     """
     The base class controlling random sampling for every optimization strategy.
     """

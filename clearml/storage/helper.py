@@ -229,7 +229,7 @@ class _HttpDriver(_Driver):
 
     schemes = ("http", "https")
 
-    class _Container(object):
+    class _Container:
         _default_backend_session = None
 
         def __init__(self, name: str, retries: int = 5, **kwargs: Any) -> None:
@@ -268,7 +268,7 @@ class _HttpDriver(_Driver):
             if self._should_attach_auth_header():
                 return self._default_backend_session.add_auth_headers({})
 
-    class _HttpSessionHandle(object):
+    class _HttpSessionHandle:
         def __init__(
             self,
             url: str,
@@ -468,7 +468,7 @@ class _HttpDriver(_Driver):
             return False
 
 
-class _Stream(object):
+class _Stream:
     encoding = None
     mode = "rw"
     name = ""
@@ -588,7 +588,7 @@ class _Boto3Driver(_Driver):
 
     _bucket_location_failure_reported = set()
 
-    class _Container(object):
+    class _Container:
         _creation_lock = ForkSafeRLock()
 
         def __init__(self, name: str, cfg: S3BucketConfig) -> None:
@@ -614,7 +614,7 @@ class _Boto3Driver(_Driver):
                 self.bucket = self.resource.Bucket(bucket_name)
 
     @attrs
-    class ListResult(object):
+    class ListResult:
         name = attrib(default=None)
         size = attrib(default=None)
 
@@ -1031,7 +1031,7 @@ class _GoogleCloudStorageDriver(_Driver):
     scheme = "gs"
     scheme_prefix = str(furl(scheme=scheme, netloc=""))
 
-    class _Container(object):
+    class _Container:
         def __init__(self, name: str, cfg: Any) -> None:
             try:
                 from google.cloud import storage  # noqa
@@ -1229,7 +1229,7 @@ class _AzureBlobServiceStorageDriver(_Driver):
     _containers = {}
     _max_connections = deferred_config("azure.storage.max_connections", 0)
 
-    class _Container(object):
+    class _Container:
         def __init__(
             self,
             name: str,
@@ -1422,7 +1422,7 @@ class _AzureBlobServiceStorageDriver(_Driver):
             return self.__blob_service
 
     @attrs
-    class _Object(object):
+    class _Object:
         container = attrib()
         blob_name = attrib()
         content_length = attrib()
@@ -1676,7 +1676,7 @@ class _FileStorageDriver(_Driver):
     IGNORE_FOLDERS = [".lock", ".hash"]
     Object = namedtuple("Object", ["name", "size", "extra", "driver", "container", "hash", "meta_data"])
 
-    class _Container(object):
+    class _Container:
         def __init__(self, name: str, extra: dict, driver: Any) -> None:
             self.name = name
             self.extra = extra
@@ -2244,7 +2244,7 @@ class _FileStorageDriver(_Driver):
         return os.path.isfile(object_name)
 
 
-class _StorageHelper(object):
+class _StorageHelper:
     """Storage helper.
     Used by the entire system to download/upload files.
     Supports both local and remote files (currently local files, network-mapped files, HTTP/S and Amazon S3)
@@ -2258,7 +2258,7 @@ class _StorageHelper(object):
         return get_logger("storage")
 
     @attrs
-    class _PathSubstitutionRule(object):
+    class _PathSubstitutionRule:
         registered_prefix = attrib(type=str)
         local_prefix = attrib(type=str)
         replace_windows_sep = attrib(type=bool)
@@ -2305,7 +2305,7 @@ class _StorageHelper(object):
 
             return rules_list
 
-    class _UploadData(object):
+    class _UploadData:
         @property
         def src_path(self) -> str:
             return self._src_path
@@ -3581,10 +3581,10 @@ class StorageHelper(_StorageHelper):
         transform=bool,
     )
 
-    class CacheConfigs(object):
+    class CacheConfigs:
         configs = {}
 
-        class Defaults(object):
+        class Defaults:
             cache_name = None
             cache_base_dir = None
             cleanup_seconds_threshold = None

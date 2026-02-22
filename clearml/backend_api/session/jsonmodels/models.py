@@ -142,5 +142,5 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
         return not (self == other)
 
 
-class _CacheKey(object):
+class _CacheKey:
     """Object to identify model in memory."""

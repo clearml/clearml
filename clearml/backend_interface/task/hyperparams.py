@@ -16,7 +16,7 @@ from ...backend_api import Session
 from ...backend_api.services import tasks
 
 
-class HyperParams(object):
+class HyperParams:
     def __init__(self, task: Any) -> None:
         self.task = task
 

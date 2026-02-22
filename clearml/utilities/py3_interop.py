@@ -7,7 +7,7 @@ import six
 
 
 @six.add_metaclass(abc.ABCMeta)
-class AbstractContextManager(object):
+class AbstractContextManager:
     """An abstract base class for context managers. Supported in contextlib from python 3.6 and up"""
 
     def __enter__(self) -> "AbstractContextManager":

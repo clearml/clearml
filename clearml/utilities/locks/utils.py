@@ -68,7 +68,7 @@ def open_atomic(filename: str, binary: bool = True) -> Generator[tempfile._Tempo
             pass
 
 
-class Lock(object):
+class Lock:
     def __init__(
         self,
         filename: str,

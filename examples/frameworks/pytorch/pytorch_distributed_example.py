@@ -45,7 +45,7 @@ class Net(nn.Module):
         return output
 
 
-class Partition(object):
+class Partition:
     """ Dataset partitioning helper """
     def __init__(self, data, index):
         self.data = data
@@ -59,7 +59,7 @@ class Partition(object):
         return self.data[data_idx]
 
 
-class DataPartitioner(object):
+class DataPartitioner:
     def __init__(self, data, sizes=(0.7, 0.2, 0.1), seed=1234):
         self.data = data
         self.partitions = []

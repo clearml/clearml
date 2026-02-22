@@ -22,7 +22,7 @@ from ..task import Task
 logger = getLogger("clearml.automation.job")
 
 
-class BaseJob(object):
+class BaseJob:
     _job_hash_description = "job_hash={}"
     _job_hash_property = "pipeline_job_hash"
     _hashing_callback = None
@@ -825,7 +825,7 @@ class TrainsJob(ClearmlJob):
 
 
 # noinspection PyMethodMayBeStatic, PyUnusedLocal
-class _JobStub(object):
+class _JobStub:
     """
     This is a Job Stub, use only for debugging
     """

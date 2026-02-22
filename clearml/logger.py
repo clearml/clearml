@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from matplotlib import pyplot  # noqa
 
 
-class Logger(object):
+class Logger:
     """
     The ``Logger`` class is the ClearML console log and metric statistics interface, and contains methods for explicit
     reporting.
@@ -1266,7 +1266,7 @@ class Logger(object):
         :return: a ContextManager
         """
 
-        class _LoggingContext(object):
+        class _LoggingContext:
             def __init__(self, a_logger: Logger) -> None:
                 self.logger = a_logger
 

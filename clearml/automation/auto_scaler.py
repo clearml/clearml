@@ -76,7 +76,7 @@ class ScalerConfig:
         )
 
 
-class AutoScaler(object):
+class AutoScaler:
     def __init__(
         self,
         config: "ScalerConfig",

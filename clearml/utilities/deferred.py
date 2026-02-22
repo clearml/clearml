@@ -6,9 +6,9 @@ import attr
 import six
 
 
-class DeferredExecutionPool(object):
+class DeferredExecutionPool:
     @attr.s
-    class _DeferredAction(object):
+    class _DeferredAction:
         method = attr.ib()
         args = attr.ib()
         kwargs = attr.ib()
@@ -49,7 +49,7 @@ class ParameterizedDefaultDict(dict):
         return self[key]
 
 
-class DeferredExecution(object):
+class DeferredExecution:
     def __init__(self, pool_cls: type = DeferredExecutionPool) -> None:
         self._pools = ParameterizedDefaultDict(pool_cls)
 

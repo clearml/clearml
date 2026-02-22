@@ -171,7 +171,7 @@ class Framework(Options):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class BaseModel(object):
+class BaseModel:
     # noinspection PyProtectedMember
     _archived_tag = _Task.archived_tag
     _package_tag = "package"
@@ -2775,6 +2775,6 @@ class OutputModel(BaseModel):
         return Path(self._last_uploaded_url or self.url).name
 
 
-class Waitable(object):
+class Waitable:
     def wait(self, *_: Any, **__: Any) -> bool:
         return True
