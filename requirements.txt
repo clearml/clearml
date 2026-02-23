@@ -6,7 +6,7 @@ pathlib2>=2.3.0
 Pillow>=7.0.0 ; python_version < '3.8'
 Pillow>=10.3.0 ; python_version >= '3.8'
 psutil>=3.4.2
-pyparsing>=2.0.3
+pyparsing>=3.0.0
 python-dateutil>=2.6.1
 pyjwt>=2.4.0,<2.11.0
 PyYAML>=3.12
