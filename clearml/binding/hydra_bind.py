@@ -10,7 +10,7 @@ from ..config import running_remotely, get_remote_task_id, DEV_TASK_NO_REUSE
 from ..debugging.log import LoggerRoot
 
 
-class PatchHydra(object):
+class PatchHydra:
     _original_run_job = None
     _original_hydra_run = None
     _allow_omegaconf_edit = None

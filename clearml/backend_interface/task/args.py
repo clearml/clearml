@@ -23,7 +23,7 @@ from ...binding.args import call_original_argparser
 from ...utilities.proxy_object import get_type_from_basic_type_str
 
 
-class _Arguments(object):
+class _Arguments:
     _prefix_sep = "/"
     # TODO: separate dict and argparse after we add UI support
     _prefix_args = "Args" + _prefix_sep

@@ -1,7 +1,7 @@
 from typing import Any
 
 
-class IOCallsManager(object):
+class IOCallsManager:
     def __init__(self) -> None:
         self.threads_io = {}
 

@@ -10,7 +10,7 @@ from ..backend_config.bucket_config import (
 from ..storage.helper import StorageHelper
 
 
-class SetupUploadMixin(object):
+class SetupUploadMixin:
     log = abstractproperty()
     storage_uri = abstractproperty()
 

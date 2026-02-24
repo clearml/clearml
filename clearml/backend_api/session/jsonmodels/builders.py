@@ -11,7 +11,7 @@ from . import errors
 from .fields import NotSet
 
 
-class Builder(object):
+class Builder:
     def __init__(
         self,
         parent: "Builder" = None,

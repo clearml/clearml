@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 @six.add_metaclass(ABCMeta)
-class PatchBaseModelIO(object):
+class PatchBaseModelIO:
     """
     Base class for patched models
 

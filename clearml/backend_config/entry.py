@@ -17,7 +17,7 @@ Converter = Callable[[Any], Any]
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Entry(object):
+class Entry:
     """
     Configuration entry definition
     """

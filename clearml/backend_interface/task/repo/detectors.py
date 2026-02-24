@@ -26,7 +26,7 @@ class DetectionError(Exception):
 
 
 @attr.s
-class Result(object):
+class Result:
     """ " Repository information as queried by a detector"""
 
     url = attr.ib(default="")
@@ -42,7 +42,7 @@ class Result(object):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Detector(object):
+class Detector:
     """Base class for repository detection"""
 
     """
@@ -58,7 +58,7 @@ class Detector(object):
         return get_logger("Repository Detection")
 
     @attr.s
-    class Commands(object):
+    class Commands:
         """ " Repository information as queried by a detector"""
 
         url = attr.ib(default=None, type=list)

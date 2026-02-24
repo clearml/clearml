@@ -88,7 +88,7 @@ def _to_np_array(value: Any) -> np.ndarray:
 
 
 @attrs
-class SeriesInfo(object):
+class SeriesInfo:
     name = attrib(type=str)
     data = attrib(type=np.ndarray, converter=_to_np_array)
     labels = attrib(default=None)

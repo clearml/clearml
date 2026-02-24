@@ -40,7 +40,7 @@ class PatchedMatplotlib:
     _logger_started_reporting = False
     _matplotlib_reported_titles = set()
 
-    class _PatchWarnings(object):
+    class _PatchWarnings:
         def __init__(self) -> None:
             pass
 

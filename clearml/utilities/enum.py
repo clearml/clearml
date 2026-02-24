@@ -1,7 +1,7 @@
 from typing import Dict, List, Any
 
 
-class EnumOptions(object):
+class EnumOptions:
     """Base class for enum-like classes using class-attributes with string values to represent enum key/value pairs"""
 
     __cache = None
@@ -22,7 +22,7 @@ class EnumOptions(object):
         return cls.__cache
 
 
-class Options(object):
+class Options:
     """Base class for an Options class which allow getting all class properties as a key/value mapping"""
 
     @classmethod

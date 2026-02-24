@@ -7,7 +7,7 @@ from ..backend_interface.task.args import _Arguments
 from ..config import running_remotely
 
 
-class PatchAbsl(object):
+class PatchAbsl:
     _original_DEFINE_flag = None
     _original_FLAGS_parse_call = None
     _current_task = None

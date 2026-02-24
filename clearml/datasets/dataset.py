@@ -77,7 +77,7 @@ if TYPE_CHECKING:
 
 
 @attrs
-class FileEntry(object):
+class FileEntry:
     relative_path = attrib(default=None, type=str)
     hash = attrib(default=None, type=str)
     parent_dataset_id = attrib(default=None, type=str)
@@ -100,7 +100,7 @@ class FileEntry(object):
 
 
 @attrs
-class LinkEntry(object):
+class LinkEntry:
     link = attrib(default=None, type=str)
     relative_path = attrib(default=None, type=str)
     parent_dataset_id = attrib(default=None, type=str)
@@ -116,7 +116,7 @@ class LinkEntry(object):
         )
 
 
-class Dataset(object):
+class Dataset:
     __private_magic = 42 * 1337
     __state_entry_name = "state"
     __default_data_entry_name = "data"

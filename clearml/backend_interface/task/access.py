@@ -7,7 +7,7 @@ from typing import Dict, Optional, Any
 from pathlib2 import Path
 
 
-class AccessMixin(object):
+class AccessMixin:
     """A mixin providing task fields access functionality"""
 
     session = abstractproperty()

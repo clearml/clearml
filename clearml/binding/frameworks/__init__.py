@@ -51,12 +51,12 @@ def _patched_call_no_recursion_guard(original_fn: Callable, patched_fn: Callable
     return _inner_patch
 
 
-class _Empty(object):
+class _Empty:
     def __init__(self) -> None:
         self.trains_in_model = None
 
 
-class WeightsFileHandler(object):
+class WeightsFileHandler:
     # _model_out_store_lookup = {}
     # _model_in_store_lookup = {}
     _model_store_lookup_lock = threading.Lock()
@@ -74,7 +74,7 @@ class WeightsFileHandler(object):
         save = "save"
         load = "load"
 
-    class ModelInfo(object):
+    class ModelInfo:
         def __init__(
             self,
             model: Optional[Model],

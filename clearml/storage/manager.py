@@ -17,7 +17,7 @@ from ..config import deferred_config
 from ..debugging.log import LoggerRoot
 
 
-class StorageManager(object):
+class StorageManager:
     """
     StorageManager is helper interface for downloading & uploading files to supported remote storage
     Support remote servers: http(s)/S3/GS/Azure/File-System-Folder

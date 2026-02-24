@@ -21,7 +21,7 @@ class ModelDoesNotExistError(Exception):
     pass
 
 
-class _StorageUriMixin(object):
+class _StorageUriMixin:
     @property
     def upload_storage_uri(self) -> str:
         """A URI into which models are uploaded"""

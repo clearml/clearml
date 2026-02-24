@@ -8,7 +8,7 @@ from . import running_remotely
 from .defs import SESSION_CACHE_FILE
 
 
-class SessionCache(object):
+class SessionCache:
     """
     Handle SDK session cache.
     TODO: Improve error handling to something like "except (FileNotFoundError, PermissionError, JSONDecodeError)"

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     import fire
 
 
-class SimpleNamespace(object):
+class SimpleNamespace:
     def __init__(self, **kwargs: Any) -> None:
         self.__dict__.update(kwargs)
 

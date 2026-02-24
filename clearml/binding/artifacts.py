@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     import pandas
 
 
-class Artifact(object):
+class Artifact:
     """
     Read-Only Artifact object
     """
@@ -267,7 +267,7 @@ class Artifact(object):
         )
 
 
-class Artifacts(object):
+class Artifacts:
     max_preview_size_bytes = 65536
 
     _flush_frequency_sec = 300.0

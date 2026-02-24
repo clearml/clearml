@@ -19,7 +19,7 @@ from ..task import Task
 
 
 @attrs
-class BaseScheduleJob(object):
+class BaseScheduleJob:
     name = attrib(type=str, default=None)
     base_task_id = attrib(type=str, default=None)
     base_function = attrib(type=Callable, default=None)
@@ -298,7 +298,7 @@ class ScheduleJob(BaseScheduleJob):
 
 
 @attrs
-class ExecutedJob(object):
+class ExecutedJob:
     name = attrib(type=str, default=None)
     started = attrib(type=datetime, converter=datetime_from_isoformat, default=None)
     finished = attrib(type=datetime, converter=datetime_from_isoformat, default=None)
@@ -309,7 +309,7 @@ class ExecutedJob(object):
         return {k: v for k, v in self.__dict__.items() if full or not str(k).startswith("_")}
 
 
-class BaseScheduler(object):
+class BaseScheduler:
     def __init__(
         self,
         sync_frequency_minutes: float = 15,

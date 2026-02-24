@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     import fastai
 
 
-class PatchFastai(object):
+class PatchFastai:
     @staticmethod
     def update_current_task(task: Any, **_: Any) -> None:
         if fastai is None:
@@ -38,7 +38,7 @@ class PatchFastai(object):
             pass
 
 
-class PatchFastaiV1(object):
+class PatchFastaiV1:
     __metrics_names = {}
     __gradient_hist_helpers = {}
     _current_task = None
@@ -199,7 +199,7 @@ class PatchFastaiV1(object):
             pass
 
 
-class PatchFastaiV2(object):
+class PatchFastaiV2:
     _current_task = None
     __patched = False
 

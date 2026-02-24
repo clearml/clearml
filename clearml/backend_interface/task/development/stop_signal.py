@@ -6,13 +6,13 @@ if TYPE_CHECKING:
     from ....backend_interface import Task
 
 
-class TaskStopReason(object):
+class TaskStopReason:
     stopped = "stopped"
     reset = "reset"
     status_changed = "status_changed"
 
 
-class TaskStopSignal(object):
+class TaskStopSignal:
     enabled = deferred_config("development.support_stopping", False, transform=bool)
 
     _number_of_consecutive_reset_tests = 4

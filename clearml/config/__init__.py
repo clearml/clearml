@@ -18,7 +18,7 @@ from ..backend_config.bucket_config import S3BucketConfigurations
 from ..utilities.proxy_object import LazyEvalWrapper
 
 
-class ConfigWrapper(object):
+class ConfigWrapper:
     _config = None
 
     @classmethod
@@ -47,7 +47,7 @@ class ConfigWrapper(object):
             cls._config = value
 
 
-class ConfigSDKWrapper(object):
+class ConfigSDKWrapper:
     _config_sdk = None
 
     @classmethod

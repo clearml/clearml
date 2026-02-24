@@ -18,7 +18,7 @@ from ..utilities.lowlevel.file_access import (
 )
 
 
-class PatchedJoblib(object):
+class PatchedJoblib:
     _patched_joblib = False
     _patched_sk_joblib = False
     _current_task = None

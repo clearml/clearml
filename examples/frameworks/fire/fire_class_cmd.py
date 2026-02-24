@@ -5,7 +5,7 @@ from clearml import Task
 import fire
 
 
-class BrokenCalculator(object):
+class BrokenCalculator:
     def __init__(self, offset=1):
         self._offset = offset
 

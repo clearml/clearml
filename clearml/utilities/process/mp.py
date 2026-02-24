@@ -39,7 +39,7 @@ except ImportError:
         return multiprocessing
 
 
-class _ForkSafeThreadSyncObject(object):
+class _ForkSafeThreadSyncObject:
     __process_lock = get_context("fork" if sys.platform == "linux" else "spawn").Lock()
 
     @classmethod
@@ -212,7 +212,7 @@ class ForkQueue(_ForkSafeThreadSyncObject):
         return self._sync.close()
 
 
-class ThreadCalls(object):
+class ThreadCalls:
     def __init__(self) -> None:
         self._queue = ForkQueue()
         self._thread = Thread(target=self._worker)
@@ -262,7 +262,7 @@ class ThreadCalls(object):
         self._thread = None
 
 
-class SingletonThreadPool(object):
+class SingletonThreadPool:
     __thread_pool = None
     __thread_pool_pid = None
 
@@ -285,7 +285,7 @@ class SingletonThreadPool(object):
         return cls.__thread_pool and cls.__thread_pool_pid == os.getpid() and cls.__thread_pool.is_alive()
 
 
-class SafeQueue(object):
+class SafeQueue:
     """
     Many writers Single Reader multiprocessing safe Queue
     """
@@ -450,7 +450,7 @@ class SafeQueue(object):
         self._send(header + buf)
 
 
-class SafeEvent(object):
+class SafeEvent:
     __thread_pool = SingletonThreadPool()
 
     def __init__(self) -> None:
@@ -512,7 +512,7 @@ class SingletonLock(AbstractContextManager):
         self.release()
 
 
-class BackgroundMonitor(object):
+class BackgroundMonitor:
     # If we need multiple monitoring contexts (i.e. subprocesses) this will become a dict
     _main_process = None
     _main_process_proc_obj = None

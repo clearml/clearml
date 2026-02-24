@@ -11,7 +11,7 @@ from ..backend_api.session import Session
 from ..backend_config import EnvEntry
 
 
-class CheckPackageUpdates(object):
+class CheckPackageUpdates:
     _package_version_checked = False
 
     @classmethod

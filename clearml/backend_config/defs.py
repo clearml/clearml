@@ -38,7 +38,7 @@ CONFIG_VERBOSE = EnvEntry("CLEARML_CONFIG_VERBOSE", type=bool)
 """Control verbose configuration loading"""
 
 
-class Environment(object):
+class Environment:
     """Supported environment names"""
 
     default = "default"

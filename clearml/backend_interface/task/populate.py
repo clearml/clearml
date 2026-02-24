@@ -16,7 +16,7 @@ from .repo import ScriptInfo
 from ...task import Task
 
 
-class CreateAndPopulate(object):
+class CreateAndPopulate:
     _VCS_SSH_REGEX = (
         "^"
         "(?:(?P<user>{regular}*?)@)?"
@@ -687,7 +687,7 @@ class CreateAndPopulate(object):
         return found_index if found_index < 0 else lines[found_index][0]
 
 
-class CreateFromFunction(object):
+class CreateFromFunction:
     kwargs_section = "kwargs"
     return_section = "return"
     input_artifact_section = "kwargs_artifacts"

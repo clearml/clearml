@@ -12,7 +12,7 @@ from ....utilities.lowlevel.threads import kill_thread
 from ....utilities.process.mp import SafeEvent
 
 
-class DevWorker(object):
+class DevWorker:
     property_abort_callback_completed = "_abort_callback_completed"
     property_abort_callback_timeout = "_abort_callback_timeout"
     property_abort_poll_freq = "_abort_poll_freq"

@@ -12,7 +12,7 @@ from ..config import TASK_LOG_ENVIRONMENT, running_remotely, config
 from ..utilities.process.mp import BackgroundMonitor
 
 
-class EnvironmentBind(object):
+class EnvironmentBind:
     _current_task = None
     _environment_section = "Environment"
     __patched = False
@@ -71,7 +71,7 @@ class EnvironmentBind(object):
         cls._current_task.connect(env_param, cls._environment_section)
 
 
-class SimpleQueueWrapper(object):
+class SimpleQueueWrapper:
     def __init__(self, task: Any, simple_queue: Any) -> None:
         self.__current_task = task
         self.__simple_queue = simple_queue
@@ -96,7 +96,7 @@ class SimpleQueueWrapper(object):
         return getattr(self.__simple_queue, attr)
 
 
-class PatchOsFork(object):
+class PatchOsFork:
     _original_fork = None
     _registered_fork_callbacks = False
     _current_task = None

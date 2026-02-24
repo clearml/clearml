@@ -61,7 +61,7 @@ class ConfigEntry(Entry):
         log.error(message.capitalize())
 
 
-class Config(object):
+class Config:
     # used in place of None in Config.get as default value because None is a valid value
     _MISSING = object()
 

@@ -40,7 +40,7 @@ from ..utilities.proxy_object import (
 from ..utilities.version import Version
 
 
-class PipelineController(object):
+class PipelineController:
     """
     Pipeline controller.
     Pipeline is a DAG of base tasks, each task will be cloned (arguments changed as required), executed, and monitored.
@@ -90,7 +90,7 @@ class PipelineController(object):
     ]
 
     @attrs
-    class Node(object):
+    class Node:
         # pipeline step name
         name = attrib(type=str)
         # base Task ID to be cloned and launched

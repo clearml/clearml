@@ -115,7 +115,7 @@ class ProxyDictPreWrite(dict):
         )
 
 
-class StubObject(object):
+class StubObject:
     def __call__(self, *args: Any, **kwargs: Any) -> "StubObject":
         return self
 

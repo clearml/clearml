@@ -9,7 +9,7 @@ import six
 
 
 @six.add_metaclass(ABCMeta)
-class TokenManager(object):
+class TokenManager:
     @property
     def token_expiration_threshold_sec(self) -> int:
         return self.__token_expiration_threshold_sec

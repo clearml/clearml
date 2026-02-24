@@ -11,7 +11,7 @@ from .response import ResponseMeta, Response
 from .errors import ResultNotReadyError, TimeoutExpiredError
 
 
-class CallResult(object):
+class CallResult:
     @property
     def meta(self) -> ResponseMeta:
         return self.__meta

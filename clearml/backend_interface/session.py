@@ -17,7 +17,7 @@ class SendError(Exception):
 
 
 @six.add_metaclass(ABCMeta)
-class SessionInterface(object):
+class SessionInterface:
     """Session wrapper interface providing a session property and a send convenience method"""
 
     @property

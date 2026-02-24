@@ -20,7 +20,7 @@ except ImportError:
     raise ImportError("OptimizerOptuna requires 'optuna' package, it was not found\n install with: pip install optuna")
 
 
-class OptunaObjective(object):
+class OptunaObjective:
     def __init__(
         self,
         base_task_id: str,
