@@ -157,7 +157,7 @@ class Dataset(object):
         dataset_tags: Optional[Sequence[str]] = None,
         dataset_version: Optional[str] = None,
         description: Optional[str] = None,
-    ) -> ():
+    ):
         """
         Do not use directly! Use Dataset.create(...) or Dataset.get(...) instead.
         """
@@ -381,7 +381,7 @@ class Dataset(object):
         return self._dataset_version
 
     @version.setter
-    def version(self, version: str) -> ():
+    def version(self, version: str) -> None:
         version = str(version).strip()
         self._dataset_version = version
         if not Version.is_valid_version_string(version):
@@ -395,7 +395,7 @@ class Dataset(object):
         return self._task.get_tags() or []
 
     @tags.setter
-    def tags(self, values: List[str]) -> ():
+    def tags(self, values: List[str]) -> None:
         self._task.set_tags(values or [])
 
     def add_tags(self, tags: Union[Sequence[str], str]) -> None:
@@ -416,7 +416,7 @@ class Dataset(object):
         recursive: bool = True,
         verbose: bool = False,
         max_workers: Optional[int] = None,
-    ) -> ():
+    ) -> int:
         """
         Add a folder into the current dataset. calculate file hash,
         and compare against parent, mark files to be uploaded
@@ -697,7 +697,7 @@ class Dataset(object):
         max_workers: Optional[int] = None,
         retries: int = 3,
         preview: bool = True,
-    ) -> ():
+    ) -> Optional[bool]:
         """
         Start file uploading, the function returns when all files are uploaded.
 
@@ -935,7 +935,7 @@ class Dataset(object):
         metadata: Union[numpy.array, "pd.DataFrame", Dict[str, Any]],
         metadata_name: str = "metadata",
         ui_visible: bool = True,
-    ) -> ():
+    ) -> None:
         # noqa: F821
         """
         Attach a user-defined metadata to the dataset. Check `Task.upload_artifact` for supported types.
@@ -973,7 +973,7 @@ class Dataset(object):
             return None
         return metadata.get()
 
-    def set_description(self, description: str) -> ():
+    def set_description(self, description: str) -> None:
         """
         Set description of the dataset
 
@@ -1448,7 +1448,7 @@ class Dataset(object):
         cls._set_project_system_tags(instance._task)
         return instance
 
-    def _fix_dataset_files_parents(self) -> ():
+    def _fix_dataset_files_parents(self) -> None:
         """
         Needed when someone removes and adds the same file -> parent data will be lost
         """
@@ -1490,7 +1490,7 @@ class Dataset(object):
         return compressed_size
 
     @classmethod
-    def _raise_on_dataset_used(cls, dataset_id: str) -> ():
+    def _raise_on_dataset_used(cls, dataset_id: str) -> None:
         """
         Raise an exception if the given dataset is being used
 
@@ -1587,7 +1587,7 @@ class Dataset(object):
         shallow_search: bool = False,  # bool
         delete_files: bool = True,  # bool
         delete_external_files: bool = False,  # bool
-    ) -> ():
+    ) -> None:
         """
         Delete the dataset(s). If multiple datasets match the parameters,
         raise an Exception or move the entire dataset if `entire_dataset` is True and `force` is True
@@ -1651,7 +1651,7 @@ class Dataset(object):
         new_dataset_name: str,  # str
         dataset_project: str,  # str
         dataset_name: str,  # str
-    ) -> ():
+    ) -> None:
         """
         Rename the dataset.
 
@@ -1700,7 +1700,7 @@ class Dataset(object):
         new_dataset_project: str,  # str
         dataset_project: str,  # str
         dataset_name: str,  # str
-    ) -> ():
+    ) -> None:
         """
         Move the dataset to another project.
 
@@ -2314,7 +2314,7 @@ class Dataset(object):
             for k in to_delete:
                 del self._dependency_graph[k]
 
-    def _serialize(self, update_dependency_chunk_lookup: bool = False) -> ():
+    def _serialize(self, update_dependency_chunk_lookup: bool = False) -> None:
         """
         store current state of the Dataset for later use
 
@@ -3078,7 +3078,7 @@ class Dataset(object):
             return "{}{}".format(self.__cache_folder_prefix, self._id)
         return "{}{}_{}_{}".format(self.__cache_folder_prefix, self._id, part, num_parts)
 
-    def _add_script_call(self, func_name: str, **kwargs: Any) -> ():
+    def _add_script_call(self, func_name: str, **kwargs: Any) -> None:
         # if we never created the Task, we should not add the script calls
         if not self._created_task:
             return
@@ -3508,7 +3508,7 @@ class Dataset(object):
         raise_on_error: bool,
         force: bool,
         max_workers: Optional[int] = None,
-    ) -> ():
+    ) -> None:
         # create thread pool, for creating soft-links / copying
         max_workers = max_workers or psutil.cpu_count()
         pool = ThreadPool(max_workers)

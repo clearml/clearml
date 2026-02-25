@@ -13,7 +13,7 @@ class RandomSeed(object):
     _seed = 1337
 
     @staticmethod
-    def set_random_seed(seed: int = 1337) -> ():
+    def set_random_seed(seed: int = 1337) -> None:
         """
         Set global seed for all hyperparameter strategy random number sampling.
 
@@ -39,7 +39,7 @@ class Parameter(RandomSeed):
 
     _class_type_serialize_name = "type"
 
-    def __init__(self, name: Optional[str]) -> ():
+    def __init__(self, name: Optional[str]):
         """
         Create a new Parameter for hyperparameter optimization
 
@@ -119,7 +119,7 @@ class UniformParameterRange(Parameter):
         max_value: float,
         step_size: Optional[float] = None,
         include_max_value: bool = True,
-    ) -> ():
+    ):
         """
         Create a parameter to be sampled by the SearchStrategy
 
@@ -179,7 +179,7 @@ class LogUniformParameterRange(UniformParameterRange):
         base: float = 10,
         step_size: Optional[float] = None,
         include_max_value: bool = True,
-    ) -> ():
+    ):
         """
         Create a parameter to be sampled by the SearchStrategy
 
@@ -231,7 +231,7 @@ class UniformIntegerParameterRange(Parameter):
         max_value: int,
         step_size: int = 1,
         include_max_value: bool = True,
-    ) -> ():
+    ):
         """
         Create a parameter to be sampled by the SearchStrategy.
 
@@ -284,7 +284,7 @@ class DiscreteParameterRange(Parameter):
     Discrete randomly sampled hyperparameter object.
     """
 
-    def __init__(self, name: str, values: Sequence[Any] = ()) -> ():
+    def __init__(self, name: str, values: Sequence[Any] = ()):
         """
         Uniformly sample values form a list of discrete options.
 
@@ -319,7 +319,7 @@ class ParameterSet(Parameter):
     def __init__(
         self,
         parameter_combinations: Sequence[Mapping[str, Union[float, int, str, Parameter]]] = (),
-    ) -> ():
+    ):
         """
         Uniformly sample values form a list of discrete options (combinations) of parameters.
 
