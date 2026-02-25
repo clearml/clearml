@@ -299,7 +299,7 @@ class Budget(object):
             self.limit = limit
             self.current = {}
 
-        def update(self, uid: Union[str, int], value: float) -> ():
+        def update(self, uid: Union[str, int], value: float) -> None:
             if value is not None:
                 try:
                     self.current[uid] = float(value)
@@ -413,7 +413,7 @@ class SearchStrategy(object):
         self._validate_base_task()
         self._optimizer_task = None
 
-    def start(self) -> ():
+    def start(self) -> None:
         """
         Start the Optimizer controller function loop(). If the calling process is stopped, the controller will stop
         as well.
@@ -431,7 +431,7 @@ class SearchStrategy(object):
                 break
             counter += 1
 
-    def stop(self) -> ():
+    def stop(self) -> None:
         """
         Stop the current running optimization loop. Called from a different thread than the :meth:`start`.
         """
@@ -844,7 +844,7 @@ class SearchStrategy(object):
         logger.info("Creating new Task: {}".format(parameter_override))
         return new_job
 
-    def set_job_class(self, job_class: ClearmlJob) -> ():
+    def set_job_class(self, job_class: ClearmlJob) -> None:
         """
         Set the class to use for the :meth:`helper_create_job` function.
 
@@ -856,7 +856,7 @@ class SearchStrategy(object):
         self,
         job_parent_task_id: Optional[str],
         project_name: Optional[str] = None,
-    ) -> ():
+    ) -> None:
         """
         Set the default parent for all Jobs created by the :meth:`helper_create_job` method.
 
@@ -875,7 +875,7 @@ class SearchStrategy(object):
             else None
         )
 
-    def set_job_naming_scheme(self, naming_function: Optional[Callable[[str, dict], str]]) -> ():
+    def set_job_naming_scheme(self, naming_function: Optional[Callable[[str, dict], str]]) -> None:
         """
         Set the function used to name a newly created job.
 
@@ -889,7 +889,7 @@ class SearchStrategy(object):
         """
         self._naming_function = naming_function
 
-    def set_optimizer_task(self, task: Task) -> ():
+    def set_optimizer_task(self, task: Task) -> None:
         """
         Set the optimizer task object to be used to store/generate reports on the optimization process.
         Usually this is the current task of this process.
@@ -898,7 +898,7 @@ class SearchStrategy(object):
         """
         self._optimizer_task = task
 
-    def _validate_base_task(self) -> ():
+    def _validate_base_task(self) -> None:
         """
         Check the base task exists and contains the requested Objective metric and hyperparameters.
         """
@@ -1664,7 +1664,7 @@ class HyperParameterOptimizer(object):
         self,
         timeout: Optional[float] = None,
         wait_for_reporter: Optional[bool] = True,
-    ) -> ():
+    ) -> None:
         """
         Stop the HyperParameterOptimizer controller and the optimization thread.
 
@@ -1759,7 +1759,7 @@ class HyperParameterOptimizer(object):
         self,
         in_minutes: Optional[float] = None,
         specific_time: Optional[datetime] = None,
-    ) -> ():
+    ) -> None:
         """
         Set a time limit for the HyperParameterOptimizer controller. If we reached the time limit, stop the optimization
         process. If ``specific_time`` is provided, use it; otherwise, use the ``in_minutes``.
@@ -1907,7 +1907,7 @@ class HyperParameterOptimizer(object):
         """
         return self.optimizer
 
-    def set_default_job_class(self, job_class: ClearmlJob) -> ():
+    def set_default_job_class(self, job_class: ClearmlJob) -> None:
         """
         Set the Job class to use when the optimizer spawns new Jobs.
 
@@ -1915,7 +1915,7 @@ class HyperParameterOptimizer(object):
         """
         self.optimizer.set_job_class(job_class)
 
-    def set_report_period(self, report_period_minutes: float) -> ():
+    def set_report_period(self, report_period_minutes: float) -> None:
         """
         Set reporting period for the accumulated objective report (minutes). This report is sent on the Optimizer Task,
         and collects the Objective metric from all running jobs.
@@ -2044,14 +2044,14 @@ class HyperParameterOptimizer(object):
             arguments["opt"],
         )
 
-    def _daemon(self) -> ():
+    def _daemon(self) -> None:
         """
         Implement the main pooling thread, calling loop every ``self.pool_period_minutes`` minutes.
         """
         self.optimizer.start()
         self._thread = None
 
-    def _report_daemon(self) -> ():
+    def _report_daemon(self) -> None:
         title_series = self._objective_metric.get_objective_metric()
         title = ["{}/{}".format(ts[0], ts[1]) for ts in title_series]
         counter = 0
@@ -2433,7 +2433,7 @@ class HyperParameterOptimizer(object):
         task_logger: Logger,
         title: str,
         counter: int,
-    ) -> ():
+    ) -> None:
         if not completed_jobs:
             return
 
@@ -2455,11 +2455,11 @@ class HyperParameterOptimizer(object):
                     value=latest_completed,
                 )
 
-    def _report_resources(self, task_logger: Logger, iteration: int) -> ():
+    def _report_resources(self, task_logger: Logger, iteration: int) -> None:
         self._report_active_workers(task_logger, iteration)
         self._report_tasks_status(task_logger, iteration)
 
-    def _report_active_workers(self, task_logger: Logger, iteration: int) -> ():
+    def _report_active_workers(self, task_logger: Logger, iteration: int) -> None:
         res = self.__get_session().send(workers_service.GetAllRequest())
         response = res.wait()
         if response.ok():
@@ -2479,7 +2479,7 @@ class HyperParameterOptimizer(object):
                 value=queue_workers,
             )
 
-    def _report_tasks_status(self, task_logger: Logger, iteration: int) -> ():
+    def _report_tasks_status(self, task_logger: Logger, iteration: int) -> None:
         tasks_status = {"running tasks": 0, "pending tasks": 0}
         for job in self.optimizer.get_running_jobs():
             if job.is_running():

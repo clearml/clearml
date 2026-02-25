@@ -1976,7 +1976,7 @@ class Task(_Task):
         resp = res.response
         return resp
 
-    def set_progress(self, progress: int) -> ():
+    def set_progress(self, progress: int) -> None:
         """
         Sets Task's progress (0 - 100)
         Progress is a field computed and reported by the user.
@@ -2086,7 +2086,7 @@ class Task(_Task):
 
         raise Exception("Unsupported mutable type %s: no connect function found" % type(mutable).__name__)
 
-    def set_packages(self, packages: Union[str, Path, Sequence[str]]) -> ():
+    def set_packages(self, packages: Union[str, Path, Sequence[str]]) -> None:
         """
         Manually specify a list of required packages or a local requirements.txt file. Note that this will
         overwrite all existing packages.
@@ -2117,7 +2117,7 @@ class Task(_Task):
         repo: Optional[str] = None,
         branch: Optional[str] = None,
         commit: Optional[str] = None,
-    ) -> ():
+    ) -> None:
         """
         Specify a repository to attach to the function.
         Allow users to execute the task inside the specified repository, enabling them to load modules/script
@@ -2653,7 +2653,7 @@ class Task(_Task):
 
         return current_conf
 
-    def mark_started(self, force: bool = False) -> ():
+    def mark_started(self, force: bool = False) -> None:
         """
         Manually mark a Task as started (happens automatically)
 
@@ -2663,7 +2663,7 @@ class Task(_Task):
         self.started(force=force)
         self.reload()
 
-    def mark_stopped(self, force: bool = False, status_message: Optional[str] = None) -> ():
+    def mark_stopped(self, force: bool = False, status_message: Optional[str] = None) -> None:
         """
         Manually mark a Task as stopped (also used in :meth:`_at_exit`)
 
@@ -3143,7 +3143,7 @@ class Task(_Task):
         """
         return self._get_model_config_dict()
 
-    def set_model_label_enumeration(self, enumeration: Optional[Mapping[str, int]] = None) -> ():
+    def set_model_label_enumeration(self, enumeration: Optional[Mapping[str, int]] = None) -> None:
         """
         Set the label enumeration for the Task object before creating an output model.
         Later, when creating an output model, the model will inherit these properties.
@@ -3445,7 +3445,7 @@ class Task(_Task):
         docker_image: Optional[str] = None,
         docker_arguments: Optional[Union[str, Sequence[str]]] = None,
         docker_setup_bash_script: Optional[Union[str, Sequence[str]]] = None,
-    ) -> ():
+    ) -> None:
         """
         Set the base docker image for this experiment
         If provided, this value will be used by clearml-agent to execute this experiment
@@ -3703,7 +3703,7 @@ class Task(_Task):
         ),
         raise_on_status: Optional[Iterable["Task.TaskStatusEnum"]] = (_Task.TaskStatusEnum.failed,),
         check_interval_sec: float = 60.0,
-    ) -> ():
+    ) -> None:
         """
         Wait for a task to reach a defined status.
 
@@ -4151,7 +4151,7 @@ class Task(_Task):
                     f.write("\n".join(lines[1:-1]))
 
     @classmethod
-    def debug_simulate_remote_task(cls, task_id: str, reset_task: bool = False) -> ():
+    def debug_simulate_remote_task(cls, task_id: str, reset_task: bool = False) -> None:
         """
         Simulate remote execution of a specified Task.
         This call will simulate the behaviour of your Task as if executed by the ClearML-Agent
@@ -4280,7 +4280,7 @@ class Task(_Task):
         # noinspection PyProtectedMember
         return OutputModel._text_to_config_dict(config_text)
 
-    def _set_startup_info(self) -> ():
+    def _set_startup_info(self) -> None:
         self._set_runtime_properties(
             runtime_properties={
                 "CLEARML VERSION": self.session.client,

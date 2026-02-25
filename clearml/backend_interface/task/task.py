@@ -467,7 +467,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             return None
 
     @storage_uri.setter
-    def storage_uri(self, value: str) -> ():
+    def storage_uri(self, value: str) -> None:
         """
         Set the storage / output url for this task. This is the default location for output models and other artifacts.
 
@@ -490,7 +490,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return self.data.name or ""
 
     @name.setter
-    def name(self, value: str) -> ():
+    def name(self, value: str) -> None:
         """
         Set the current Task's name.
 
@@ -565,7 +565,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return self.data.comment or ""
 
     @comment.setter
-    def comment(self, value: str) -> ():
+    def comment(self, value: str) -> None:
         """
         Set the comment of the task. Please note that this will override any comment currently
         present. If you want to add lines to the comment field, get the comments first, add your
@@ -593,7 +593,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """Return the task's cached status (don't reload if we don't have to)"""
         return str(self.data.status)
 
-    def reload(self) -> ():
+    def reload(self) -> None:
         """
         Reload current Task's state from clearml-server.
         Refresh all task's fields, including artifacts / models / parameters etc.
@@ -723,7 +723,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
             return task_object
 
-    def reset(self, set_started_on_success: bool = True, force: bool = False) -> ():
+    def reset(self, set_started_on_success: bool = True, force: bool = False) -> None:
         """
         Reset the task. Task will be reloaded following a successful reset.
 
@@ -912,7 +912,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         assert isinstance(resp.response, tasks.PublishResponse)
         return resp
 
-    def publish_on_completion(self, enable: bool = True) -> ():
+    def publish_on_completion(self, enable: bool = True) -> None:
         """The signal that this task will be published automatically on task completion"""
         self._set_runtime_properties(runtime_properties={"_publish_on_complete": enable})
 
@@ -1159,7 +1159,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """Get accumulated label stats for the current/last frames iteration"""
         return self._curr_label_stats
 
-    def _accumulate_label_stats(self, roi_stats: dict, reset: bool = False) -> ():
+    def _accumulate_label_stats(self, roi_stats: dict, reset: bool = False) -> None:
         if reset:
             self._curr_label_stats = {}
         for label in roi_stats:
@@ -1175,7 +1175,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         update_task_design: bool = True,
         update_task_labels: bool = True,
         name: Optional[str] = None,
-    ) -> ():
+    ) -> None:
         """
         Set a new input model for the Task. The model must be "ready" (status is ``Published``) to be used as the
         Task's input model.
@@ -1302,7 +1302,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return parameters
 
-    def set_parameters(self, *args: dict, **kwargs: Any) -> ():
+    def set_parameters(self, *args: dict, **kwargs: Any) -> None:
         """
         Set the parameters for a Task. This method sets a complete group of key-value parameter pairs, but does not
         support parameter descriptions (the input is a dictionary of key-value pairs).
@@ -1315,7 +1315,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         return self._set_parameters(*args, __update=False, **kwargs)
 
-    def _set_parameters(self, *args: dict, **kwargs: Any) -> ():
+    def _set_parameters(self, *args: dict, **kwargs: Any) -> None:
         """
         Set the parameters for a Task. This method sets a complete group of key-value parameter pairs, but does not
         support parameter descriptions (the input is a dictionary of key-value pairs).
@@ -1475,7 +1475,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         value: str,
         description: Optional[str] = None,
         value_type: Optional[Any] = None,
-    ) -> ():
+    ) -> None:
         """
         Set a single Task parameter. This overrides any previous value for this parameter.
 
@@ -1536,7 +1536,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return res.ok() if not self._offline_mode else True
 
-    def update_parameters(self, *args: dict, **kwargs: Any) -> ():
+    def update_parameters(self, *args: dict, **kwargs: Any) -> None:
         """
         Update the parameters for a Task. This method updates a complete group of key-value parameter pairs, but does
         not support parameter descriptions (the input is a dictionary of key-value pairs).
@@ -1549,7 +1549,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         self._set_parameters(*args, __update=True, **kwargs)
 
-    def set_model_label_enumeration(self, enumeration: Mapping[str, int] = None) -> ():
+    def set_model_label_enumeration(self, enumeration: Mapping[str, int] = None) -> None:
         """
         Set a dictionary of labels (text) to ids (integers) {str(label): integer(id)}
 
@@ -1569,7 +1569,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             execution.model_labels = enumeration
             self._edit(execution=execution)
 
-    def remove_input_models(self, models_to_remove: Sequence[Union[str, "BaseModel"]]) -> ():
+    def remove_input_models(self, models_to_remove: Sequence[Union[str, "BaseModel"]]) -> None:
         """
         Remove input models from the current task. Note that the models themselves are not deleted,
         but the tasks' reference to the models is removed.
@@ -1584,7 +1584,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self.data.models.input = [model for model in self.data.models.input if model.model not in ids_to_remove]
             self._edit(models=self.data.models)
 
-    def _set_default_docker_image(self) -> ():
+    def _set_default_docker_image(self) -> None:
         if not DOCKER_IMAGE_ENV_VAR.exists() and not DOCKER_BASH_SETUP_ENV_VAR.exists():
             return
         self.set_base_docker(
@@ -1597,7 +1597,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         docker_cmd: str,
         docker_arguments: Optional[Union[str, Sequence[str]]] = None,
         docker_setup_bash_script: Optional[Union[str, Sequence[str]]] = None,
-    ) -> ():
+    ) -> None:
         """
         Set the base docker image for this experiment
         If provided, this value will be used by clearml-agent to execute this experiment
@@ -1799,7 +1799,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return True
 
-    def _set_model_design(self, design: str = None) -> ():
+    def _set_model_design(self, design: str = None) -> None:
         with self._edit_lock:
             self.reload()
             if Session.check_min_api_version("2.9"):
@@ -1868,7 +1868,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return self._random_seed
 
     @classmethod
-    def set_random_seed(cls, random_seed: Optional[int]) -> ():
+    def set_random_seed(cls, random_seed: Optional[int]) -> None:
         """
         Set the default random seed for any new initialized tasks
 
@@ -1944,7 +1944,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """Get all current Task's tags."""
         return self._get_task_property("tags")
 
-    def set_system_tags(self, tags: Sequence[str]) -> ():
+    def set_system_tags(self, tags: Sequence[str]) -> None:
         assert isinstance(tags, (list, tuple))
         tags = list(set(tags))
         if Session.check_min_api_version("2.3"):
@@ -1957,7 +1957,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
     def get_system_tags(self) -> Sequence[str]:
         return self._get_task_property("system_tags" if Session.check_min_api_version("2.3") else "tags")
 
-    def set_tags(self, tags: Sequence[str]) -> ():
+    def set_tags(self, tags: Sequence[str]) -> None:
         """
         Set the current Task's tags. Please note this will overwrite anything that is there already.
 
@@ -1970,7 +1970,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._set_task_property("tags", tags)
         self._edit(tags=self.data.tags)
 
-    def set_name(self, name: str) -> ():
+    def set_name(self, name: str) -> None:
         """
         Set the Task name.
 
@@ -1982,7 +1982,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._edit(name=name)
         self.data.name = name
 
-    def set_parent(self, parent: Optional[Union[str, "Task"]]) -> ():
+    def set_parent(self, parent: Optional[Union[str, "Task"]]) -> None:
         """
         Set the parent task for the Task.
 
@@ -1997,7 +1997,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._set_task_property("parent", str(parent) if parent else None)
         self._edit(parent=self.data.parent)
 
-    def set_comment(self, comment: str) -> ():
+    def set_comment(self, comment: str) -> None:
         """
         Set a comment / description for the Task.
 
@@ -2008,7 +2008,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._set_task_property("comment", str(comment))
         self._edit(comment=str(comment))
 
-    def set_task_type(self, task_type: Union[str, "Task.TaskTypes"]) -> ():
+    def set_task_type(self, task_type: Union[str, "Task.TaskTypes"]) -> None:
         """
         Set the task_type for the Task.
 
@@ -2037,7 +2037,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self._set_task_property("task_type", str(task_type))
         self._edit(type=task_type)
 
-    def set_archived(self, archive: bool) -> ():
+    def set_archived(self, archive: bool) -> None:
         """
         Archive the Task or remove it from the archived folder.
 
@@ -2563,7 +2563,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             )
         cls._force_store_standalone_script = bool(force)
 
-    def _set_random_seed_used(self, random_seed: Optional[int]) -> ():
+    def _set_random_seed_used(self, random_seed: Optional[int]) -> None:
         self._random_seed = random_seed
 
     def _get_default_report_storage_uri(self) -> str:
@@ -2638,7 +2638,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         except Exception:
             return None
 
-    def _reload_last_iteration(self) -> ():
+    def _reload_last_iteration(self) -> None:
         # noinspection PyBroadException
         try:
             all_tasks = self.send(
@@ -2697,7 +2697,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self,
         system_tags: Optional[Sequence[str]] = None,
         comment: Optional[str] = None,
-    ) -> ():
+    ) -> None:
         self._data.script = tasks.Script(
             binary="",
             repository="",
@@ -2788,7 +2788,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         return running_remotely() and get_remote_task_id() == self.id
 
-    def _save_data_to_offline_dir(self, **kwargs: Any) -> ():
+    def _save_data_to_offline_dir(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
             setattr(self.data, k, v)
         offline_mode_folder = self.get_offline_mode_folder()
@@ -2831,7 +2831,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             )
             return res
 
-    def _update_requirements(self, requirements: Union[dict, str, Sequence[str]]) -> ():
+    def _update_requirements(self, requirements: Union[dict, str, Sequence[str]]) -> None:
         if not isinstance(requirements, dict):
             requirements = {"pip": requirements}
 
@@ -2854,7 +2854,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         except Exception:
             pass
 
-    def _update_script(self, script: dict) -> ():
+    def _update_script(self, script: dict) -> None:
         with self._edit_lock:
             self.reload()
             self.data.script = script
@@ -3195,7 +3195,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         """
         batch_size = max_events or batch_size
 
-        def apply_unique_selector(events_set: Set[Any], evs: List[dict]) -> ():
+        def apply_unique_selector(events_set: Set[Any], evs: List[dict]) -> None:
             try:
                 events_set.update(map(unique_selector, evs))
             except TypeError:
@@ -3267,7 +3267,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return self.__edit_lock
 
     @_edit_lock.setter
-    def _edit_lock(self, value: RLock) -> ():
+    def _edit_lock(self, value: RLock) -> None:
         self.__edit_lock = value
 
     @classmethod

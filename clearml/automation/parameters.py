@@ -13,7 +13,7 @@ class RandomSeed(object):
     _seed = 1337
 
     @staticmethod
-    def set_random_seed(seed: int = 1337) -> ():
+    def set_random_seed(seed: int = 1337) -> None:
         """
         Set global seed for all hyperparameter strategy random number sampling.
 
