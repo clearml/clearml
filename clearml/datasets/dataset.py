@@ -157,7 +157,7 @@ class Dataset(object):
         dataset_tags: Optional[Sequence[str]] = None,
         dataset_version: Optional[str] = None,
         description: Optional[str] = None,
-    ) -> ():
+    ):
         """
         Do not use directly! Use Dataset.create(...) or Dataset.get(...) instead.
         """

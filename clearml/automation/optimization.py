@@ -84,7 +84,7 @@ class Objective(_ObjectiveInterface):
         series: str,
         order: str = "max",
         extremum: bool = False,
-    ) -> ():
+    ):
         """
         Construct ``Objective`` object that will return the scalar value for a specific task ID.
 
@@ -295,7 +295,7 @@ class Objective(_ObjectiveInterface):
 
 class Budget(object):
     class Field(object):
-        def __init__(self, limit: Optional[float] = None) -> ():
+        def __init__(self, limit: Optional[float] = None):
             self.limit = limit
             self.current = {}
 
@@ -317,7 +317,7 @@ class Budget(object):
         jobs_limit: Optional[int],
         iterations_limit: Optional[int],
         compute_time_limit: Optional[float],
-    ) -> ():
+    ):
         self.jobs = self.Field(jobs_limit)
         self.iterations = self.Field(iterations_limit)
         self.compute_time = self.Field(compute_time_limit)
@@ -362,7 +362,7 @@ class SearchStrategy(object):
         max_iteration_per_job: Optional[int] = None,
         total_max_jobs: Optional[int] = None,
         **_: Any
-    ) -> ():
+    ):
         """
         Initialize a search strategy optimizer.
 
@@ -1214,7 +1214,7 @@ class GridSearch(SearchStrategy):
         max_iteration_per_job: Optional[int] = None,
         total_max_jobs: Optional[int] = None,
         **_: Any
-    ) -> ():
+    ):
         """
         Initialize a grid search optimizer
 
@@ -1293,7 +1293,7 @@ class RandomSearch(SearchStrategy):
         max_iteration_per_job: Optional[int] = None,
         total_max_jobs: Optional[int] = None,
         **_: Any
-    ) -> ():
+    ):
         """
         Initialize a random search optimizer.
 
@@ -1381,7 +1381,7 @@ class HyperParameterOptimizer(object):
         spawn_project: Optional[str] = None,
         save_top_k_tasks_only: Optional[int] = None,
         **optimizer_kwargs: Any
-    ) -> ():
+    ):
         """
         Create a new hyperparameter controller. The newly created object will launch and monitor the new experiments.
 
