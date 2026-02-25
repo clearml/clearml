@@ -43,6 +43,7 @@ from .backend_config.defs import get_active_config_file, get_config_file
 from .backend_api.services import tasks, projects, events, queues
 from .backend_api.session.session import (
     Session,
+    CallResult,
     ENV_ACCESS_KEY,
     ENV_SECRET_KEY,
     ENV_HOST,
@@ -2676,7 +2677,7 @@ class Task(_Task):
         # mark task as stopped
         self.stopped(force=force, status_message=str(status_message) if status_message else None)
 
-    def mark_stop_request(self, force: bool = False, status_message: Optional[str] = None) -> ():
+    def mark_stop_request(self, force: bool = False, status_message: Optional[str] = None) -> Optional[CallResult]:
         """
         Request a task to stop. this will not change the task status
         but mark a request for an agent or SDK to actually stop the Task.

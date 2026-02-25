@@ -31,7 +31,8 @@ from ...utilities.proxy_object import verify_basic_type, cast_basic_type, get_ba
 from ...binding.artifacts import Artifacts
 from ...backend_interface.task.development.worker import DevWorker
 from ...backend_interface.session import SendError
-from ...backend_api import Session
+from ...backend_api import Session, CallResult
+from ...backend_api.session.response import Response
 from ...backend_api.services import tasks, models, events, projects
 
 # from ...backend_api.session.defs import ENV_OFFLINE_MODE
@@ -739,7 +740,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         self.reload()
 
-    def started(self, ignore_errors: bool = True, force: bool = False) -> ():
+    def started(self, ignore_errors: bool = True, force: bool = False) -> Optional[CallResult]:
         """The signal that this Task started."""
         return self.send(tasks.StartedRequest(self.id, force=force), ignore_errors=ignore_errors)
 
@@ -749,7 +750,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         force: bool = False,
         status_reason: Optional[str] = None,
         status_message: Optional[str] = None,
-    ) -> ():
+    ) -> Optional[CallResult]:
         """The signal that this Task stopped."""
         return self.send(
             tasks.StoppedRequest(
@@ -766,7 +767,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         ignore_errors: bool = True,
         force: bool = False,
         status_message: Optional[str] = None,
-    ) -> ():
+    ) -> Optional[CallResult]:
         """
         Request a task to stop. this will not change the task status
         but mark a request for an agent or SDK to actually stop the Task.
@@ -792,7 +793,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             ignore_errors=ignore_errors,
         )
 
-    def completed(self, ignore_errors: bool = True) -> ():
+    def completed(self, ignore_errors: bool = True) -> Optional[CallResult]:
         """
         .. note:: Deprecated, use mark_completed(...) instead
         """
@@ -807,7 +808,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         ignore_errors: bool = True,
         status_message: Optional[str] = None,
         force: bool = False,
-    ) -> ():
+    ) -> Optional[CallResult]:
         """
         Use this method to close and change status of (remotely!) executed tasks.
 
@@ -889,7 +890,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         status_reason: Optional[str] = None,
         status_message: Optional[str] = None,
         force: bool = False,
-    ) -> ():
+    ) -> Optional[CallResult]:
         """The signal that this Task stopped."""
         return self.send(
             tasks.FailedRequest(
@@ -901,7 +902,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             ignore_errors=ignore_errors,
         )
 
-    def publish(self, ignore_errors: bool = True) -> ():
+    def publish(self, ignore_errors: bool = True) -> "tasks.PublishResponse":
         """The signal that this task will be published"""
         if self.status not in (
             self.TaskStatusEnum.stopped,
@@ -1085,7 +1086,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         return self._get_all_events(event_type="plot", unique_selector=image_source_selector, batch_size=10000)
 
-    def update_model_desc(self, new_model_desc_file: Optional[str] = None) -> ():
+    def update_model_desc(self, new_model_desc_file: Optional[str] = None) -> Response:
         """Change the Task's model description."""
         with self._edit_lock:
             self.reload()
@@ -1886,7 +1887,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         self,
         project_id: Optional[str] = None,
         project_name: Optional[str] = None,
-    ) -> ():
+    ) -> Optional[bool]:
         """
         Set the project of the current task by either specifying a project name or ID
         """
@@ -2774,7 +2775,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             )
 
     @classmethod
-    def _get_api_server(cls) -> ():
+    def _get_api_server(cls) -> str:
         return Session.get_api_server_host()
 
     def _get_app_server(self) -> str:
@@ -2802,7 +2803,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             export_data["offline_output_models"] = self._offline_output_models
             json.dump(export_data, f, ensure_ascii=True, sort_keys=True)
 
-    def _edit(self, **kwargs: Any) -> Any:
+    def _edit(self, **kwargs: Any) -> Optional[CallResult]:
         with self._edit_lock:
             if self._offline_mode:
                 self._save_data_to_offline_dir(**kwargs)
@@ -3242,7 +3243,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
         return events_list
 
     @property
-    def _edit_lock(self) -> ():
+    def _edit_lock(self) -> Union[RLock, FileRLock]:
         # skip the actual lock, this one-time lock will always enter
         # only used on shutdown process to avoid deadlocks
         if self.__edit_lock is False:

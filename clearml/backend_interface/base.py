@@ -1,6 +1,6 @@
 import abc
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import requests.exceptions
 import six
@@ -64,7 +64,7 @@ class InterfaceBase(SessionInterface):
         raise_on_errors: bool = True,
         log: logging.Logger = None,
         async_enable: bool = False,
-    ) -> CallResult:
+    ) -> Optional[CallResult]:
         """Convenience send() method providing a standardized error reporting"""
         if cls._offline_mode:
             return None
@@ -136,7 +136,7 @@ class InterfaceBase(SessionInterface):
         ignore_errors: bool = False,
         raise_on_errors: bool = True,
         async_enable: bool = False,
-    ) -> CallResult:
+    ) -> Optional[CallResult]:
         return self._send(
             session=self.session,
             req=req,

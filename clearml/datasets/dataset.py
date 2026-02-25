@@ -416,7 +416,7 @@ class Dataset(object):
         recursive: bool = True,
         verbose: bool = False,
         max_workers: Optional[int] = None,
-    ) -> ():
+    ) -> int:
         """
         Add a folder into the current dataset. calculate file hash,
         and compare against parent, mark files to be uploaded
@@ -697,7 +697,7 @@ class Dataset(object):
         max_workers: Optional[int] = None,
         retries: int = 3,
         preview: bool = True,
-    ) -> ():
+    ) -> Optional[bool]:
         """
         Start file uploading, the function returns when all files are uploaded.
 
