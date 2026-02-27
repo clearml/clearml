@@ -60,6 +60,7 @@ class PatchJsonArgParse(object):
     __remote_task_params = {}
     __remote_task_params_dict = {}
     __patched = False
+    __skip_validation_param = None  # Cache for the skip validation parameter name
 
     @classmethod
     def update_current_task(cls, task: Any) -> None:
@@ -237,6 +238,31 @@ class PatchJsonArgParse(object):
                 if subarg_key not in cls.__remote_task_params_dict:
                     cls.__remote_task_params_dict[subarg_key] = subarg_value
 
+    @classmethod
+    def _get_skip_validation_param(cls) -> str:
+        """Detect which skip validation parameter is supported by the installed jsonargparse version.
+        
+        Returns '_skip_validation' for jsonargparse >= 4.0, '_skip_check' for older versions.
+        """
+        if cls.__skip_validation_param is not None:
+            return cls.__skip_validation_param
+        
+        if ArgumentParser is None:
+            cls.__skip_validation_param = "_skip_validation"
+            return cls.__skip_validation_param
+        
+        import inspect
+        sig = inspect.signature(ArgumentParser.parse_args)
+        if "_skip_validation" in sig.parameters:
+            cls.__skip_validation_param = "_skip_validation"
+        elif "_skip_check" in sig.parameters:
+            cls.__skip_validation_param = "_skip_check"
+        else:
+            # Default to newer API name
+            cls.__skip_validation_param = "_skip_validation"
+        
+        return cls.__skip_validation_param
+
     @staticmethod
     def __get_paths_from_dict(dict_: dict) -> list:
         paths = [(path_key, path) for path_key, path in dict_.items() if isinstance(path, Path)]
@@ -245,8 +271,9 @@ class PatchJsonArgParse(object):
                 paths.extend((subargs_key, path) for path in subargs)
         return paths
 
-    @staticmethod
+    @classmethod
     def __get_args_from_path(
+        cls,
         parser: "ArgumentParser",
         path: Tuple[str, "Path"],
         subcommand: Optional[str] = None,
@@ -255,6 +282,9 @@ class PatchJsonArgParse(object):
             # make sure no side effects happen in parser
             parser = copy.deepcopy(parser)
             argument = path[0]
+            # Get the correct parameter name for the installed jsonargparse version
+            skip_param = cls._get_skip_validation_param()
+            skip_kwargs = {skip_param: True}
             if subcommand and argument.startswith(subcommand + PatchJsonArgParse._commands_sep):
                 argument = argument[len(subcommand + PatchJsonArgParse._commands_sep) :]
                 result = parser.parse_args(
@@ -263,16 +293,16 @@ class PatchJsonArgParse(object):
                         parser.prefix_chars[0] * 2 + argument,
                         path[1].rel_path,
                     ],
-                    _skip_check=True,
                     defaults=False,
+                    **skip_kwargs
                 )
                 if PatchJsonArgParse._command_name in result:
                     del result[PatchJsonArgParse._command_name]
             else:
                 result = parser.parse_args(
                     [parser.prefix_chars[0] * 2 + argument, path[1].rel_path],
-                    _skip_check=True,
                     defaults=False,
+                    **skip_kwargs
                 )
             if argument in result:
                 del result[argument]
