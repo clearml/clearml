@@ -495,17 +495,15 @@ class Reporter(InterfaceBase, AbstractContextManager, SetupUploadMixin, AsyncMan
         :param nan_as_null: If True, Convert NaN to None (null), otherwise use 'nan'
         :type nan_as_null: bool
         """
-        inf_value = math.inf if six.PY3 else float("inf")
-
         def to_base_type(
             o: Any,
         ) -> Union[None, str, float, int, datetime.date, datetime.datetime]:
             if isinstance(o, float):
                 if o != o:
                     return None if nan_as_null else "nan"
-                elif o == inf_value:
+                elif o == math.inf:
                     return "inf"
-                elif o == -inf_value:
+                elif o == -math.inf:
                     return "-inf"
                 return round(o, ndigits=round_digits) if round_digits is not None else o
             elif isinstance(o, (datetime.date, datetime.datetime)):

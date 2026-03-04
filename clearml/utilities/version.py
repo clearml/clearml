@@ -4,13 +4,9 @@ import re
 from copy import deepcopy
 from typing import Callable, Union, List, Optional, Tuple, Any
 
-import six
 from attr import attrs, attrib
 
-if six.PY3:
-    from math import inf
-else:
-    inf = float("inf")
+from math import inf
 
 
 class InvalidVersion(ValueError):

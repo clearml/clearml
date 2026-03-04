@@ -424,9 +424,9 @@ class Logger:
             reporter_table = table
         else:
             reporter_table = table.fillna(str(np.nan))
-            replace("NaN", np.nan, math.nan if six.PY3 else float("nan"))
-            replace("Inf", np.inf, math.inf if six.PY3 else float("inf"))
-            minus_inf = [-np.inf, -math.inf if six.PY3 else -float("inf")]
+            replace("NaN", np.nan, math.nan)
+            replace("Inf", np.inf, math.inf)
+            minus_inf = [-np.inf, -math.inf]
             try:
                 minus_inf.append(np.NINF)
             except AttributeError:

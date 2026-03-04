@@ -6,8 +6,6 @@ from argparse import ArgumentParser, Namespace
 from copy import copy
 from typing import Optional, List, Union, Dict, Tuple, Callable, Type, Any
 
-from six import PY2
-
 try:
     from argparse import _SubParsersAction
 except ImportError:
@@ -163,43 +161,6 @@ class PatchArgumentParser:
             # sync back and parse
             if running_remotely():
                 if original_parse_fn:
-                    # if we are running python2 check if we have subparsers,
-                    # if we do we need to patch the args, because there is no default subparser
-                    if PY2:
-                        import itertools
-
-                        def _get_sub_parsers_defaults(subparser: _SubParsersAction, prev: list = []) -> list:
-                            actions_grp = (
-                                [v._actions for v in subparser.choices.values()]
-                                if isinstance(subparser, _SubParsersAction)
-                                else [subparser._actions]
-                            )
-                            _sub_parsers_defaults = (
-                                [[subparser]] if hasattr(subparser, "default") and subparser.default else []
-                            )
-                            for actions in actions_grp:
-                                _sub_parsers_defaults += [
-                                    _get_sub_parsers_defaults(v, prev)
-                                    for v in actions
-                                    if isinstance(v, _SubParsersAction) and hasattr(v, "default") and v.default
-                                ]
-
-                            return list(itertools.chain.from_iterable(_sub_parsers_defaults))
-
-                        sub_parsers_defaults = _get_sub_parsers_defaults(self)
-                        if sub_parsers_defaults:
-                            if args is None:
-                                # args default to the system args
-                                import sys as _sys
-
-                                args = _sys.argv[1:]
-                            else:
-                                args = list(args)
-                            # make sure we append the subparsers
-                            for a in sub_parsers_defaults:
-                                if a.default not in args:
-                                    args.append(a.default)
-
                     parsed_args = original_parse_fn(self, args=args, namespace=namespace)
                     PatchArgumentParser._add_last_parsed_args(self, parsed_args)
                 else:

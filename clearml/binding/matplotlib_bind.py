@@ -8,7 +8,7 @@ from typing import Union, Dict, List, Tuple, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import matplotlib
-import six
+
 from six import BytesIO
 
 from .import_bind import PostImportHookPatching
@@ -92,16 +92,10 @@ class PatchedMatplotlib:
             import matplotlib.pyplot as plt
             import matplotlib.figure as figure
 
-            if six.PY2:
-                PatchedMatplotlib._patched_original_plot = staticmethod(plt.show)
-                PatchedMatplotlib._patched_original_imshow = staticmethod(plt.imshow)
-                PatchedMatplotlib._patched_original_figure = staticmethod(figure.Figure.show)
-                PatchedMatplotlib._patched_original_savefig = staticmethod(figure.Figure.savefig)
-            else:
-                PatchedMatplotlib._patched_original_plot = plt.show
-                PatchedMatplotlib._patched_original_imshow = plt.imshow
-                PatchedMatplotlib._patched_original_figure = figure.Figure.show
-                PatchedMatplotlib._patched_original_savefig = figure.Figure.savefig
+            PatchedMatplotlib._patched_original_plot = plt.show
+            PatchedMatplotlib._patched_original_imshow = plt.imshow
+            PatchedMatplotlib._patched_original_figure = figure.Figure.show
+            PatchedMatplotlib._patched_original_savefig = figure.Figure.savefig
 
             # noinspection PyBroadException
             try:
@@ -254,20 +248,15 @@ class PatchedMatplotlib:
         # noinspection PyBroadException
         try:
             fname = kw.get("fname") or args[0]
-            from pathlib2 import Path
-
-            if six.PY3:
-                from pathlib import Path as Path3
-            else:
-                Path3 = Path
+            from pathlib import Path
 
             # if we are not storing into a file (str/Path) do not log the matplotlib
-            if not isinstance(fname, (str, Path, Path3)):
+            if not isinstance(fname, (str, Path)):
                 return ret
         except Exception:
             pass
 
-        tid = threading._get_ident() if six.PY2 else threading.get_ident()
+        tid = threading.get_ident()
         if not PatchedMatplotlib._recursion_guard.get(tid):
             PatchedMatplotlib._recursion_guard[tid] = True
             # noinspection PyBroadException
@@ -283,7 +272,7 @@ class PatchedMatplotlib:
     def patched_figure_show(self, *args: Any, **kw: Any) -> Any:
         if not PatchedMatplotlib._current_task:
             return PatchedMatplotlib._patched_original_figure(self, *args, **kw)
-        tid = threading._get_ident() if six.PY2 else threading.get_ident()
+        tid = threading.get_ident()
         if PatchedMatplotlib._recursion_guard.get(tid):
             # we are inside a gaurd do nothing
             return PatchedMatplotlib._patched_original_figure(self, *args, **kw)
@@ -298,7 +287,7 @@ class PatchedMatplotlib:
     def patched_show(*args: Any, **kw: Any) -> Any:
         if not PatchedMatplotlib._current_task:
             return PatchedMatplotlib._patched_original_plot(*args, **kw)
-        tid = threading._get_ident() if six.PY2 else threading.get_ident()
+        tid = threading.get_ident()
         PatchedMatplotlib._recursion_guard[tid] = True
         # noinspection PyBroadException
         try:

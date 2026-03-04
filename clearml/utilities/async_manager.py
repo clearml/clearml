@@ -2,8 +2,6 @@ import os
 import time
 from typing import Optional, Callable, Any
 
-import six
-
 from .process.mp import SingletonLock
 
 
@@ -52,12 +50,7 @@ class AsyncManagerMixin:
             if r.ready():
                 continue
             t = time.time()
-            # bugfix for python2.7 threading issues
-            if six.PY2 and not remaining:
-                while not r.ready():
-                    r.wait(timeout=2.0)
-            else:
-                r.wait(timeout=remaining)
+            r.wait(timeout=remaining)
             count += 1
             if max_num_uploads is not None and max_num_uploads - count <= 0:
                 break

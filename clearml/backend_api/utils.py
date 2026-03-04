@@ -8,16 +8,11 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from urllib3 import PoolManager
 import urllib3
-import six
 
 from .session.defs import ENV_HOST_VERIFY_CERT
 from ..backend_config.converters import strtobool
 
-if six.PY3:
-    from functools import lru_cache
-elif six.PY2:
-    # python 2 support
-    from backports.functools_lru_cache import lru_cache  # noqa
+from functools import lru_cache
 
 __disable_certificate_verification_warning = 0
 
@@ -154,13 +149,6 @@ def get_http_session_with_retry(
     )
 
     session = SessionWithTimeout()
-
-    # HACK: with python 2.7 there is a potential race condition that can cause
-    # a deadlock when importing "netrc", inside the get_netrc_auth() function
-    # setting 'session.trust_env' to False will make sure the `get_netrc_auth` is not called
-    # see details: https://github.com/psf/requests/issues/2925
-    if six.PY2:
-        session.trust_env = False
 
     if backoff_max is not None:
         if "BACKOFF_MAX" in vars(Retry):

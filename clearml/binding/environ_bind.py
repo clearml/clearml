@@ -4,8 +4,6 @@ from multiprocessing import pool
 from time import sleep
 from typing import Callable, TYPE_CHECKING, Any
 
-import six
-
 if TYPE_CHECKING:
     from .. import Task
 from ..config import TASK_LOG_ENVIRONMENT, running_remotely, config
@@ -123,11 +121,7 @@ class PatchOsFork:
                 )
                 cls._registered_fork_callbacks = True
             except Exception:
-                # python <3.6
-                if six.PY2:
-                    cls._original_fork = staticmethod(os.fork)
-                else:
-                    cls._original_fork = os.fork
+                cls._original_fork = os.fork
                 os.fork = cls._patched_fork
 
         except Exception:

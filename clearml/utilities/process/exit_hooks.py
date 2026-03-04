@@ -5,8 +5,6 @@ import sys
 import types
 from typing import Callable, Union, Any
 
-import six
-
 from ...logger import Logger
 
 
@@ -26,7 +24,7 @@ class ExitHooks:
         self._import_bind_path = os.path.join("clearml", "binding", "import_bind.py")
 
     def update_callback(self, callback: Callable) -> None:
-        if self._exit_callback and not six.PY2:
+        if self._exit_callback:
             # noinspection PyBroadException
             try:
                 atexit.unregister(self._exit_callback)
@@ -120,7 +118,7 @@ class ExitHooks:
 
         try:
             # remove us from import errors
-            if six.PY3 and isinstance(exctype, type) and issubclass(exctype, ImportError):
+            if isinstance(exctype, type) and issubclass(exctype, ImportError):
                 prev = cur = traceback
                 while cur is not None:
                     tb_next = cur.tb_next

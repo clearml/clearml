@@ -7,7 +7,6 @@ from random import randint
 from tempfile import mkstemp
 from typing import TYPE_CHECKING, Callable, Dict, Optional, Union, Any
 
-import six
 from pathlib2 import Path
 
 from ...backend_interface.model import Model
@@ -25,7 +24,7 @@ _recursion_guard = {}
 def _patched_call(original_fn: Callable, patched_fn: Callable) -> Callable:
     def _inner_patch(*args: Any, **kwargs: Any) -> Any:
         # noinspection PyProtectedMember,PyUnresolvedReferences
-        ident = threading._get_ident() if six.PY2 else threading.get_ident()
+        ident = threading.get_ident()
         if ident in _recursion_guard:
             return original_fn(*args, **kwargs)
         _recursion_guard[ident] = 1

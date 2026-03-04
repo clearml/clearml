@@ -5,7 +5,6 @@ import yaml
 from enum import Enum
 from inspect import isfunction
 
-from six import PY2
 from argparse import (
     _StoreAction,  # noqa
     ArgumentError,  # noqa
@@ -513,9 +512,6 @@ class _Arguments:
                         ):
                             current_action.default = v
                         current_action.required = False
-                        # python2 doesn't support defaults for positional arguments, unless used with nargs=?
-                        if PY2 and not current_action.nargs:
-                            current_action.nargs = "?"
                     else:
                         # do not add parameters that do not exist in argparser, they might be the dict
                         pass

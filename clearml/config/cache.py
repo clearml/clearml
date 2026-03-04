@@ -1,7 +1,6 @@
 import json
 from os.path import expanduser
 
-import six
 from pathlib2 import Path
 
 from . import running_remotely
@@ -21,8 +20,7 @@ class SessionCache:
     def _load_cache(cls) -> dict:
         # noinspection PyBroadException
         try:
-            flag = "rb" if six.PY2 else "rt"
-            with (Path(expanduser(cls.SESSION_CACHE_FOLDER)) / SESSION_CACHE_FILE).open(flag) as fp:
+            with (Path(expanduser(cls.SESSION_CACHE_FOLDER)) / SESSION_CACHE_FILE).open("rt") as fp:
                 return json.load(fp)
         except Exception:
             return {}
@@ -32,8 +30,7 @@ class SessionCache:
         # noinspection PyBroadException
         try:
             Path(expanduser(cls.SESSION_CACHE_FOLDER)).mkdir(parents=True, exist_ok=True)
-            flag = "wb" if six.PY2 else "wt"
-            with (Path(expanduser(cls.SESSION_CACHE_FOLDER)) / SESSION_CACHE_FILE).open(flag) as fp:
+            with (Path(expanduser(cls.SESSION_CACHE_FOLDER)) / SESSION_CACHE_FILE).open("wt") as fp:
                 json.dump(cache, fp)
         except Exception:
             pass
