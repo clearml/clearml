@@ -437,7 +437,7 @@ class BaseModel:
 
         if not model_path:
             if raise_on_error:
-                raise ValueError("Model package '{}' could not be downloaded".format(self.url))
+                raise ValueError(f"Model package '{self.url}' could not be downloaded")
             return None
 
         if return_path:
@@ -1310,8 +1310,8 @@ class BaseModel:
             str(self._task.TaskStatusEnum.in_progress),
         ):
             self._log.warning(
-                "Could not update last created model in Task {}, "
-                "Task status '{}' cannot be updated".format(self._task.id, self._task.status)
+                f"Could not update last created model in Task {self._task.id}, "
+                f"Task status '{self._task.status}' cannot be updated"
             )
         elif task_model_entry:
             self._base_model.update_for_task(
@@ -1479,7 +1479,7 @@ class Model(BaseModel):
 
         only_fields = ["id", "created", "system_tags"]
 
-        extra_fields = {"metadata.{}.value".format(k): v for k, v in (metadata or {}).items()}
+        extra_fields = {f"metadata.{k}.value": v for k, v in (metadata or {}).items()}
 
         models_fetched = []
 
@@ -1545,7 +1545,7 @@ class Model(BaseModel):
             weights_url = model.url
         except Exception:
             if raise_on_errors:
-                raise ValueError("Could not find model id={}".format(model.id))
+                raise ValueError(f"Could not find model id={model.id}")
             return False
 
         try:
@@ -1556,11 +1556,11 @@ class Model(BaseModel):
             response = res.wait()
             if not response.ok():
                 if raise_on_errors:
-                    raise ValueError("Could not remove model id={}: {}".format(model.id, response.meta))
+                    raise ValueError(f"Could not remove model id={model.id}: {response.meta}")
                 return False
         except SendError as ex:
             if raise_on_errors:
-                raise ValueError("Could not remove model id={}: {}".format(model.id, ex))
+                raise ValueError(f"Could not remove model id={model.id}: {ex}")
             return False
         except ValueError:
             if raise_on_errors:
@@ -1568,7 +1568,7 @@ class Model(BaseModel):
             return False
         except Exception as ex:
             if raise_on_errors:
-                raise ValueError("Could not remove model id={}: {}".format(model.id, ex))
+                raise ValueError(f"Could not remove model id={model.id}: {ex}")
             return False
 
         if not delete_weights_file:
@@ -1578,11 +1578,11 @@ class Model(BaseModel):
         try:
             if not helper.delete(weights_url):
                 if raise_on_errors:
-                    raise ValueError("Could not remove model id={} weights file: {}".format(model.id, weights_url))
+                    raise ValueError(f"Could not remove model id={model.id} weights file: {weights_url}")
                 return False
         except Exception as ex:
             if raise_on_errors:
-                raise ValueError("Could not remove model id={} weights file '{}': {}".format(model.id, weights_url, ex))
+                raise ValueError(f"Could not remove model id={model.id} weights file '{weights_url}': {ex}")
             return False
 
         return True
@@ -1699,7 +1699,7 @@ class InputModel(Model):
         if result.response.models:
             logger = get_logger()
 
-            logger.debug('A model with uri "{}" already exists. Selecting it'.format(weights_url))
+            logger.debug(f'A model with uri "{weights_url}" already exists. Selecting it')
 
             model = get_single_result(
                 entity="model",
@@ -1709,7 +1709,7 @@ class InputModel(Model):
                 raise_on_error=False,
             )
 
-            logger.info("Selected model id: {}".format(model.id))
+            logger.info(f"Selected model id: {model.id}")
 
             return InputModel(model_id=model.id)
 
@@ -1722,9 +1722,9 @@ class InputModel(Model):
 
         task = Task.current_task()
         if task:
-            comment = "Imported by task id: {}".format(task.id) + ("\n" + comment if comment else "")
+            comment = f"Imported by task id: {task.id}" + ("\n" + comment if comment else "")
             project_id = task.project
-            name = name or "Imported by {}".format(task.name or "")
+            name = name or f"Imported by {task.name or ''}"
             # do not register the Task, because we do not want it listed after as "output model",
             # the Task never actually created the Model
             task_id = None
@@ -1897,9 +1897,7 @@ class InputModel(Model):
             )
             if not found_models:
                 raise ValueError(
-                    "Could not locate model with project={} name={} tags={} published={}".format(
-                        project, name, tags, only_published
-                    )
+                    f"Could not locate model with project={project} name={name} tags={tags} published={only_published}"
                 )
             model_id = found_models[0].id
         super(InputModel, self).__init__(model_id)
@@ -1983,9 +1981,7 @@ class InputModel(Model):
         if cls._WARNING_CONNECTED_NAMES[name]:
             return
         get_logger().warning(
-            "Connecting multiple input models with the same name: `{}`. This might result in the wrong model being used when executing remotely".format(
-                name
-            )
+            f"Connecting multiple input models with the same name: `{name}`. This might result in the wrong model being used when executing remotely"
         )
         cls._WARNING_CONNECTED_NAMES[name] = True
 
@@ -2219,7 +2215,7 @@ class OutputModel(BaseModel):
                 project_id=self._task.project,
                 name=self._floating_data.name or self._task.name,
                 comment=(
-                    "{}\n{}".format(_base_model.comment, self._floating_data.comment)
+                    f"{_base_model.comment}\n{self._floating_data.comment}"
                     if (
                         _base_model.comment
                         and self._floating_data.comment
@@ -2453,7 +2449,7 @@ class OutputModel(BaseModel):
         # let us know the iteration number, we put it in the comment section for now.
         if update_comment:
             comment = self.comment or ""
-            iteration_msg = "snapshot {} stored".format(weights_filename or register_uri)
+            iteration_msg = f"snapshot {weights_filename or register_uri} stored"
             if not comment.startswith("\n"):
                 comment = "\n" + comment
             comment = iteration_msg + comment
@@ -2567,7 +2563,7 @@ class OutputModel(BaseModel):
                 try:
                     (os.rmdir if is_dir else os.remove)(path)
                 except OSError:
-                    self._log.info("Failed removing temporary {}".format(path))
+                    self._log.info(f"Failed removing temporary {path}")
 
             for filename in weights_filenames:
                 safe_remove(filename)

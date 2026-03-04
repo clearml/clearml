@@ -1419,7 +1419,7 @@ class Logger:
                     try:
                         # make sure we are writing to the original stdout
                         StdStreamPatch.stderr_original_write(
-                            'clearml.Logger failed sending log [level {}]: "{}"\n'.format(level, msg)
+                           f'clearml.Logger failed sending log [level {level}]: "{msg}"\n'
                         )
                     except Exception:
                         pass

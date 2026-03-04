@@ -16,7 +16,7 @@ import uuid
 from _socket import gethostname
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from concurrent.futures import ThreadPoolExecutor, TimeoutError, CancelledError
+from concurrent.futures import ThreadPoolExecutor
 from copy import copy
 from datetime import datetime, timezone
 from multiprocessing.pool import ThreadPool, AsyncResult
@@ -200,7 +200,7 @@ class _Driver(metaclass=ABCMeta):
         # import here to avoid circular imports
         from .manager import StorageManager
 
-        cls.get_logger().info("Attempting to download remote certificate '{}'".format(cert_url))
+        cls.get_logger().info(f"Attempting to download remote certificate '{cert_url}'")
         potential_exception = None
         downloaded_verify = None
         try:
@@ -215,7 +215,7 @@ class _Driver(metaclass=ABCMeta):
                 )
             )
         else:
-            cls.get_logger().info("Successfully downloaded remote certificate '{}'".format(cert_url))
+            cls.get_logger().info(f"Successfully downloaded remote certificate '{cert_url}'")
         return downloaded_verify
 
 
@@ -316,7 +316,7 @@ class _HttpDriver(_Driver):
             try:
                 callback(new_chunk)
             except Exception as ex:
-                self.get_logger().debug("Exception raised when running callback function: {}".format(ex))
+                self.get_logger().debug(f"Exception raised when running callback function: {ex}")
 
         # when sending data in post, there is no connection timeout, just an entire upload timeout
         timeout = int(self.timeout_total)
@@ -346,8 +346,7 @@ class _HttpDriver(_Driver):
 
         res = container.session.post(url, data=m, timeout=timeout, headers=headers)
         if res.status_code != requests.codes.ok:
-            raise ValueError("Failed uploading object {} to {} ({}): {}".format(
-                object_name, url, res.status_code, res.text))
+            raise ValueError(f"Failed uploading object {object_name} to {url} ({res.status_code}): {res.text}")
 
         # call back is useless because we are not calling it while uploading...
         return res
@@ -906,7 +905,7 @@ class _Boto3Driver(_Driver):
             bucket_name = str(fullname.path.segments[0])
             filename = str(furl(path=fullname.path.segments[1:]))
             if conf.subdir:
-                filename = "{}/{}".format(conf.subdir, filename)
+                filename = f"{conf.subdir}/{filename}"
 
             data = {
                 "user": getpass.getuser(),
@@ -1148,7 +1147,7 @@ class _GoogleCloudStorageDriver(_Driver):
                 pass
             name = getattr(object, "name", "")
             if not kwargs.get("silent", False):
-                self.get_logger().warning("Failed deleting object {}: {}".format(name, ex))
+                self.get_logger().warning(f"Failed deleting object {name}: {ex}")
             return False
 
         return not object.exists()
@@ -1535,7 +1534,7 @@ class _AzureBlobServiceStorageDriver(_Driver):
     ) -> _Object:
         container = self._containers.get(container_name)
         if not container:
-            raise StorageError("Container `{}` not found for object {}".format(container_name, object_name))
+            raise StorageError(f"Container `{container_name}` not found for object {object_name}")
 
         # blob_name = self._blob_name_from_object_path(object_name, container_name)
         blob = container.get_blob_properties(container.name, object_name)
@@ -1553,7 +1552,7 @@ class _AzureBlobServiceStorageDriver(_Driver):
         container = obj.container
         total_size_mb = obj.content_length / (1024.0 * 1024.0)
         remote_path = os.path.join(
-            "{}://".format(self.scheme),
+            f"{self.scheme}://",
             container.config.account_name,
             container.name,
             obj.blob_name,
@@ -1715,7 +1714,7 @@ class _FileStorageDriver(_Driver):
         """
 
         if "/" in container_name or "\\" in container_name:
-            raise ValueError('Container name "{}" cannot contain \\ or / '.format(container_name))
+            raise ValueError(f'Container name "{container_name}" cannot contain \\ or / ')
 
     def _make_container(self, container_name: str) -> _Container:
         """
@@ -1734,7 +1733,7 @@ class _FileStorageDriver(_Driver):
         try:
             stat = os.stat(full_path)
         except OSError:
-            raise OSError('Target path "{}" is not accessible or does not exist'.format(full_path))
+            raise OSError(f'Target path "{full_path}" is not accessible or does not exist')
 
         extra = {
             "creation_time": stat.st_ctime,
@@ -1760,12 +1759,12 @@ class _FileStorageDriver(_Driver):
         full_path = os.path.realpath(os.path.join(self.base_path, container.name if container else ".", object_name))
 
         if os.path.isdir(full_path):
-            raise ValueError('Target path "{}" already exist'.format(full_path))
+            raise ValueError(f'Target path "{full_path}" already exist')
 
         try:
             stat = os.stat(full_path)
         except Exception:
-            raise ValueError('Cannot access target path "{}"'.format(full_path))
+            raise ValueError(f'Cannot access target path "{full_path}"')
 
         extra = {
             "creation_time": stat.st_ctime,
@@ -1857,7 +1856,7 @@ class _FileStorageDriver(_Driver):
         path = os.path.realpath(os.path.join(self.base_path, container.name if container else "."))
 
         if check and not os.path.isdir(path):
-            raise ValueError('Target path "{}" does not exist'.format(path))
+            raise ValueError(f'Target path "{path}" does not exist')
 
         return path
 
@@ -1930,7 +1929,7 @@ class _FileStorageDriver(_Driver):
         base_name = os.path.basename(destination_path)
 
         if not base_name and not os.path.exists(destination_path):
-            raise ValueError('Path "{}" does not exist'.format(destination_path))
+            raise ValueError(f'Path "{destination_path}" does not exist')
 
         if not base_name:
             file_path = os.path.join(destination_path, obj.name)
@@ -1938,7 +1937,7 @@ class _FileStorageDriver(_Driver):
             file_path = destination_path
 
         if os.path.exists(file_path) and not overwrite_existing:
-            raise ValueError('File "{}" already exists, but overwrite_existing=False'.format(file_path))
+            raise ValueError(f'File "{file_path}" already exists, but overwrite_existing=False')
 
         try:
             shutil.copy(obj_path, file_path)
@@ -2118,14 +2117,14 @@ class _FileStorageDriver(_Driver):
             exp = sys.exc_info()[1]
             if exp.errno == errno.EEXIST:
                 raise ValueError(
-                    'Container "{}" with this name already exists. The name '
+                    f'Container "{container_name}" with this name already exists. The name '
                     "must be unique among all the containers in the "
-                    "system".format(container_name)
+                    "system"
                 )
             else:
-                raise ValueError('Error creating container "{}"'.format(container_name))
+                raise ValueError(f'Error creating container "{container_name}"')
         except Exception:
-            raise ValueError('Error creating container "{}"'.format(container_name))
+            raise ValueError(f'Error creating container "{container_name}"')
 
         return self._make_container(container_name)
 
@@ -2140,8 +2139,8 @@ class _FileStorageDriver(_Driver):
         """
 
         # Check if there are any objects inside this
-        for obj in self._get_objects(container):
-            raise ValueError('Container "{}" is not empty'.format(container.name))
+        for _obj in self._get_objects(container):
+            raise ValueError(f'Container "{container.name}" is not empty')
 
         path = self.get_container_cdn_url(container, check=True)
 
@@ -2234,7 +2233,7 @@ class _FileStorageDriver(_Driver):
         # now get rid of the file:// prefix
         path = Path(full_url[7:])
         if not path.exists():
-            raise ValueError("Requested path does not exist: {}".format(path))
+            raise ValueError(f"Requested path does not exist: {path}")
         return path.as_posix()
 
     def test_upload(self, test_path: str, config: Any, **kwargs: Any) -> bool:
@@ -2281,11 +2280,7 @@ class _StorageHelper:
 
                 if any(prefix is None for prefix in (rule.registered_prefix, rule.local_prefix)):
                     cls._get_logger().warning(
-                        "Illegal substitution rule configuration '{}[{}]': {}".format(
-                            cls.path_substitution_config,
-                            index,
-                            asdict(rule),
-                        )
+                        f"Illegal substitution rule configuration '{cls.path_substitution_config}[{index}]': {asdict(rule)}"
                     )
 
                     continue
@@ -2293,11 +2288,7 @@ class _StorageHelper:
                 if all((rule.replace_windows_sep, rule.replace_linux_sep)):
                     cls._get_logger().warning(
                         "Only one of replace_windows_sep and replace_linux_sep flags may be set."
-                        "'{}[{}]': {}".format(
-                            cls.path_substitution_config,
-                            index,
-                            asdict(rule),
-                        )
+                        f"'{cls.path_substitution_config}[{index}]': {asdict(rule)}"
                     )
                     continue
 
@@ -2403,7 +2394,7 @@ class _StorageHelper:
         try:
             configs = kwargs.get("configs")
             if configs:
-                instance_key += "_{}".format(configs.cache_name)
+                instance_key += f"_{configs.cache_name}"
         except Exception:
             pass
 
@@ -2418,7 +2409,7 @@ class _StorageHelper:
             cls._get_logger().error(str(ex))
             return None
         except Exception as ex:
-            cls._get_logger().error("Failed creating storage object {} Reason: {}".format(base_url or url, ex))
+            cls._get_logger().error(f"Failed creating storage object {base_url or url} Reason: {ex}")
             return None
 
         cls._helpers[instance_key] = instance
@@ -2482,10 +2473,10 @@ class _StorageHelper:
         if self._scheme == _AzureBlobServiceStorageDriver.scheme:
             self._conf = copy(self._azure_configurations.get_config_by_uri(url))
             if self._conf is None:
-                raise StorageError("Missing Azure Blob Storage configuration for {}".format(url))
+                raise StorageError(f"Missing Azure Blob Storage configuration for {url}")
 
             if not self._conf.account_name or not self._conf.account_key:
-                raise StorageError("Missing account name or key for Azure Blob Storage access for {}".format(base_url))
+                raise StorageError(f"Missing account name or key for Azure Blob Storage access for {base_url}")
 
             self._driver = _AzureBlobServiceStorageDriver()
             self._container = self._driver.get_container(config=self._conf, account_url=parsed.netloc)
@@ -2559,9 +2550,9 @@ class _StorageHelper:
     @classmethod
     def get_aws_storage_uri_from_config(cls, bucket_config: BucketConfig) -> str:
         uri = (
-            "s3://{}/{}".format(bucket_config.host, bucket_config.bucket)
+            f"s3://{bucket_config.host}/{bucket_config.bucket}"
             if bucket_config.host
-            else "s3://{}".format(bucket_config.bucket)
+            else f"s3://{bucket_config.bucket}"
         )
         if bucket_config.subdir:
             uri += "/" + bucket_config.subdir
@@ -2570,14 +2561,14 @@ class _StorageHelper:
     @classmethod
     def get_gcp_storage_uri_from_config(cls, bucket_config: BucketConfig) -> str:
         return (
-            "gs://{}/{}".format(bucket_config.bucket, bucket_config.subdir)
+            f"gs://{bucket_config.bucket}/{bucket_config.subdir}"
             if bucket_config.subdir
-            else "gs://{}".format(bucket_config.bucket)
+            else f"gs://{bucket_config.bucket}"
         )
 
     @classmethod
     def get_azure_storage_uri_from_config(cls, bucket_config: BucketConfig) -> str:
-        return "azure://{}.blob.core.windows.net/{}".format(bucket_config.account_name, bucket_config.container_name)
+        return f"azure://{bucket_config.account_name}.blob.core.windows.net/{bucket_config.container_name}"
 
     @classmethod
     def get_configuration(cls, bucket_config: BucketConfig) -> S3BucketConfig:
@@ -2627,7 +2618,7 @@ class _StorageHelper:
                 _Boto3Driver._test_bucket_config(bucket_config, log)  # noqa
             if existing:
                 if log:
-                    log.warning("Overriding existing configuration for '{}'".format(uri))
+                    log.warning(f"Overriding existing configuration for '{uri}'")
                 configs.remove_config(existing)
             configs.add_config(bucket_config)
         else:
@@ -2635,7 +2626,7 @@ class _StorageHelper:
             good_config = False
             if existing:
                 if log:
-                    log.info("Using existing credentials for '{}'".format(uri))
+                    log.info(f"Using existing credentials for '{uri}'")
                 good_config = _Boto3Driver._test_bucket_config(existing, log, raise_on_error=False)  # noqa
 
             if not good_config:
@@ -2643,7 +2634,7 @@ class _StorageHelper:
                 configs.update_config_with_defaults(bucket_config)
 
                 if log:
-                    log.info("Using global credentials for '{}'".format(uri))
+                    log.info(f"Using global credentials for '{uri}'")
                 if _test_config:
                     _Boto3Driver._test_bucket_config(bucket_config, log)  # noqa
                 configs.add_config(bucket_config)
@@ -2658,19 +2649,19 @@ class _StorageHelper:
         if not use_existing:
             if existing:
                 if log:
-                    log.warning("Overriding existing configuration for '{}'".format(uri))
+                    log.warning(f"Overriding existing configuration for '{uri}'")
                 configs.remove_config(existing)
             configs.add_config(bucket_config)
         else:
             good_config = False
             if existing:
                 if log:
-                    log.info("Using existing config for '{}'".format(uri))
+                    log.info(f"Using existing config for '{uri}'")
                 good_config = _GoogleCloudStorageDriver.test_upload(None, bucket_config)
             if not good_config:
                 configs.update_config_with_defaults(bucket_config)
                 if log:
-                    log.info("Using global credentials for '{}'".format(uri))
+                    log.info(f"Using global credentials for '{uri}'")
                 configs.add_config(bucket_config)
 
     @classmethod
@@ -2683,19 +2674,19 @@ class _StorageHelper:
         if not use_existing:
             if existing:
                 if log:
-                    log.warning("Overriding existing configuration for '{}'".format(uri))
+                    log.warning(f"Overriding existing configuration for '{uri}'")
                 configs.remove_config(existing)
             configs.add_config(bucket_config)
         else:
             good_config = False
             if existing:
                 if log:
-                    log.info("Using existing config for '{}'".format(uri))
+                    log.info(f"Using existing config for '{uri}'")
                 good_config = _AzureBlobServiceStorageDriver.test_upload(None, bucket_config)
             if not good_config:
                 configs.update_config_with_defaults(bucket_config)
                 if log:
-                    log.info("Using global credentials for '{}'".format(uri))
+                    log.info(f"Using global credentials for '{uri}'")
                 configs.add_config(bucket_config)
 
     @classmethod
@@ -2889,7 +2880,7 @@ class _StorageHelper:
         extra.update(self._extra)
         last_ex = None
         cb = UploadProgressReport.from_stream(stream, object_name, self._verbose, self._log)
-        for i in range(max(1, int(retries))):
+        for _i in range(max(1, int(retries))):
             try:
                 self._driver.upload_object_via_stream(
                     iterator=stream,
@@ -3074,15 +3065,12 @@ class _StorageHelper:
         cb = None
         try:
             if verbose:
-                self._log.info("Start downloading from {}".format(remote_path))
+                self._log.info(f"Start downloading from {remote_path}")
             # check for 0 sized files as well - we want to override empty files that were created
             # via mkstemp or similar functions
             if not overwrite_existing and Path(local_path).is_file() and Path(local_path).stat().st_size != 0:
                 self._log.debug(
-                    "File {} already exists, no need to download, thread id = {}".format(
-                        local_path,
-                        threading.current_thread().ident,
-                    ),
+                    f"File {local_path} already exists, no need to download, thread id = {threading.current_thread().ident}",
                 )
 
                 return local_path
@@ -3094,7 +3082,7 @@ class _StorageHelper:
                 return local_path
             # we download into temp_local_path so that if we accidentally stop in the middle,
             # we won't think we have the entire file
-            temp_local_path = "{}_{}{}".format(local_path, time(), self._temp_download_suffix)
+            temp_local_path = f"{local_path}_{time()}{self._temp_download_suffix}"
             obj = self.get_object(remote_path, silence_errors=silence_errors)
             if not obj:
                 return None
@@ -3170,13 +3158,11 @@ class _StorageHelper:
                     report_completed=True,
                     report_summary=verbose or download_reported,
                     report_prefix="Downloaded",
-                    report_suffix="from {} , saved to {}".format(remote_path, local_path),
+                    report_suffix=f"from {remote_path} , saved to {local_path}",
                 )
             elif verbose or download_reported:
                 self._log.info(
-                    "Downloaded {:.2f} MB successfully from {} , saved to {}".format(
-                        dl_total_mb, remote_path, local_path
-                    )
+                    f"Downloaded {dl_total_mb:.2f} MB successfully from {remote_path} , saved to {local_path}"
                 )
             return local_path
         except DownloadError:
@@ -3186,7 +3172,7 @@ class _StorageHelper:
         except Exception as e:
             if cb:
                 cb.close()
-            self._log.error("Could not download {} , err: {} ".format(remote_path, e))
+            self._log.error(f"Could not download {remote_path} , err: {e} ")
             if delete_on_failure and temp_local_path:
                 # noinspection PyBroadException
                 try:
@@ -3244,11 +3230,11 @@ class _StorageHelper:
         try:
             self.upload_from_stream(stream=BytesIO(b"clearml"), dest_path=dest_path)
         except Exception:
-            raise ValueError("Insufficient permissions (write failed) for {}".format(base_url))
+            raise ValueError(f"Insufficient permissions (write failed) for {base_url}")
         try:
             self.delete(path=dest_path)
         except Exception:
-            raise ValueError("Insufficient permissions (delete failed) for {}".format(base_url))
+            raise ValueError(f"Insufficient permissions (delete failed) for {base_url}")
         return True
 
     @classmethod
@@ -3297,7 +3283,7 @@ class _StorageHelper:
         def replace_separator(_url: str, where: int, sep: str) -> str:
             return _url[:where] + _url[where:].replace(sep, os.sep)
 
-        for index, rule in enumerate(cls._path_substitutions):
+        for rule in cls._path_substitutions:
             if url.startswith(rule.registered_prefix):
                 url = url.replace(
                     rule.registered_prefix,
@@ -3329,7 +3315,7 @@ class _StorageHelper:
         elif parsed.scheme == _AzureBlobServiceStorageDriver.scheme:
             conf = cls._azure_configurations.get_config_by_uri(base_url)
             if not conf:
-                raise StorageError("Can't find azure configuration for {}".format(base_url))
+                raise StorageError(f"Can't find azure configuration for {base_url}")
             return str(furl(base_url).set(path=conf.container_name))
         elif parsed.scheme == _GoogleCloudStorageDriver.scheme:
             conf = cls._gs_configurations.get_config_by_uri(base_url)
@@ -3361,10 +3347,10 @@ class _StorageHelper:
                     folder_uri = "/".join((_base_url, folder_uri))
 
                 cls._get_logger().debug(
-                    "Upload destination {} amended to {} for registration purposes".format(prev_folder_uri, folder_uri)
+                    f"Upload destination {prev_folder_uri} amended to {folder_uri} for registration purposes"
                 )
             else:
-                raise ValueError("folder_uri: {} does not start with base url: {}".format(folder_uri, _base_url))
+                raise ValueError(f"folder_uri: {folder_uri} does not start with base url: {_base_url}")
 
         return folder_uri
 
@@ -3451,7 +3437,7 @@ class _StorageHelper:
             else:
                 self._log.info(msg)
         last_ex = None
-        for i in range(max(1, int(retries))):
+        for _i in range(max(1, int(retries))):
             try:
                 if not self._upload_from_file(local_path=src_path, dest_path=canonized_dest_path, extra=extra):
                     # retry if failed
@@ -3576,7 +3562,7 @@ class StorageHelper(_StorageHelper):
         Overloads the standard StorageHelper and provides local caching support for calls to download_to_file().
     """
     use_disk_space_file_size_strategy = deferred_config(
-        "storage.cache.{}.enabled".format(_DISK_STRATEGY_SECTION),
+        f"storage.cache.{_DISK_STRATEGY_SECTION}.enabled",
         False,
         transform=bool,
     )
@@ -3733,7 +3719,7 @@ class StorageHelper(_StorageHelper):
             self.cache_base_dir.mkdir(parents=True, exist_ok=True)
         except OSError as ex:
             raise StorageError(
-                "Failed creating cache folder {}: {}".format(self.cache_base_dir, ex)
+                f"Failed creating cache folder {self.cache_base_dir}: {ex}"
             )
 
     @classmethod
@@ -3887,9 +3873,7 @@ class StorageHelper(_StorageHelper):
                 except Exception:
                     if not silence_errors:
                         self._log.error(
-                            "Could not download {} to local path. Note that the download to the cache succeeded".format(
-                                remote_path
-                            )
+                            f"Could not download {remote_path} to local path. Note that the download to the cache succeeded"
                         )
             return download_path
         except self._NotDirectOrCached:
@@ -3957,7 +3941,7 @@ class StorageHelper(_StorageHelper):
         scheme, netloc, filename, query, fragment = fast_urlsplit(canonized_url, allow_fragments=False)
         if query:
             filename = filename.split('/')
-            filename[-1] = '{}.{}'.format(hashlib.md5(query.encode()).hexdigest(), filename[-1])
+            filename[-1] = f'{hashlib.md5(query.encode()).hexdigest()}.{filename[-1]}'
             filename = '/'.join(filename if filename[0] else filename[1:])
         else:
             filename = str(Path(filename.lstrip("/")))
@@ -4015,7 +3999,7 @@ class StorageHelper(_StorageHelper):
             and (skip_size_check or os.path.getsize(secondary_cache_path) != 0)
         ):
             if verbose:
-                self._log.info("{} found in the secondary cache. Downloading to local cache".format(remote_path))
+                self._log.info(f"{remote_path} found in the secondary cache. Downloading to local cache")
             secondary_to_local_cache_fetcher = self.__class__.get(secondary_cache_path)
             local_path = os.path.join(
                 str(secondary_to_local_cache_fetcher.cache_dir),
@@ -4180,7 +4164,7 @@ class StorageHelper(_StorageHelper):
                         self._path_locks_cnt.pop(key, None)
                         try:
                             locks.pop(key, None)
-                        except (KeyError, Exception):
+                        except Exception:
                             pass
                         self._reused_locks.append(lock)
 
@@ -4205,7 +4189,7 @@ class StorageHelper(_StorageHelper):
             try:
                 future = self.clean_cache_executor.submit(self._do_clean_cache, self.log)
                 future.result(timeout=0)
-            except (TimeoutError, CancelledError, Exception):
+            except Exception:
                 pass
 
     def _update_cache_file(self, file_path, downloaded=False, log=None):
@@ -4330,7 +4314,7 @@ class StorageHelper(_StorageHelper):
                         self._pre_delete_hooks[client_name](candidate)
                     except Exception as exc:
                         if log:
-                            log.error("Pre delete hook of client {} failed: {}".format(client_name, exc))
+                            log.error(f"Pre delete hook of client {client_name} failed: {exc}")
 
                 try:
                     # Remove file and update cache size
@@ -4360,7 +4344,7 @@ class StorageHelper(_StorageHelper):
         heapify(cached_files)
 
         start_path = str(self.cache_base_dir)
-        for dirpath, dirnames, filenames in os.walk(start_path):
+        for dirpath, _dirnames, filenames in os.walk(start_path):
             for f in filenames:
                 # remove session file from cache list, so we do not delete it
                 if dirpath == start_path and f == SESSION_CACHE_FILE:
@@ -4431,7 +4415,7 @@ class StorageHelperDiskSpaceFileSizeStrategy(StorageHelper):
 def _config(*keys, default=None, cache_name=None):
     storage_key = "storage.cache"
     if cache_name is not None:
-        storage_key += ".{}".format(cache_name)
+        storage_key += f".{cache_name}"
     primary_key = ".".join(filter(None, (storage_key, *keys)))
     if cache_name == "secondary":
         nested_key = _secondary_disk_config_key(*keys)
@@ -4444,7 +4428,7 @@ def _config(*keys, default=None, cache_name=None):
 def _disk_config_key(cache_name, *keys):
     storage_key = "storage.cache"
     if cache_name is not None:
-        storage_key += ".{}".format(cache_name)
+        storage_key += f".{cache_name}"
     return ".".join(filter(None, (storage_key, _DISK_STRATEGY_SECTION, *keys)))
 
 
@@ -4483,7 +4467,7 @@ def _disk_config_percentage(*keys, default=None, cache_name=None):
 def _get_cache_dir(cache_name=None):
     config_key = "storage.cache"
     if cache_name:
-        config_key += ".{}".format(cache_name)
+        config_key += f".{cache_name}"
     env_var = None
     default_cache_dir = None
     if cache_name is None:
@@ -4500,7 +4484,7 @@ def _get_cache_dir(cache_name=None):
     cache_base_dir = (
         env_var
         or nested_default
-        or config.get("{}.default_base_dir".format(config_key), None)
+        or config.get(f"{config_key}.default_base_dir", None)
         or default_cache_dir
     )
     if cache_base_dir is None:

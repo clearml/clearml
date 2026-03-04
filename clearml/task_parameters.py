@@ -55,7 +55,7 @@ def range_validator(
 
     def _range_validator(instance: Any, attribute: attr.Attribute, value: Union[int, float]) -> None:
         if ((min_value is not None) and (value < min_value)) or ((max_value is not None) and (value > max_value)):
-            raise ValueError("{} must be in range [{}, {}]".format(attribute.name, min_value, max_value))
+            raise ValueError(f"{attribute.name} must be in range [{min_value}, {max_value}]")
 
     return _range_validator
 
@@ -159,7 +159,7 @@ class TaskParameters:
         """
         for key, value in source_dict.items():
             if not hasattr(self, key):
-                raise ValueError("Unknown key {} in {} object".format(key, type(self).__name__))
+                raise ValueError(f"Unknown key {key} in {type(self).__name__} object")
 
             setattr(self, key, value)
 

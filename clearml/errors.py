@@ -9,7 +9,7 @@ class UsageError(RuntimeError):
 
 class ArtifactUriDeleteError(ValueError):
     def __init__(self, artifact: str, uri: str, remaining_uris: List[str]) -> None:
-        super(ArtifactUriDeleteError, self).__init__("Failed deleting artifact {}: file {}".format(artifact, uri))
+        super(ArtifactUriDeleteError, self).__init__(f"Failed deleting artifact {artifact}: file {uri}")
         self.artifact = artifact
         self.uri = uri
         self._remaining_uris = remaining_uris
