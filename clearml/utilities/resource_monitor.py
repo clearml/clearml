@@ -5,7 +5,7 @@ import sys
 import warnings
 from math import ceil, log10
 from time import time
-from typing import Text, Dict, List, Any
+from typing import Dict, List, Any
 
 import psutil
 from pathlib2 import Path
@@ -364,7 +364,7 @@ class ResourceMonitor(BackgroundMonitor):
             bytes_to_megabytes(self._get_process_used_memory() if self._process_info else virtual_memory.used) / 1024
         )
         stats["memory_free_gb"] = bytes_to_megabytes(virtual_memory.available) / 1024
-        disk_use_percentage = psutil.disk_usage(Text(Path.home())).percent
+        disk_use_percentage = psutil.disk_usage(str(Path.home())).percent
         stats["disk_free_percent"] = 100.0 - disk_use_percentage
         with warnings.catch_warnings():
             if logging.root.level > logging.DEBUG:  # If the logging level is bigger than debug, ignore

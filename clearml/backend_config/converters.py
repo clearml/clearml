@@ -1,16 +1,10 @@
 import base64
 from typing import Union, Optional, Any, TypeVar, Callable, Tuple
 
-try:
-    from typing import Text
-except ImportError:
-    # windows conda-less hack
-    Text = object
-
 ConverterType = TypeVar("ConverterType", bound=Callable[[Any], Any])
 
 
-def strtobool(val: Text) -> int:
+def strtobool(val: str) -> int:
     """Convert a string representation of truth to true (1) or false (0).
 
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
@@ -26,22 +20,22 @@ def strtobool(val: Text) -> int:
         raise ValueError("invalid truth value %r" % (val,))
 
 
-def base64_to_text(value: Any) -> Text:
+def base64_to_text(value: Any) -> str:
     return base64.b64decode(value).decode("utf-8")
 
 
-def text_to_bool(value: Text) -> bool:
+def text_to_bool(value: str) -> bool:
     return bool(strtobool(value))
 
 
-def safe_text_to_bool(value: Text) -> bool:
+def safe_text_to_bool(value: str) -> bool:
     try:
         return bool(strtobool(value))
     except ValueError:
         return bool(value)
 
 
-def any_to_bool(value: Optional[Union[int, float, Text]]) -> bool:
+def any_to_bool(value: Optional[Union[int, float, str]]) -> bool:
     if isinstance(value, str):
         return text_to_bool(value)
     return bool(value)

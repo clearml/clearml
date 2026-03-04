@@ -36,26 +36,20 @@ from .log import initialize as initialize_log, logger
 from .utils import get_options
 from ..utilities.pyhocon import ConfigTree, ConfigFactory
 
-try:
-    from typing import Text
-except ImportError:
-    # windows conda-less hack
-    Text = object
-
 log = logger(__file__)
 
 
 class ConfigEntry(Entry):
     logger = None
 
-    def __init__(self, config: "Config", *keys: Text, **kwargs: Any) -> None:
+    def __init__(self, config: "Config", *keys: str, **kwargs: Any) -> None:
         super(ConfigEntry, self).__init__(*keys, **kwargs)
         self.config = config
 
-    def _get(self, key: Text) -> Any:
+    def _get(self, key: str) -> Any:
         return self.config.get(key, NotSet)
 
-    def error(self, message: Text) -> None:
+    def error(self, message: str) -> None:
         log.error(message.capitalize())
 
 
@@ -106,10 +100,10 @@ class Config:
         self._roots = value
 
     @property
-    def env(self) -> Text:
+    def env(self) -> str:
         return self._env
 
-    def logger(self, path: Text = None) -> logging.Logger:
+    def logger(self, path: str = None) -> logging.Logger:
         return logger(path)
 
     def load_relative_to(self, *module_paths: Any) -> None:
@@ -247,10 +241,10 @@ class Config:
         except Exception:
             pass
 
-    def __getitem__(self, key: Text) -> Any:
+    def __getitem__(self, key: str) -> Any:
         return self._config[key]
 
-    def get(self, key: Text, default: Any = _MISSING) -> Any:
+    def get(self, key: str, default: Any = _MISSING) -> Any:
         value = self._config.get(key, default)
         if value is self._MISSING:
             raise KeyError("Unable to find value for key '{}' and default value was not provided.".format(key))
@@ -313,7 +307,7 @@ class Config:
         return conf
 
     @staticmethod
-    def _read_single_file(file_path: Text, verbose: bool = True) -> ConfigTree:
+    def _read_single_file(file_path: str, verbose: bool = True) -> ConfigTree:
         if not file_path or not Path(file_path).is_file():
             return ConfigTree()
 

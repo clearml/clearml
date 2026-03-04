@@ -12,7 +12,6 @@ from operator import itemgetter
 from types import ModuleType
 from typing import (
     Dict,
-    Text,
     Tuple,
     Type,
     Sequence,
@@ -36,12 +35,12 @@ from ....backend_config.defs import LOCAL_CONFIG_FILE_OVERRIDE_VAR
 SERVICE_TO_ENTITY_CLASS_NAMES = {"storage": "StorageItem"}
 
 
-def entity_class_name(service: ModuleType) -> Text:
+def entity_class_name(service: ModuleType) -> str:
     service_name = api_entity_name(service)
     return SERVICE_TO_ENTITY_CLASS_NAMES.get(service_name.lower(), service_name)
 
 
-def api_entity_name(service: ModuleType) -> Text:
+def api_entity_name(service: ModuleType) -> str:
     return module_name(service).rstrip("s")
 
 
@@ -68,7 +67,7 @@ class APIError(Exception):
         self.meta: ResponseMeta = response.meta
         self.code: int = response.meta.result_code
         self.subcode: int = response.meta.result_subcode
-        self.message: Text = response.meta.result_msg
+        self.message: str = response.meta.result_msg
         self.codes: Tuple[int, int] = (self.code, self.subcode)
 
     def get_traceback(self) -> Optional[List[str]]:
@@ -105,14 +104,14 @@ class StrictSession(Session):
 
     def __init__(
         self,
-        config_file: Union[Path, Text] = None,
+        config_file: Union[Path, str] = None,
         initialize_logging: bool = False,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         """
         :param config_file: configuration file to use, else use the default
-        :type config_file: Path | Text
+        :type config_file: Path | str
         """
 
         def init() -> None:
@@ -147,17 +146,17 @@ class Response:
     Exposes "meta" of the original result.
     """
 
-    def __init__(self, result: CallResult, dest: Text = None) -> None:
+    def __init__(self, result: CallResult, dest: str = None) -> None:
         """
         :param result: result of endpoint call
         :type result: CallResult
         :param dest: if all of a response's data is contained in one field, use that field
-        :type dest: Text
+        :type dest: str
         """
         self.response = None
         self._result = result
         response = getattr(result, "response", result)
-        if getattr(response, "_service") == "events" and getattr(response, "_action") in (
+        if getattr(response, "_service", None) == "events" and getattr(response, "_action", None) in (
             "scalar_metrics_iter_histogram",
             "multi_task_scalar_metrics_iter_histogram",
             "vector_metrics_iter_histogram",
@@ -172,7 +171,7 @@ class Response:
             response = getattr(response, dest)
         self.response = response
 
-    def __getattr__(self, attr: Text) -> Any:
+    def __getattr__(self, attr: str) -> Any:
         if self.response is None:
             return None
         return getattr(self.response, attr)
@@ -199,7 +198,7 @@ class TableResponse(Response):
         self,
         service: "Service",
         entity: Any,
-        fields: Sequence[Text] = None,
+        fields: Sequence[str] = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -214,18 +213,18 @@ class TableResponse(Response):
         self.fields = fields or ("id", "name")
         self.response = [entity(service, item) for item in self]
 
-    def __repr__(self, fields: Sequence[Text] = None) -> Text:
+    def __repr__(self, fields: Sequence[str] = None) -> str:
         return self._format_table(fields=fields)
 
     __str__ = __repr__
 
-    def _format_table(self, fields: Sequence[Text] = None) -> Text:
+    def _format_table(self, fields: Sequence[str] = None) -> str:
         """
         Display <fields> attributes of each element in a table
         :param fields:
         """
 
-        def getter(obj: Any, attr: Text) -> Text:
+        def getter(obj: Any, attr: str) -> str:
             result = reduce(
                 lambda x, name: x if x is None else getattr(x, name, None),
                 attr.split("."),
@@ -236,7 +235,7 @@ class TableResponse(Response):
         fields = fields or self.fields
         return "\n".join(str(dict((attr, getter(item, attr)) for attr in fields)) for item in self)
 
-    def display(self, fields: Sequence[Text] = None) -> None:
+    def display(self, fields: Sequence[str] = None) -> None:
         print(self._format_table(fields=fields))
 
     def where(self, predicate: Callable[[Any], bool] = None, **kwargs: Any) -> "TableResponse":
@@ -289,7 +288,7 @@ class Entity:
 
     @property
     @abc.abstractmethod
-    def entity_name(self) -> Text:
+    def entity_name(self) -> str:
         """
         Singular name of entity
         """
@@ -315,10 +314,10 @@ class Entity:
         result = self._service.session.send(self.get_by_id_request(self.data.id))
         self.data = getattr(result.response, self.entity_name)
 
-    def _get_default_kwargs(self) -> Dict[Text, Any]:
+    def _get_default_kwargs(self) -> Dict[str, Any]:
         return {self.entity_name: self.data.id}
 
-    def __getattr__(self, attr: Text) -> Any:
+    def __getattr__(self, attr: str) -> Any:
         """
         Inject the entity's ID to the method call.
         All missing properties are assumed to be functions.
@@ -351,7 +350,7 @@ class Entity:
             base = dir_()
         return list(set(base).union(dir(self._service), dir(self.data)))
 
-    def __repr__(self) -> Text:
+    def __repr__(self) -> str:
         """
         Display entity type, ID, and - if available - name.
         """
@@ -427,7 +426,7 @@ def make_action(service: "Service", request_cls: Type["APIRequest"]) -> Callable
             )
 
     else:
-        assert False
+        raise
 
     get.__name__ = get.__qualname__ = action
 
@@ -484,7 +483,7 @@ def make_service_class(module: types.ModuleType) -> Type[Service]:
     return type(str(module_name(module)), (Service,), properties)
 
 
-def module_name(module: Any) -> Text:
+def module_name(module: Any) -> str:
     try:
         module = module.__name__
     except AttributeError:
@@ -523,7 +522,7 @@ class APIClient:
     def __init__(
         self,
         session: Session = None,
-        api_version: Text = None,
+        api_version: str = None,
         **kwargs: Any,
     ) -> None:
         self.session = session or StrictSession()
