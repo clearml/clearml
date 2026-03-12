@@ -107,7 +107,7 @@ class ResourceMonitor(BackgroundMonitor):
             # noinspection PyBroadException
             try:
                 active_gpus = os.environ.get("NVIDIA_VISIBLE_DEVICES", "") or os.environ.get("CUDA_VISIBLE_DEVICES", "")
-                if active_gpus and active_gpus != "all":
+                if active_gpus and active_gpus not in ("all", "void"):
                     if os.path.isdir(active_gpus):
                         try:
                             self._active_gpus = os.listdir(active_gpus)
@@ -337,7 +337,7 @@ class ResourceMonitor(BackgroundMonitor):
                 if not self._skip_nonactive_gpu(gpu):
                     skips_all = False
                     break
-            if skips_all and active_gpus != "none":
+            if skips_all and active_gpus not in ("none", "void"):
                 self._active_gpus = None
         except Exception as e:
             logging.getLogger("clearml.resource_monitor").warning(
