@@ -156,6 +156,17 @@ class PipelineController:
         skip_children_on_fail = attrib(type=bool, default=True)
         # the stage of the step
         stage = attrib(type=str, default=None)
+        # --- Dynamic loop support ---
+        # callable(pipeline, node) -> bool, evaluated after loop body completes
+        loop_condition = attrib(type=Callable, default=None)
+        # list of node names that form the loop body (re-executed each iteration)
+        loop_body = attrib(type=list, default=None)
+        # safety cap on iterations (0 = unlimited)
+        max_loop_iterations = attrib(type=int, default=10)
+        # runtime counter, incremented each time the loop body restarts
+        _loop_iteration = attrib(type=int, default=0)
+        # True while loop body nodes are being (re-)executed
+        _loop_active = attrib(type=bool, default=False)
 
         def __attrs_post_init__(self) -> None:
             if self.parents is None:
@@ -174,6 +185,8 @@ class PipelineController:
                 self.monitor_artifacts = []
             if self.monitor_models is None:
                 self.monitor_models = []
+            if self.loop_body is None:
+                self.loop_body = []
             if self.continue_behaviour is not None:
                 self.continue_on_fail = self.continue_behaviour.get("continue_on_fail", True)
                 self.continue_on_abort = self.continue_behaviour.get("continue_on_abort", True)
@@ -514,7 +527,10 @@ class PipelineController:
         recursively_parse_parameters: bool = False,
         output_uri: Optional[Union[str, bool]] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
+        loop_condition: Optional[Callable[["PipelineController", "PipelineController.Node"], bool]] = None,
+        loop_body: Optional[List[str]] = None,
+        max_loop_iterations: int = 10,
     ) -> bool:
         """
         Add a step to the pipeline execution DAG.
@@ -675,6 +691,13 @@ class PipelineController:
             Any parameters passed from the failed step to its children will default to None
           - If the keys are not present in the dictionary, their values will default to True
         :param stage: Name of the stage. This parameter enables pipeline step grouping into stages
+        :param loop_condition: Optional callable ``(pipeline, node) -> bool``.
+            When provided together with ``loop_body``, this step acts as a **loop controller**.
+            After *all* body steps complete, the callable is invoked.
+            Return ``True`` to re-execute the body steps; ``False`` to proceed downstream.
+        :param loop_body: List of step **names** that form the loop body.
+            These steps are reset and re-executed each time ``loop_condition`` returns ``True``.
+        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10).
 
         :return: True if successful
         """
@@ -754,7 +777,10 @@ class PipelineController:
             monitor_models=monitor_models or [],
             output_uri=self._output_uri if output_uri is None else output_uri,
             continue_behaviour=continue_behaviour,
-            stage=stage
+            stage=stage,
+            loop_condition=loop_condition,
+            loop_body=loop_body or [],
+            max_loop_iterations=max_loop_iterations,
         )
         self._retries[name] = 0
         self._retries_callbacks[name] = (
@@ -823,7 +849,10 @@ class PipelineController:
         draft: Optional[bool] = False,
         working_dir: Optional[str] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
+        loop_condition: Optional[Callable[["PipelineController", "PipelineController.Node"], bool]] = None,
+        loop_body: Optional[List[str]] = None,
+        max_loop_iterations: int = 10,
     ) -> bool:
         """
         Create a Task from a function, including wrapping the function input arguments
@@ -1062,7 +1091,10 @@ class PipelineController:
             draft=draft,
             working_dir=working_dir,
             continue_behaviour=continue_behaviour,
-            stage=stage
+            stage=stage,
+            loop_condition=loop_condition,
+            loop_body=loop_body,
+            max_loop_iterations=max_loop_iterations,
         )
 
     def start(
@@ -2387,10 +2419,49 @@ class PipelineController:
 
         return True
 
+    def _get_loop_body_nodes(self):
+        # type: () -> set
+        """Collect all node names that belong to any loop body."""
+        loop_body_nodes = set()
+        for node in self._nodes.values():
+            if node.loop_condition and node.loop_body:
+                loop_body_nodes.update(node.loop_body)
+        return loop_body_nodes
+
     def _verify_dag(self) -> bool:
         """
-        :return: True iff the pipeline dag is fully accessible and contains no cycles
+        Verify the pipeline graph is valid.
+        Allows controlled cycles created by loop nodes while still
+        rejecting uncontrolled/accidental cycles.
+
+        :return: True iff the pipeline graph is valid
         """
+        loop_body_nodes = self._get_loop_body_nodes()
+        loop_controller_nodes = {
+            n.name for n in self._nodes.values()
+            if n.loop_condition and n.loop_body
+        }
+
+        # validate every loop controller
+        for node in self._nodes.values():
+            if not node.loop_condition or not node.loop_body:
+                continue
+            for body_name in node.loop_body:
+                if body_name not in self._nodes:
+                    raise ValueError(
+                        "Loop node '{}' references body step '{}' which does not exist".format(
+                            node.name, body_name
+                        )
+                    )
+            if node.max_loop_iterations < 1:
+                raise ValueError(
+                    "Loop node '{}' max_loop_iterations must be >= 1, got {}".format(
+                        node.name, node.max_loop_iterations
+                    )
+                )
+
+        # Run Kahn's algorithm ignoring back-edges from loop controllers
+        # to their body nodes (these edges form the controlled cycle).
         visited = set()
         prev_visited = None
         while prev_visited != visited:
@@ -2399,12 +2470,16 @@ class PipelineController:
                 if k in visited:
                     continue
                 if any(p == node.name for p in node.parents or []):
-                    # node cannot have itself as parent
                     return False
-                if not all(p in visited for p in node.parents or []):
+                effective_parents = node.parents or []
+                if k in loop_body_nodes:
+                    effective_parents = [
+                        p for p in effective_parents
+                        if p not in loop_controller_nodes
+                    ]
+                if not all(p in visited for p in effective_parents):
                     continue
                 visited.add(k)
-        # return False if we did not cover all the nodes
         return not bool(set(self._nodes.keys()) - visited)
 
     def _add_function_step(
@@ -2453,7 +2528,10 @@ class PipelineController:
         draft: Optional[bool] = False,
         working_dir: Optional[str] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
+        loop_condition: Optional[Callable[["PipelineController", "PipelineController.Node"], bool]] = None,
+        loop_body: Optional[List[str]] = None,
+        max_loop_iterations: int = 10,
     ) -> bool:
         """
         Create a Task from a function, including wrapping the function input arguments
@@ -2786,7 +2864,10 @@ class PipelineController:
             output_uri=output_uri,
             draft=draft,
             continue_behaviour=continue_behaviour,
-            stage=stage
+            stage=stage,
+            loop_condition=loop_condition,
+            loop_body=loop_body or [],
+            max_loop_iterations=max_loop_iterations,
         )
         self._retries[name] = 0
         self._retries_callbacks[name] = (
@@ -2821,6 +2902,75 @@ class PipelineController:
         )
         parsed_queue_name = self._parse_step_ref(node.queue)
         node.job.launch(queue_name=parsed_queue_name or self._default_execution_queue)
+
+    def _reset_loop_body_node(self, node: "PipelineController.Node") -> None:
+        """Reset a node so it can be re-executed in the next loop iteration."""
+        node.executed = None
+        node.job = None
+        node.job_started = None
+        node.job_ended = None
+        node.job_type = None
+        node.skip_job = False
+        node.status = "pending"
+
+    def _evaluate_loop_nodes(self, completed_jobs: list) -> None:
+        """
+        After jobs complete, check if any loop controller's body is
+        fully done. If so, evaluate the loop condition and either
+        reset the body for another iteration or let execution continue
+        downstream.
+        """
+        for node in list(self._nodes.values()):
+            if not node.loop_condition or not node.loop_body:
+                continue
+
+            # all body nodes must be executed (success or fail)
+            body_nodes = [self._nodes.get(b) for b in node.loop_body if b in self._nodes]
+            if not body_nodes:
+                continue
+            if not all(b.executed for b in body_nodes):
+                continue
+
+            # any body node that just completed in this cycle triggers evaluation
+            if not any(b.name in completed_jobs for b in body_nodes):
+                continue
+
+            try:
+                should_loop = node.loop_condition(self, node)
+            except Exception as ex:
+                getLogger("clearml.automation.controller").warning(
+                    "Loop condition for '{}' raised {}: {}. Stopping loop.".format(
+                        node.name, type(ex).__name__, ex
+                    )
+                )
+                should_loop = False
+
+            if should_loop and (
+                node.max_loop_iterations < 1 or node._loop_iteration < node.max_loop_iterations
+            ):
+                node._loop_iteration += 1
+                node._loop_active = True
+                print(
+                    "Loop '{}': iteration {} — resetting body nodes {}".format(
+                        node.name, node._loop_iteration, node.loop_body
+                    )
+                )
+                for b in body_nodes:
+                    self._reset_loop_body_node(b)
+                # also reset the loop controller itself so downstream sees it as pending
+                node.executed = None
+                node.job = None
+                node.job_started = None
+                node.job_ended = None
+                node.skip_job = False
+                node.status = "pending"
+            else:
+                node._loop_active = False
+                # mark controller as executed so downstream nodes can proceed
+                if not node.executed:
+                    last_body = body_nodes[-1]
+                    node.executed = last_body.executed if last_body.executed else "loop_completed"
+                    node.skip_job = True
 
     def _launch_node(self, node: "PipelineController.Node") -> bool:
         """
@@ -3359,6 +3509,9 @@ class PipelineController:
                         self._experiment_completed_cb(self, job_node)
                     if self._post_step_callbacks.get(job_node.name):
                         self._post_step_callbacks[job_node.name](self, job_node)
+
+            # --- Dynamic loop evaluation ---
+            self._evaluate_loop_nodes(completed_jobs)
 
             # check if we need to stop the pipeline, and abort all running steps
             if nodes_failed_stop_pipeline:
@@ -4182,6 +4335,9 @@ class PipelineDecorator(PipelineController):
                     if self._post_step_callbacks.get(job_node.name):
                         self._post_step_callbacks[job_node.name](self, job_node)
 
+            # --- Dynamic loop evaluation ---
+            self._evaluate_loop_nodes(completed_jobs)
+
             # check if we need to stop the pipeline, and abort all running steps
             if nodes_failed_stop_pipeline:
                 print(
@@ -4450,7 +4606,10 @@ class PipelineDecorator(PipelineController):
         draft: Optional[bool] = False,
         working_dir: Optional[str] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
+        loop_condition: Optional[Callable[[PipelineController, PipelineController.Node], bool]] = None,
+        loop_body: Optional[List[str]] = None,
+        max_loop_iterations: int = 10,
     ) -> Callable:
         """
         pipeline component function to be executed remotely
@@ -4664,7 +4823,10 @@ class PipelineDecorator(PipelineController):
                 draft=draft,
                 working_dir=working_dir,
                 continue_behaviour=continue_behaviour,
-                stage=stage
+                stage=stage,
+                loop_condition=loop_condition,
+                loop_body=loop_body,
+                max_loop_iterations=max_loop_iterations,
             )
 
             if cls._singleton:
