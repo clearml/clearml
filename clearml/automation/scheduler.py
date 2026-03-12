@@ -158,6 +158,7 @@ class ScheduleJob(BaseScheduleJob):
                 day=int(self.day or 1),
                 hour=int(self.hour or 0),
                 minute=int(self.minute or 0),
+                tzinfo=timezone.utc,
             )
             if self.weekdays:
                 self._next_run += relativedelta(weekday=self.get_weekday_ord(self.weekdays[0]))
@@ -197,18 +198,21 @@ class ScheduleJob(BaseScheduleJob):
         return self._next_run
 
     def _calc_next_run(self, prev_timestamp: datetime, weekday: Optional[int]) -> datetime:
+        _tz = prev_timestamp.tzinfo
         # make sure that if we have a specific day we zero the minutes/hours/seconds
         if self.year:
             prev_timestamp = datetime(
                 year=prev_timestamp.year,
                 month=self.month or prev_timestamp.month,
                 day=self.day or 1,
+                tzinfo=_tz,
             )
         elif self.month:
             prev_timestamp = datetime(
                 year=prev_timestamp.year,
                 month=prev_timestamp.month,
                 day=self.day or 1,
+                tzinfo=_tz,
             )
         elif self.day is None and weekday is not None:
             # notice we assume every X hours on specific weekdays
@@ -219,6 +223,7 @@ class ScheduleJob(BaseScheduleJob):
                 day=prev_timestamp.day,
                 hour=prev_timestamp.hour,
                 minute=prev_timestamp.minute,
+                tzinfo=_tz,
             )
             next_timestamp += relativedelta(
                 years=self.year or 0,
@@ -233,6 +238,7 @@ class ScheduleJob(BaseScheduleJob):
                     year=prev_timestamp.year,
                     month=prev_timestamp.month,
                     day=prev_timestamp.day,
+                    tzinfo=_tz,
                 ) + relativedelta(
                     years=self.year or 0,
                     months=0 if self.year else (self.month or 0),
@@ -249,6 +255,7 @@ class ScheduleJob(BaseScheduleJob):
                 year=prev_timestamp.year,
                 month=prev_timestamp.month,
                 day=prev_timestamp.day,
+                tzinfo=_tz,
             ) + relativedelta(days=1)
         elif self.day:
             # reset minutes in the hour (we will be adding additional hour/minute anyhow)
@@ -256,6 +263,7 @@ class ScheduleJob(BaseScheduleJob):
                 year=prev_timestamp.year,
                 month=prev_timestamp.month,
                 day=prev_timestamp.day,
+                tzinfo=_tz,
             )
         elif self.hour:
             # reset minutes in the hour (we will be adding additional minutes anyhow)
@@ -264,6 +272,7 @@ class ScheduleJob(BaseScheduleJob):
                 month=prev_timestamp.month,
                 day=prev_timestamp.day,
                 hour=prev_timestamp.hour,
+                tzinfo=_tz,
             )
 
         return prev_timestamp + relativedelta(
@@ -277,7 +286,7 @@ class ScheduleJob(BaseScheduleJob):
 
     def run(self, task_id: Optional[str]) -> datetime:
         super(ScheduleJob, self).run(task_id)
-        if self._last_executed or self.starting_time != datetime.fromtimestamp(0):
+        if self._last_executed or self.starting_time != datetime.fromtimestamp(0, tz=timezone.utc):
             self._schedule_counter += 1
 
         self._last_executed = datetime.now(timezone.utc)
@@ -682,7 +691,7 @@ class TaskScheduler(BaseScheduler):
             task_parameters=task_parameters,
             task_overrides=task_overrides,
             clone_task=not bool(reuse_task),
-            starting_time=datetime.fromtimestamp(0) if execute_immediately else datetime.now(timezone.utc),
+            starting_time=datetime.fromtimestamp(0, tz=timezone.utc) if execute_immediately else datetime.now(timezone.utc),
             minute=minute,
             hour=hour,
             day=day,
