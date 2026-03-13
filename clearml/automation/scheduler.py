@@ -158,6 +158,7 @@ class ScheduleJob(BaseScheduleJob):
                 day=int(self.day or 1),
                 hour=int(self.hour or 0),
                 minute=int(self.minute or 0),
+                tzinfo=timezone.utc
             )
             if self.weekdays:
                 self._next_run += relativedelta(weekday=self.get_weekday_ord(self.weekdays[0]))
@@ -203,12 +204,14 @@ class ScheduleJob(BaseScheduleJob):
                 year=prev_timestamp.year,
                 month=self.month or prev_timestamp.month,
                 day=self.day or 1,
+                tzinfo=timezone.utc,
             )
         elif self.month:
             prev_timestamp = datetime(
                 year=prev_timestamp.year,
                 month=prev_timestamp.month,
                 day=self.day or 1,
+                tzinfo=timezone.utc,
             )
         elif self.day is None and weekday is not None:
             # notice we assume every X hours on specific weekdays
@@ -219,6 +222,7 @@ class ScheduleJob(BaseScheduleJob):
                 day=prev_timestamp.day,
                 hour=prev_timestamp.hour,
                 minute=prev_timestamp.minute,
+                tzinfo=timezone.utc,
             )
             next_timestamp += relativedelta(
                 years=self.year or 0,
@@ -233,6 +237,7 @@ class ScheduleJob(BaseScheduleJob):
                     year=prev_timestamp.year,
                     month=prev_timestamp.month,
                     day=prev_timestamp.day,
+                    tzinfo=timezone.utc,
                 ) + relativedelta(
                     years=self.year or 0,
                     months=0 if self.year else (self.month or 0),
@@ -249,6 +254,7 @@ class ScheduleJob(BaseScheduleJob):
                 year=prev_timestamp.year,
                 month=prev_timestamp.month,
                 day=prev_timestamp.day,
+                tzinfo=timezone.utc,
             ) + relativedelta(days=1)
         elif self.day:
             # reset minutes in the hour (we will be adding additional hour/minute anyhow)
@@ -256,6 +262,7 @@ class ScheduleJob(BaseScheduleJob):
                 year=prev_timestamp.year,
                 month=prev_timestamp.month,
                 day=prev_timestamp.day,
+                tzinfo=timezone.utc,
             )
         elif self.hour:
             # reset minutes in the hour (we will be adding additional minutes anyhow)
@@ -264,6 +271,7 @@ class ScheduleJob(BaseScheduleJob):
                 month=prev_timestamp.month,
                 day=prev_timestamp.day,
                 hour=prev_timestamp.hour,
+                tzinfo=timezone.utc,
             )
 
         return prev_timestamp + relativedelta(
