@@ -161,7 +161,7 @@ class PipelineController:
         loop_condition = attrib(type=Callable, default=None)
         # list of node names that form the loop body (re-executed each iteration)
         loop_body = attrib(type=list, default=None)
-        # safety cap on iterations (0 = unlimited)
+        # safety cap on iterations; 0 means unlimited
         max_loop_iterations = attrib(type=int, default=10)
         # runtime counter, incremented each time the loop body restarts
         _loop_iteration = attrib(type=int, default=0)
@@ -697,7 +697,7 @@ class PipelineController:
             Return ``True`` to re-execute the body steps; ``False`` to proceed downstream.
         :param loop_body: List of step **names** that form the loop body.
             These steps are reset and re-executed each time ``loop_condition`` returns ``True``.
-        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10).
+        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10, 0=unlimited).
 
         :return: True if successful
         """
@@ -1044,7 +1044,7 @@ class PipelineController:
             Return ``True`` to re-execute the body steps; ``False`` to proceed downstream.
         :param loop_body: List of step **names** that form the loop body.
             These steps are reset and re-executed each time ``loop_condition`` returns ``True``.
-        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10).
+        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10, 0=unlimited).
 
         :return: True if successful
         """
@@ -2478,9 +2478,9 @@ class PipelineController:
                             node.name, body_name
                         )
                     )
-            if node.max_loop_iterations < 1:
+            if node.max_loop_iterations < 0:
                 raise ValueError(
-                    "Loop node '{}' max_loop_iterations must be >= 1, got {}".format(
+                    "Loop node '{}' max_loop_iterations must be >= 0 (0=unlimited), got {}".format(
                         node.name, node.max_loop_iterations
                     )
                 )
@@ -4798,7 +4798,7 @@ class PipelineDecorator(PipelineController):
             Return ``True`` to re-execute the body steps; ``False`` to proceed downstream.
         :param loop_body: List of step **names** that form the loop body.
             These steps are reset and re-executed each time ``loop_condition`` returns ``True``.
-        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10).
+        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10, 0=unlimited).
 
         :return: function wrapper
         """
