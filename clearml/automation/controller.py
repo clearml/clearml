@@ -1038,6 +1038,13 @@ class PipelineController:
             Any parameters passed from the failed step to its children will default to None
           - If the keys are not present in the dictionary, their values will default to True
         :param stage: Name of the stage. This parameter enables pipeline step grouping into stages
+        :param loop_condition: Optional callable ``(pipeline, node) -> bool``.
+            When provided together with ``loop_body``, this step acts as a **loop controller**.
+            After *all* body steps complete, the callable is invoked.
+            Return ``True`` to re-execute the body steps; ``False`` to proceed downstream.
+        :param loop_body: List of step **names** that form the loop body.
+            These steps are reset and re-executed each time ``loop_condition`` returns ``True``.
+        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10).
 
         :return: True if successful
         """
@@ -2216,6 +2223,9 @@ class PipelineController:
                     "job",
                     "name",
                     "task_factory_func",
+                    "loop_condition",
+                    "_loop_iteration",
+                    "_loop_active",
                     "executed",
                     "status",
                     "job_started",
@@ -2247,7 +2257,10 @@ class PipelineController:
         """
         nodes_items = list(self._nodes.items())
         dag = {
-            name: dict((k, v) for k, v in node.__dict__.items() if k not in ("job", "name", "task_factory_func"))
+            name: dict(
+                (k, v) for k, v in node.__dict__.items()
+                if k not in ("job", "name", "task_factory_func", "loop_condition")
+            )
             for name, node in nodes_items
         }
         # update state for presentation only
@@ -2287,6 +2300,13 @@ class PipelineController:
                     )
 
         # if we do clone the Task deserialize everything, except the function creating
+        # preserve loop_condition callables before overwriting nodes
+        _prev_loop_conditions = {
+            name: node.loop_condition
+            for name, node in self._nodes.items()
+            if node.loop_condition
+        }
+
         self._nodes = {
             k: self.Node(name=k, **{kk: vv for kk, vv in v.items() if kk not in ("job_id",)})
             if k not in self._nodes or (v.get("base_task_id") and v.get("clone_task"))
@@ -2301,6 +2321,11 @@ class PipelineController:
                     func = self._nodes[node.job_code_section].task_factory_func
                     if func:
                         node.task_factory_func = func
+
+        # restore loop_condition callables (not serializable, kept from code)
+        for name, cond in _prev_loop_conditions.items():
+            if name in self._nodes and not self._nodes[name].loop_condition:
+                self._nodes[name].loop_condition = cond
 
     def _has_stored_configuration(self) -> bool:
         """
@@ -4767,6 +4792,13 @@ class PipelineDecorator(PipelineController):
            Any parameters passed from the failed step to its children will default to None
           - If the keys are not present in the dictionary, their values will default to True
         :param stage: Name of the stage. This parameter enables pipeline step grouping into stages
+        :param loop_condition: Optional callable ``(pipeline, node) -> bool``.
+            When provided together with ``loop_body``, this step acts as a **loop controller**.
+            After *all* body steps complete, the callable is invoked.
+            Return ``True`` to re-execute the body steps; ``False`` to proceed downstream.
+        :param loop_body: List of step **names** that form the loop body.
+            These steps are reset and re-executed each time ``loop_condition`` returns ``True``.
+        :param max_loop_iterations: Safety limit on the number of loop iterations (default 10).
 
         :return: function wrapper
         """
