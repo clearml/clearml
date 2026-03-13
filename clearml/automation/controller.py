@@ -2975,8 +2975,8 @@ class PipelineController:
             ):
                 node._loop_iteration += 1
                 node._loop_active = True
-                print(
-                    "Loop '{}': iteration {} — resetting body nodes {}".format(
+                getLogger("clearml.automation.controller").info(
+                    "Loop '{}': iteration {} - resetting body nodes {}".format(
                         node.name, node._loop_iteration, node.loop_body
                     )
                 )
