@@ -20,8 +20,6 @@ Usage (remote)::
     python pipeline_with_dynamic_loop.py --run-remote
 """
 
-from __future__ import annotations
-
 import argparse
 import random
 import sys
@@ -32,33 +30,38 @@ from clearml.automation.controller import PipelineController
 
 # ── Pipeline step functions ─────────────────────────────────────────
 
-def step_data_prep(dataset_name: str = "demo") -> str:
-    print(f"Preparing dataset '{dataset_name}'")
+def step_data_prep(dataset_name="demo"):
+    print("Preparing dataset '{}'".format(dataset_name))
     return dataset_name
 
 
-def step_train(dataset: str = "demo", lr: float = 0.01) -> dict:
-    acc = round(random.uniform(85, 99), 2)
-    print(f"Training on '{dataset}' (lr={lr}) → accuracy={acc}%")
+def step_train(dataset="demo", lr=0.01):
+    import random as _rnd
+    acc = round(_rnd.uniform(85, 99), 2)
+    print("Training on '{}' (lr={}) -> accuracy={}%".format(dataset, lr, acc))
     Task.current_task().get_logger().report_scalar("Accuracy", "train", acc, 0)
     return {"accuracy": acc, "lr": lr}
 
 
-def step_evaluate(train_result: dict = None) -> dict:
+def step_evaluate(train_result=None):
     acc = (train_result or {}).get("accuracy", 0.0)
-    print(f"Evaluate → accuracy={acc}%")
+    print("Evaluate -> accuracy={}%".format(acc))
     return {"accuracy": acc, "passed": acc >= 95.0}
 
 
-def step_deploy(eval_result: dict = None) -> str:
-    print(f"Deploying model (accuracy={eval_result})")
+def step_deploy(eval_result=None):
+    print("Deploying model (accuracy={})".format(eval_result))
     return "deployed"
+
+
+def step_loop_placeholder():
+    return "loop_placeholder"
 
 
 # ── Loop condition callback ─────────────────────────────────────────
 
-def should_retrain(pipeline: PipelineController, node: PipelineController.Node) -> bool:
-    """Return True to re-run the loop body (train → evaluate)."""
+def should_retrain(pipeline, node):
+    """Return True to re-run the loop body (train -> evaluate)."""
     eval_node = pipeline.get_pipeline_dag().get("evaluate")
     if not eval_node or not eval_node.executed:
         return False
@@ -70,15 +73,17 @@ def should_retrain(pipeline: PipelineController, node: PipelineController.Node) 
         acc = 0.0
     should_loop = acc < 95.0
     print(
-        f"Loop condition: accuracy={acc:.2f}% {'< 95% → retrain' if should_loop else '>= 95% → done'} "
-        f"(iteration {node._loop_iteration})"
+        "Loop condition: accuracy={:.2f}% {} (iteration {})".format(
+            acc, "< 95% -> retrain" if should_loop else ">= 95% -> done",
+            node._loop_iteration
+        )
     )
     return should_loop
 
 
 # ── Pipeline definition ─────────────────────────────────────────────
 
-def build_pipeline(run_remote: bool = False) -> PipelineController:
+def build_pipeline(run_remote=False):
     pipe = PipelineController(
         name="Dynamic Loop Pipeline",
         project="examples",
@@ -111,11 +116,9 @@ def build_pipeline(run_remote: bool = False) -> PipelineController:
         cache_executed_step=False,
     )
 
-    # The loop controller: after evaluate completes, check accuracy.
-    # If < 95%, reset train+evaluate and re-run them (up to 5 times).
     pipe.add_function_step(
         name="loop_ctrl",
-        function=lambda: "loop_placeholder",
+        function=step_loop_placeholder,
         function_return=["_loop_out"],
         parents=["evaluate"],
         loop_condition=should_retrain,
