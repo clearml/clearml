@@ -6,7 +6,10 @@ import psutil
 from requests.compat import json as requests_json
 
 from clearml.backend_api import Session
-from clearml.backend_interface.datasets.hyper_dataset import HyperDatasetManagementBackend, _SaveFramesRequestNoValidate
+from clearml.backend_interface.datasets.hyper_dataset import (
+    HyperDatasetManagementBackend,
+    _get_save_frames_request_no_validate,
+)
 from clearml.backend_interface.util import get_or_create_project
 from clearml.storage.helper import StorageHelperDiskSpaceFileSizeStrategy
 from clearml.storage.manager import StorageManagerDiskSpaceFileSizeStrategy
@@ -166,10 +169,12 @@ class HyperDataset(HyperDatasetManagement):
         current_batch = []
         current_batch_size = 0
         errors = {}
+        request_class = _get_save_frames_request_no_validate()
+        empty_request = request_class(
+            version=self._version_id, frames=[]
+        )
         request_fixed_size = len(
-            requests_json.dumps(_SaveFramesRequestNoValidate(version=self._version_id, frames=[]).to_dict()).encode(
-                "utf-8"
-            )
+            requests_json.dumps(empty_request.to_dict()).encode("utf-8")
         )
         max_request_size_bytes = (max_request_size_mb * 1024 * 1024) - request_fixed_size
         for data_entry in data_entries:

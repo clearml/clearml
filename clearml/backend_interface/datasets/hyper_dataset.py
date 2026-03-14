@@ -7,13 +7,35 @@ from ..util import exact_match_regex
 from ..session import SendError
 from ...task import Task
 
-# handle import in offline mode
-_SaveFramesRequest = datasets.SaveFramesRequest if getattr(datasets, "SaveFramesRequest", None) else object
+# Lazy initialization to avoid Session creation during import (#1517)
+_SaveFramesRequestNoValidate = None
 
 
-class _SaveFramesRequestNoValidate(_SaveFramesRequest):
-    def validate(self, schema=None):
-        pass
+def _get_save_frames_request_no_validate():
+    """
+    Lazily create _SaveFramesRequestNoValidate class to avoid
+    import-time Session creation.
+
+    Issue #1517: Accessing datasets.SaveFramesRequest at module level
+    triggers __getattr__ in api_proxy.py, which creates a Session and
+    tries to connect to the server. This causes import to hang when
+    the server is unreachable.
+    """
+    global _SaveFramesRequestNoValidate
+    if _SaveFramesRequestNoValidate is None:
+        base_class = (
+            datasets.SaveFramesRequest
+            if getattr(datasets, "SaveFramesRequest", None)
+            else object
+        )
+
+        class _SaveFramesRequestNoValidateImpl(base_class):
+            def validate(self, schema=None):
+                pass
+
+        _SaveFramesRequestNoValidate = _SaveFramesRequestNoValidateImpl
+
+    return _SaveFramesRequestNoValidate
 
 
 class HyperDatasetManagementBackend(IdObjectBase):
@@ -134,7 +156,7 @@ class HyperDatasetManagementBackend(IdObjectBase):
                 frames.append(de.to_api_object())
             else:
                 frames.append(de)
-        req = _SaveFramesRequestNoValidate(version=dataset_id, frames=frames)
+        req = _get_save_frames_request_no_validate()(version=dataset_id, frames=frames)
         res = cls._send(cls._get_default_session(), req)
         return res.response
 
