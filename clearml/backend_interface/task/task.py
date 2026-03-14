@@ -95,7 +95,9 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
     _store_diff = deferred_config("development.store_uncommitted_code_diff", False)
     _store_remote_diff = deferred_config("development.store_code_diff_from_remote", False)
-    _report_subprocess_enabled = deferred_config("development.report_use_subprocess", sys.platform == "linux")
+    # Enable subprocess on both Linux and macOS (darwin)
+    # We use spawn instead of fork to avoid memory leak (issue #1556)
+    _report_subprocess_enabled = deferred_config("development.report_use_subprocess", sys.platform in ("linux", "darwin"))
     _force_use_pip_freeze = deferred_config(
         multi=[
             ("development.detect_with_pip_freeze", False),

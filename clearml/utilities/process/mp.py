@@ -3,7 +3,7 @@ import pickle
 import struct
 import sys
 from functools import partial
-from multiprocessing import Process, Semaphore, Event as ProcessEvent
+from multiprocessing import Semaphore
 from threading import Thread, Event as TrEvent, RLock as ThreadRLock
 from time import sleep, time
 from types import TracebackType
@@ -40,7 +40,8 @@ except ImportError:
 
 
 class _ForkSafeThreadSyncObject:
-    __process_lock = get_context("fork" if sys.platform == "linux" else "spawn").Lock()
+    # Use spawn context to avoid fork-based memory leak (issue #1556)
+    __process_lock = get_context("spawn").Lock()
 
     @classmethod
     def _inner_lock(cls) -> None:
@@ -454,7 +455,9 @@ class SafeEvent:
     __thread_pool = SingletonThreadPool()
 
     def __init__(self) -> None:
-        self._event = ProcessEvent()
+        # Use spawn context to avoid fork-based memory leak (issue #1556)
+        ctx = get_context("spawn")
+        self._event = ctx.Event()
 
     def is_set(self) -> bool:
         return self._event.is_set()
@@ -644,13 +647,11 @@ class BackgroundMonitor:
             for d in BackgroundMonitor._instances.get(id(task.id), []):
                 d.set_subprocess_mode()
 
-            # ToDo: solve for standalone spawn subprocess
-            # prefer os.fork, because multipprocessing.Process add atexit callback, which might later be invalid.
-            cls.__start_subprocess_os_fork(task_obj_id=id(task.id))
-            # if ForkContext is not None and isinstance(get_context(), ForkContext):
-            #     cls.__start_subprocess_forkprocess(task_obj_id=id(task.id))
-            # else:
-            #     cls.__start_subprocess_os_fork(task_obj_id=id(task.id))
+            # Use spawn instead of fork to avoid memory leak (issue #1556)
+            # When os.fork() is used, any memory allocated before Task.init() is captured
+            # in the child process and never released, causing significant memory leaks.
+            # This affects all platforms (Linux, macOS, etc.)
+            cls.__start_subprocess_forkprocess(task_obj_id=id(task.id))
 
             # wait until subprocess is up
             if wait_for_subprocess:
@@ -680,7 +681,10 @@ class BackgroundMonitor:
 
     @classmethod
     def __start_subprocess_forkprocess(cls, task_obj_id: int) -> None:
-        _main_process = Process(
+        # Explicitly use 'spawn' context to avoid memory leak from fork
+        # See issue #1556 - fork() captures parent's memory state
+        ctx = get_context("spawn")
+        _main_process = ctx.Process(
             target=cls._background_process_start,
             args=(task_obj_id, cls._sub_process_started, os.getpid()),
         )
