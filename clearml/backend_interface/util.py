@@ -270,7 +270,7 @@ def datetime_to_isoformat(o: datetime) -> Optional[str]:
     return None
 
 
-def datetime_from_isoformat(o: str) -> Optional[datetime]:
+def datetime_from_isoformat(o: Optional[Union[str, datetime]]) -> Optional[datetime]:
     if not o:
         return None
     if isinstance(o, datetime):
