@@ -270,12 +270,20 @@ def datetime_to_isoformat(o: datetime) -> Optional[str]:
     return None
 
 
-def datetime_from_isoformat(o: str) -> Optional[datetime]:
+def datetime_from_isoformat(o: Optional[Union[str, datetime]]) -> Optional[datetime]:
     if not o:
         return None
     if isinstance(o, datetime):
-        return o
+        return o if o.tzinfo else o.replace(tzinfo=timezone.utc)
+
+    normalized = o[:-1] + "+00:00" if isinstance(o, str) and o.endswith("Z") else o
+
     try:
-        return datetime.strptime(o.split("+")[0], "%Y-%m-%dT%H:%M:%S.%f")
+        parsed = datetime.fromisoformat(normalized)
     except ValueError:
-        return datetime.strptime(o.split("+")[0], "%Y-%m-%dT%H:%M:%S")
+        try:
+            parsed = datetime.strptime(normalized, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            parsed = datetime.strptime(normalized, "%Y-%m-%dT%H:%M:%S")
+
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
