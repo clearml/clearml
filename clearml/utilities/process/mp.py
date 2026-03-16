@@ -658,6 +658,15 @@ class BackgroundMonitor:
 
     @classmethod
     def __start_subprocess_os_fork(cls, task_obj_id: int) -> None:
+        # Force garbage collection before forking to minimize memory copied to child process.
+        # This mitigates the memory leak reported in GitHub issue #1556, where large objects
+        # allocated before Task.init() would be copied into the background monitoring subprocess
+        # and never released, even when deleted and garbage collected in the parent process.
+        # See: https://github.com/allegroai/clearml/issues/1556
+        import gc
+
+        gc.collect()
+
         process_args = (task_obj_id, cls._sub_process_started, os.getpid())
         BackgroundMonitor._main_process = os.fork()
         # check if we are the child process
@@ -744,6 +753,13 @@ class BackgroundMonitor:
         except:  # noqa
             # Do not change the exception we need to catch base exception as well
             pass
+
+        # Force garbage collection in the child process to release memory that was
+        # copied from the parent during fork but is no longer needed.
+        # This helps mitigate the memory leak reported in GitHub issue #1556.
+        import gc
+
+        gc.collect()
 
         # if a debugger is running, wait for it to attach to the subprocess
         if is_debugger_running:
