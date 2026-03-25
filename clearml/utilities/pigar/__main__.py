@@ -2,7 +2,6 @@
 
 from __future__ import print_function, division, absolute_import
 
-import codecs
 import os
 from typing import Callable, Set, Optional, Tuple, List, Any
 
@@ -198,13 +197,13 @@ class GenerateReqs(object):
 
     def _save_old_reqs(self) -> None:
         if os.path.isfile(self._save_path):
-            with codecs.open(self._save_path, "rb", "utf-8") as f:
+            with open(self._save_path, "r", encoding="utf-8") as f:
                 self._old_reqs = f.readlines()
 
     def _reqs_diff(self) -> None:
         if not hasattr(self, "_old_reqs"):
             return
-        with codecs.open(self._save_path, "rb", "utf-8") as f:
+        with open(self._save_path, "r", encoding="utf-8") as f:
             new_reqs = f.readlines()
         is_diff, diffs = lines_diff(self._old_reqs, new_reqs)
         msg = "Requirements file has been covered, "
