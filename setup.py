@@ -6,11 +6,10 @@ https://github.com/clearml/clearml
 import os.path
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-import codecs
 
 
 def read_text(filepath):
-    with codecs.open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         return f.read()
 
 

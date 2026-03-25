@@ -3,7 +3,6 @@ import re
 import os
 import socket
 import contextlib
-import codecs
 from datetime import timedelta
 
 from pyparsing import Forward, Keyword, QuotedString, Word, Literal, Suppress, Regex, Optional, SkipTo, ZeroOrMore, \
@@ -95,7 +94,7 @@ class ConfigFactory(object):
         :type return: Config
         """
         try:
-            with codecs.open(filename, 'r', encoding=encoding) as fd:
+            with open(filename, 'r', encoding=encoding) as fd:
                 content = fd.read()
                 return cls.parse_string(content, os.path.dirname(filename), resolve, unresolved_value)
         except IOError as e:
