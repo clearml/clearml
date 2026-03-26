@@ -12,6 +12,7 @@ import platform
 import shutil
 import sys
 import threading
+import traceback
 import uuid
 from _socket import gethostname
 from abc import ABC, abstractmethod
@@ -722,9 +723,11 @@ class _Boto3Driver(_Driver):
                 )
             except Exception as ex:
                 self.get_logger().error("Failed uploading: %s" % ex)
+                self.get_logger().debug(traceback.format_exc())
                 return False
         except Exception as ex:
             self.get_logger().error("Failed uploading: %s" % ex)
+            self.get_logger().debug(traceback.format_exc())
             return False
         return True
 
@@ -774,9 +777,11 @@ class _Boto3Driver(_Driver):
                 )
             except Exception as ex:
                 self.get_logger().error("Failed uploading: %s" % ex)
+                self.get_logger().debug(traceback.format_exc())
                 return False
         except Exception as ex:
             self.get_logger().error("Failed uploading: %s" % ex)
+            self.get_logger().debug(traceback.format_exc())
             return False
         return True
 
@@ -1102,6 +1107,7 @@ class _GoogleCloudStorageDriver(_Driver):
             blob.upload_from_file(iterator)
         except Exception as ex:
             self.get_logger().error("Failed uploading: %s" % ex)
+            self.get_logger().debug(traceback.format_exc())
             return False
         return True
 
@@ -1118,6 +1124,7 @@ class _GoogleCloudStorageDriver(_Driver):
             blob.upload_from_filename(file_path)
         except Exception as ex:
             self.get_logger().error("Failed uploading: %s" % ex)
+            self.get_logger().debug(traceback.format_exc())
             return False
         return True
 
@@ -1470,8 +1477,10 @@ class _AzureBlobServiceStorageDriver(_Driver):
             return True
         except AzureHttpError as ex:
             self.get_logger().error("Failed uploading (Azure error): %s" % ex)
+            self.get_logger().debug(traceback.format_exc())
         except Exception as ex:
             self.get_logger().error("Failed uploading: %s" % ex)
+            self.get_logger().debug(traceback.format_exc())
         return False
 
     def upload_object(
@@ -1506,8 +1515,10 @@ class _AzureBlobServiceStorageDriver(_Driver):
             return True
         except AzureHttpError as ex:
             self.get_logger().error("Failed uploading (Azure error): %s" % ex)
+            self.get_logger().debug(traceback.format_exc())
         except Exception as ex:
             self.get_logger().error("Failed uploading: %s" % ex)
+            self.get_logger().debug(traceback.format_exc())
 
     def list_container_objects(
         self,
