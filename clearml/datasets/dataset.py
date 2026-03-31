@@ -669,6 +669,10 @@ class Dataset:
         num_files = len(self._dataset_file_entries)
         self._dataset_file_entries = {k: f for k, f in self._dataset_file_entries.items() if filter_f(f)}
         num_removed = num_files - len(self._dataset_file_entries)
+        # also prune stale link entries
+        num_links = len(self._dataset_link_entries)
+        self._dataset_link_entries = {k: v for k, v in self._dataset_link_entries.items() if filter_f(v)}
+        num_removed += num_links - len(self._dataset_link_entries)
         # Update the internal state
         self.update_changed_files(num_files_removed=num_removed)
 
@@ -705,6 +709,7 @@ class Dataset:
         max_workers: Optional[int] = None,
         retries: int = 3,
         preview: bool = True,
+        upload_as_external_links: bool = False,
     ) -> Optional[bool]:
         """
         Start file uploading, the function returns when all files are uploaded.
@@ -724,6 +729,10 @@ class Dataset:
           - number of logical cores: otherwise
         :param int retries: Number of retries before failing to upload each zip. If 0, the upload is not retried.
         :param preview: If True (defaul) the dataset preview is uploaded and shown in the UI.
+        :param upload_as_external_links: If True, upload each local file entry directly to storage
+            as an individual object (instead of bundling into a zip artifact) and register it as an
+            external link entry. The destination path is ``<output_url>/external_links/<dataset_id>/``.
+            Requires ``output_url`` to be set (either as argument or as the task's output URI).
 
         :raise: If the upload failed (i.e. at least one zip failed to upload), raise a `ValueError`
         """
@@ -745,6 +754,48 @@ class Dataset:
                 if self._task.output_uri and self._task.output_uri.startswith(tuple(cloud_driver_schemes))
                 else psutil.cpu_count()
             )
+
+        if upload_as_external_links:
+            self._task.get_logger().report_text(
+            "Uploading dataset files as external links: {}".format(
+                dict(
+                    show_progress=show_progress,
+                    verbose=verbose,
+                    output_url=output_url,
+                    compression=compression,
+                )
+            ),
+            print_console=False,
+        )
+            dest_url = self.get_default_storage()
+            if not dest_url:
+                raise ValueError("output_url must be set when upload_as_external_links=True")
+            dest_bucket_dir = "{}/external_links/{}".format(dest_url.rstrip("/"), self._id)
+            files_to_upload = [
+                (f.local_path, "{}/{}".format(dest_bucket_dir, f.relative_path), f.hash)
+                for f in self._dataset_file_entries.values()
+                if f.local_path
+            ]
+            if files_to_upload:
+                effective_workers = max_workers or (
+                    1 if dest_url.startswith(tuple(cloud_driver_schemes)) else psutil.cpu_count()
+                )
+
+                def _upload_single(args):
+                    local_path, remote_path, file_hash = args
+                    helper = StorageHelper.get(remote_path)
+                    if helper is None:
+                        raise ValueError("No storage helper available for: {}".format(remote_path))
+                    helper.upload(
+                        src_path=local_path,
+                        dest_path=remote_path,
+                        extra={"upload_hash": file_hash} if file_hash else None,
+                    )
+
+                with ThreadPoolExecutor(max_workers=effective_workers) as _pool:
+                    list(_pool.map(_upload_single, files_to_upload))
+            self._dataset_file_entries = {}
+            self.add_external_files(dest_bucket_dir, read_hash=True)
 
         self._task.get_logger().report_text(
             "Uploading dataset files: {}".format(
@@ -879,6 +930,7 @@ class Dataset:
             verbose=verbose,
             output_url=output_url,
             compression=compression,
+            upload_as_external_links=upload_as_external_links,
         )
 
         self._dirty = False
