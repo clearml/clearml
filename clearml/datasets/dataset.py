@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy, copy
 from multiprocessing.pool import ThreadPool
 from tempfile import mkdtemp
-from typing import Union, Optional, Sequence, List, Dict, Mapping, Tuple, TYPE_CHECKING, Any
+from typing import Union, Optional, Sequence, List, Dict, Mapping, Tuple, TYPE_CHECKING, Any, Set
 from zipfile import ZIP_DEFLATED
 from collections import deque
 
@@ -1022,6 +1022,7 @@ class Dataset:
         num_parts: Optional[int] = None,
         raise_on_error: bool = True,
         max_workers: Optional[int] = None,
+        files: Optional[List[str]] = None,
     ) -> str:
         """
         Return a base folder with a read-only (immutable) local copy of the entire dataset
@@ -1042,6 +1043,10 @@ class Dataset:
         :param raise_on_error: If True, raise exception if dataset merging failed on any file
         :param max_workers: Number of threads to be spawned when getting the dataset copy. Defaults
             to the number of logical cores.
+        :param files: Optional list of relative file paths to pull. When provided, only those files
+            (and the chunks that contain them) are downloaded. The local cache folder is suffixed
+            with a short hash of the file list so it is stored independently from the full dataset
+            copy. When None (default), the full dataset is downloaded.
 
         :return: A base folder for the entire dataset
         """
@@ -1055,6 +1060,8 @@ class Dataset:
             raise ValueError("Cannot get a local copy of a dataset that was not finalized/closed")
         max_workers = max_workers or psutil.cpu_count()
 
+        files_of_interest = set(files) if files else None
+
         # now let's merge the parents
         target_folder = self._merge_datasets(
             use_soft_links=use_soft_links,
@@ -1062,6 +1069,7 @@ class Dataset:
             part=part,
             num_parts=num_parts,
             max_workers=max_workers,
+            files_of_interest=files_of_interest,
         )
         return target_folder
 
@@ -2704,9 +2712,12 @@ class Dataset:
         part: Optional[int] = None,
         num_parts: Optional[int] = None,
         lock_target_folder: bool = True,
+        subset_hash: Optional[str] = None,
     ) -> Tuple[Path, CacheManager.CacheContext]:
         cache = CacheManager.get_cache_manager(cache_context=self.__cache_context)
-        local_folder = Path(cache.get_cache_folder()) / self._get_cache_folder_name(part=part, num_parts=num_parts)
+        local_folder = Path(cache.get_cache_folder()) / self._get_cache_folder_name(
+            part=part, num_parts=num_parts, subset_hash=subset_hash
+        )
         if lock_target_folder:
             cache.lock_cache_folder(local_folder)
         local_folder.mkdir(parents=True, exist_ok=True)
@@ -2743,6 +2754,7 @@ class Dataset:
         part: Optional[int] = None,
         num_parts: Optional[int] = None,
         max_workers: Optional[int] = None,
+        files_of_interest: Optional[Set[str]] = None,
     ) -> str:
         """
         download and copy / soft-link, files from all the parent dataset versions
@@ -2758,9 +2770,14 @@ class Dataset:
             part=0 -> chunks[0,5], part=1 -> chunks[1,6], part=2 -> chunks[2,7], part=3 -> chunks[3, ]
         :param max_workers: Number of threads to be spawned when merging datasets. Defaults to the number
             of logical cores.
+        :param files_of_interest: Optional set of relative file paths. When provided, only those files
+            (and the chunks that contain them) are downloaded. The cache folder is suffixed with a short
+            hash derived from this set.
 
         :return: the target folder
         """
+        import hashlib
+
         assert part is None or (isinstance(part, int) and part >= 0)
         assert num_parts is None or (isinstance(num_parts, int) and num_parts >= 1)
 
@@ -2772,15 +2789,40 @@ class Dataset:
         if part is not None and not num_parts:
             num_parts = self.get_num_chunks()
 
-        # just create the dataset target folder
-        target_base_folder, _ = self._create_ds_target_folder(part=part, num_parts=num_parts, lock_target_folder=True)
+        # compute a deterministic 8-char suffix when a file subset is requested
+        subset_hash = None
+        link_entries_of_interest = None
+        if files_of_interest:
+            subset_hash = hashlib.sha256(
+                "\n".join(sorted(files_of_interest)).encode()
+            ).hexdigest()[:8]
+            link_entries_of_interest = {
+                k: v for k, v in self._dataset_link_entries.items() if k in files_of_interest
+            }
 
-        # selected specific chunks if `part` was passed
-        chunk_selection = None if part is None else self._build_chunk_selection(part=part, num_parts=num_parts)
+        # just create the dataset target folder
+        target_base_folder, _ = self._create_ds_target_folder(
+            part=part, num_parts=num_parts, lock_target_folder=True, subset_hash=subset_hash
+        )
+
+        # selected specific chunks if `part` was passed, or subset of files was requested
+        if files_of_interest:
+            chunk_selection = self._build_subset_chunk_selection(files_of_interest)
+            # if all requested files are link entries (no chunk-backed files), no chunk
+            # filtering is needed — fall back to None so the current dataset is still included
+            # in dependencies_by_order and its link entries can be downloaded.
+            if not chunk_selection:
+                chunk_selection = None
+        elif part is not None:
+            chunk_selection = self._build_chunk_selection(part=part, num_parts=num_parts)
+        else:
+            chunk_selection = None
 
         # check if target folder is not empty, see if it contains everything we need
         if target_base_folder and next(target_base_folder.iterdir(), None):
-            if self._verify_dataset_folder(target_base_folder, part, chunk_selection, max_workers):
+            if self._verify_dataset_folder(
+                target_base_folder, part, chunk_selection, max_workers, files_of_interest=files_of_interest
+            ):
                 target_base_folder.touch()
                 self._release_lock_ds_target_folder(target_base_folder)
                 return target_base_folder.as_posix()
@@ -2791,7 +2833,7 @@ class Dataset:
                 # make sure we recreate the dataset target folder
                 target_base_folder.mkdir(parents=True, exist_ok=True)
 
-        # get the dataset dependencies (if `part` was passed, only selected the ones in the selected part)
+        # get the dataset dependencies (if `part` was passed or subset requested, only select relevant ones)
         dependencies_by_order = (
             self._get_dependencies_by_order(include_unused=False, include_current=True)
             if chunk_selection is None
@@ -2806,6 +2848,7 @@ class Dataset:
                 cleanup_target_folder=True,
                 target_folder=target_base_folder,
                 max_workers=max_workers,
+                link_entries_of_interest=link_entries_of_interest,
             )
             dependencies_by_order.remove(self._id)
 
@@ -2825,10 +2868,13 @@ class Dataset:
             use_soft_links=use_soft_links,
             raise_on_error=False,
             force=False,
+            files_of_interest=files_of_interest,
         )
 
         # verify entire dataset (if failed, force downloading parent datasets)
-        if not self._verify_dataset_folder(target_base_folder, part, chunk_selection, max_workers):
+        if not self._verify_dataset_folder(
+            target_base_folder, part, chunk_selection, max_workers, files_of_interest=files_of_interest
+        ):
             LoggerRoot.get_base_logger().info("Dataset parents need refreshing, re-fetching all parent datasets")
             # we should delete the entire cache folder
             self._extract_parent_datasets(
@@ -2838,6 +2884,7 @@ class Dataset:
                 use_soft_links=use_soft_links,
                 raise_on_error=raise_on_error,
                 force=True,
+                files_of_interest=files_of_interest,
             )
 
         self._release_lock_ds_target_folder(target_base_folder)
@@ -3086,7 +3133,35 @@ class Dataset:
         )
         return dict(chunks_lookup)
 
-    def _get_cache_folder_name(self, part: Optional[int] = None, num_parts: Optional[int] = None) -> str:
+    def _build_subset_chunk_selection(self, files_of_interest: Set[str]) -> Dict[str, List[int]]:
+        """
+        Build a chunk_selection dict covering only the chunks that contain at least one file
+        from files_of_interest, across all datasets in the dependency graph.
+        :return: Dict mapping dataset_id to list of chunk indices needed for the requested files.
+        """
+        result = {}  # type: Dict[str, List[int]]
+        for ds_id in [self._id] + list(self._dependency_graph.keys()):
+            ds = self if ds_id == self._id else Dataset.get(dataset_id=ds_id)
+            for rel_path, entry in ds._dataset_file_entries.items():
+                if rel_path not in files_of_interest:
+                    continue
+                chunk_idx = self._get_chunk_idx_from_artifact_name(entry.artifact_name)
+                if chunk_idx < 0:
+                    continue
+                if ds_id not in result:
+                    result[ds_id] = []
+                if chunk_idx not in result[ds_id]:
+                    result[ds_id].append(chunk_idx)
+        return result
+
+    def _get_cache_folder_name(
+        self,
+        part: Optional[int] = None,
+        num_parts: Optional[int] = None,
+        subset_hash: Optional[str] = None,
+    ) -> str:
+        if subset_hash:
+            return "{}{}_{}".format(self.__cache_folder_prefix, self._id, subset_hash)
         if part is None:
             return "{}{}".format(self.__cache_folder_prefix, self._id)
         return "{}{}_{}_{}".format(self.__cache_folder_prefix, self._id, part, num_parts)
@@ -3521,10 +3596,16 @@ class Dataset:
         raise_on_error: bool,
         force: bool,
         max_workers: Optional[int] = None,
+        files_of_interest: Optional[Set[str]] = None,
     ) -> None:
         # create thread pool, for creating soft-links / copying
         max_workers = max_workers or psutil.cpu_count()
         pool = ThreadPool(max_workers)
+        link_entries_of_interest = (
+            {k: v for k, v in self._dataset_link_entries.items() if k in files_of_interest}
+            if files_of_interest
+            else self._dataset_link_entries
+        )
         for dataset_version_id in dependencies_by_order:
             # make sure we skip over empty dependencies
             if dataset_version_id not in self._dependency_graph:
@@ -3539,7 +3620,7 @@ class Dataset:
                     lock_target_folder=True,
                     cleanup_target_folder=False,
                     max_workers=max_workers,
-                    link_entries_of_interest=self._dataset_link_entries,
+                    link_entries_of_interest=link_entries_of_interest,
                 )
             )
             ds_base_folder.touch()
@@ -3549,6 +3630,8 @@ class Dataset:
                     selected_chunks is not None
                     and self._get_chunk_idx_from_artifact_name(file_entry.artifact_name) not in selected_chunks
                 ):
+                    return
+                if files_of_interest and file_entry.relative_path not in files_of_interest:
                     return
                 source = (ds_base_folder / file_entry.relative_path).as_posix()
                 target = (target_base_folder / file_entry.relative_path).as_posix()
@@ -3597,6 +3680,7 @@ class Dataset:
         part: int,
         chunk_selection: dict,
         max_workers: int,
+        files_of_interest: Optional[Set[str]] = None,
     ) -> bool:
         def __verify_file_or_link(
             target_base_folder: Path,
@@ -3626,6 +3710,8 @@ class Dataset:
             futures_ = []
             with ThreadPoolExecutor(max_workers=max_workers) as tp:
                 for f in self._dataset_file_entries.values():
+                    if files_of_interest and f.relative_path not in files_of_interest:
+                        continue
                     future = tp.submit(
                         __verify_file_or_link,
                         target_base_folder,
@@ -3636,6 +3722,8 @@ class Dataset:
                     futures_.append(future)
 
                 for f in self._dataset_link_entries.values():
+                    if files_of_interest and f.relative_path not in files_of_interest:
+                        continue
                     # don't check whether link is in dataset part, hence None for part and chunk_selection
                     future = tp.submit(__verify_file_or_link, target_base_folder, f, None, None)
                     futures_.append(future)
