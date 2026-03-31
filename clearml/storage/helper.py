@@ -79,7 +79,7 @@ from ..debugging import get_logger
 from ..errors import UsageError
 from ..utilities.process.mp import ForkSafeRLock, SafeEvent
 
-from ..storage.util import get_config_object_matcher
+from ..storage.util import get_config_object_matcher, sha256sum
 from ..utilities.config import get_percentage, get_human_size_default
 from ..backend_config.environment import EnvEntry
 
@@ -616,6 +616,7 @@ class _Boto3Driver(_Driver):
     class ListResult:
         name = attrib(default=None)
         size = attrib(default=None)
+        metadata = attrib(default=None)
 
     def __init__(self) -> None:
         pass
@@ -742,6 +743,8 @@ class _Boto3Driver(_Driver):
         extra_args = {}
         try:
             extra_args = {"ContentType": get_file_mimetype(object_name or file_path)}
+            if extra and extra.get("upload_hash"):
+                extra_args["Metadata"] = {"sha256": extra["upload_hash"]}
             extra_args.update(container.config.extra_args or {})
             container.bucket.upload_file(
                 file_path,
@@ -786,12 +789,19 @@ class _Boto3Driver(_Driver):
         ex_prefix: Optional[str] = None,
         **kwargs: Any,
     ) -> Generator[ListResult, None, None]:
+        read_hash = kwargs.get("read_hash", False)
         if ex_prefix:
             res = container.bucket.objects.filter(Prefix=ex_prefix)
         else:
             res = container.bucket.objects.all()
         for res in res:
-            yield self.ListResult(name=res.key, size=res.size)
+            obj_metadata = None
+            if read_hash:
+                try:
+                    obj_metadata = container.resource.Object(container.bucket.name, res.key).metadata
+                except Exception:
+                    pass
+            yield self.ListResult(name=res.key, size=res.size, metadata=obj_metadata)
 
     def delete_object(self, object: Any, **kwargs: Any) -> bool:
         from botocore.exceptions import ClientError
@@ -1115,6 +1125,8 @@ class _GoogleCloudStorageDriver(_Driver):
     ) -> bool:
         try:
             blob = container.bucket.blob(object_name)
+            if extra and extra.get("upload_hash"):
+                blob.metadata = {"sha256": extra["upload_hash"]}
             blob.upload_from_filename(file_path)
         except Exception as ex:
             self.get_logger().error("Failed uploading: %s" % ex)
@@ -1492,6 +1504,7 @@ class _AzureBlobServiceStorageDriver(_Driver):
             AzureHttpError = HttpResponseError  # noqa
 
         blob_name = self._blob_name_from_object_path(object_name, container.name)
+        sha256 = extra.get("upload_hash") if extra else None
         try:
             from azure.storage.blob import ContentSettings  # noqa
 
@@ -1501,6 +1514,7 @@ class _AzureBlobServiceStorageDriver(_Driver):
                 file_path,
                 max_connections=max_connections,
                 content_settings=ContentSettings(content_type=get_file_mimetype(object_name or file_path)),
+                metadata={"sha256": sha256} if sha256 else None,
                 progress_callback=callback,
             )
             return True
@@ -1515,7 +1529,9 @@ class _AzureBlobServiceStorageDriver(_Driver):
         ex_prefix: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Any]:
-        return list(container.list_blobs(container_name=container.name, prefix=ex_prefix))
+        read_hash = kwargs.get("read_hash", False)
+        include = ["metadata"] if read_hash else None
+        return list(container.list_blobs(container_name=container.name, prefix=ex_prefix, include=include))
 
     def delete_object(self, object: Any, **kwargs: Any) -> bool:
         container = object.container
@@ -2805,12 +2821,15 @@ class _StorageHelper:
                 self.log.warning("Failed getting object size: {}('{}')".format(e.__class__.__name__, str(e)))
         return size
 
-    def get_object_metadata(self, obj: Any) -> dict:
+    def get_object_metadata(self, obj: Any, read_hash: bool = False) -> dict:
         """
         Get the metadata of the remote object.
         The metadata is a dict containing the following keys: `name`, `size`.
+        If `read_hash` is True and the object has a SHA-256 stored in its custom metadata,
+        a ``hash`` key is also included.
 
         :param object obj: The remote object
+        :param bool read_hash: If True, attempt to read SHA-256 from the object's custom metadata.
 
         :return: A dict containing the metadata of the remote object
         """
@@ -2819,6 +2838,17 @@ class _StorageHelper:
             "size": self._get_object_size_bytes(obj),
             "name": next(filter(None, (getattr(obj, f, None) for f in name_fields)), None),
         }
+        if read_hash:
+            blob_meta = getattr(obj, "metadata", None)
+            if blob_meta is None and hasattr(obj, "reload"):
+                try:
+                    obj.reload()
+                    blob_meta = getattr(obj, "metadata", None)
+                except Exception:
+                    pass
+            sha256 = (blob_meta or {}).get("sha256")
+            if sha256:
+                metadata["hash"] = sha256
         return metadata
 
     def verify_upload(
@@ -2971,7 +3001,12 @@ class _StorageHelper:
                 result_path = quote_url(result_path, _StorageHelper._quotable_uri_schemes)
             return result_path
 
-    def list(self, prefix: Optional[str] = None, with_metadata: bool = False) -> List[Union[str, Dict[str, Any]]]:
+    def list(
+        self,
+        prefix: Optional[str] = None,
+        with_metadata: bool = False,
+        read_hash: bool = False,
+    ) -> List[Union[str, Dict[str, Any]]]:
         """
         List entries in the helper base path.
 
@@ -2991,6 +3026,9 @@ class _StorageHelper:
             containing the name and metadata of the remote file. Thus, each dictionary will contain the following
             keys: `name`, `size`.
 
+        :param read_hash: If True and `with_metadata` is True, include SHA-256 hash in each metadata dict
+            (under the ``hash`` key) when the object has it stored in its custom metadata.
+
         :return: The paths of all the objects in the storage base path under prefix or
             a list of dictionaries containing the objects' metadata.
             Listed relative to the base path.
@@ -3005,8 +3043,11 @@ class _StorageHelper:
                 prefix = prefix.rstrip("/")
                 if prefix.startswith(str(self._driver.base_path)):
                     prefix = prefix[len(str(self._driver.base_path)) :]
-            res = self._driver.list_container_objects(self._container, ex_prefix=prefix)
-            result = [obj.name if not with_metadata else self.get_object_metadata(obj) for obj in res]
+            res = self._driver.list_container_objects(self._container, ex_prefix=prefix, read_hash=read_hash)
+            result = [
+                obj.name if not with_metadata else self.get_object_metadata(obj, read_hash=read_hash)
+                for obj in res
+            ]
 
             if self._base_url == "file://":
                 if not with_metadata:
@@ -3017,8 +3058,8 @@ class _StorageHelper:
             return result
         else:
             return [
-                obj.name if not with_metadata else self.get_object_metadata(obj)
-                for obj in self._driver.list_container_objects(self._container)
+                obj.name if not with_metadata else self.get_object_metadata(obj, read_hash=read_hash)
+                for obj in self._driver.list_container_objects(self._container, read_hash=read_hash)
             ]
 
     def download_to_file(
@@ -3395,6 +3436,8 @@ class _StorageHelper:
             object_name = self._normalize_object_name(dest_path)
             extra = extra.copy() if extra else {}
             extra.update(self._extra)
+            if "upload_hash" in extra and extra["upload_hash"] is None:
+                extra["upload_hash"], _ = sha256sum(local_path)
             cb = UploadProgressReport.from_file(local_path, self._verbose, self._log)
             res = self._driver.upload_object(
                 file_path=local_path,

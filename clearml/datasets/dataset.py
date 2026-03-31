@@ -113,6 +113,7 @@ class LinkEntry:
             relative_path=self.relative_path,
             parent_dataset_id=self.parent_dataset_id,
             size=self.size,
+            hash=self.hash,
         )
 
 
@@ -480,6 +481,7 @@ class Dataset:
         recursive: bool = True,
         verbose: bool = False,
         max_workers: Optional[int] = None,
+        read_hash: bool = False,
     ) -> int:
         """
         Adds external files or folders to the current dataset.
@@ -513,6 +515,11 @@ class Dataset:
         :param verbose: If True, print to console files added/modified
         :param max_workers: The number of threads to add the external files with. Useful when `source_url` is
             a sequence. Defaults to the number of logical cores
+        :param read_hash: If True, read the SHA-256 hash from each object's custom cloud metadata and store it
+            on the resulting LinkEntry. When available, hash comparison is used for change detection instead of
+            file size. Only effective for objects uploaded with ``upload_hash`` set in the StorageHelper extra dict.
+            Defaults to False.
+
         :return: Number of file links added
         """
         self._dirty = True
@@ -540,6 +547,7 @@ class Dataset:
                         dataset_path=dataset_path_,
                         recursive=recursive,
                         verbose=verbose,
+                        read_hash=read_hash,
                     )
                 )
         for future_ in futures_:
@@ -2227,11 +2235,13 @@ class Dataset:
         for f in file_entries:
             ds_cur_f = self._dataset_file_entries.get(f.relative_path)
             if not ds_cur_f:
-                if (
-                    f.relative_path in self._dataset_link_entries
-                    and f.size == self._dataset_link_entries[f.relative_path].size
-                ):
-                    continue
+                existing_link = self._dataset_link_entries.get(f.relative_path)
+                if existing_link is not None:
+                    same = (existing_link.hash and f.hash and existing_link.hash == f.hash) or (
+                        not existing_link.hash and f.size == existing_link.size
+                    )
+                    if same:
+                        continue
                 # de-duplication: if a previous file (possibly removed earlier in sync) has the same content hash,
                 # reuse its storage reference to avoid re-uploading
                 if f.hash and f.hash in prev_hash_lookup:
@@ -3652,6 +3662,7 @@ class Dataset:
         dataset_path: Optional[str] = None,
         recursive: bool = True,
         verbose: bool = False,
+        read_hash: bool = False,
     ) -> Tuple[int, int]:
         """
         Auxiliary function for `add_external_files`
@@ -3667,6 +3678,7 @@ class Dataset:
             'image.jpg' will be downloaded to 's3_files/image.jpg' (relative path to the dataset)
         :param recursive: If True match all wildcard files recursively
         :param verbose: If True print to console files added/modified
+        :param read_hash: If True, read SHA-256 from object metadata for hash-based change detection
         :return: Number of file links added and modified
         """
         if dataset_path:
@@ -3677,11 +3689,11 @@ class Dataset:
             if StorageManager.exists_file(source_url):
                 # handle local path provided without scheme
                 source_url = StorageHelper.sanitize_url(source_url)
-                remote_objects = [StorageManager.get_metadata(source_url, return_full_path=True)]
+                remote_objects = [StorageManager.get_metadata(source_url, return_full_path=True, read_hash=read_hash)]
             elif not source_url.startswith(("http://", "https://")):
                 if source_url[-1] != "/":
                     source_url = source_url + "/"
-                remote_objects = StorageManager.list(source_url, with_metadata=True, return_full_path=True)
+                remote_objects = StorageManager.list(source_url, with_metadata=True, return_full_path=True, read_hash=read_hash)
         except Exception:
             pass
         if not remote_objects:
@@ -3699,8 +3711,10 @@ class Dataset:
             try:
                 relative_path = Path(os.path.join(dataset_path or ".", relative_path)).as_posix()
                 size = remote_object.get("size")
+                hash_val = remote_object.get("hash")
                 already_added_file = self._dataset_file_entries.get(relative_path)
-                if relative_path not in self._dataset_link_entries:
+                existing_link = self._dataset_link_entries.get(relative_path)
+                if existing_link is None:
                     if verbose:
                         self._task.get_logger().report_text(
                             "External file {} added".format(link),
@@ -3711,9 +3725,12 @@ class Dataset:
                         relative_path=relative_path,
                         parent_dataset_id=self._id,
                         size=size,
+                        hash=hash_val,
                     )
                     num_added += 1
-                elif already_added_file and already_added_file.size != size:
+                elif already_added_file and (
+                    existing_link.hash != hash_val if (hash_val and existing_link.hash) else existing_link.size != size
+                ):
                     if verbose:
                         self._task.get_logger().report_text(
                             "External file {} modified".format(link),
@@ -3725,11 +3742,11 @@ class Dataset:
                         relative_path=relative_path,
                         parent_dataset_id=self._id,
                         size=size,
+                        hash=hash_val,
                     )
                     num_modified += 1
-                elif (
-                    relative_path in self._dataset_link_entries
-                    and self._dataset_link_entries[relative_path].size != size
+                elif hash_val and existing_link.hash and existing_link.hash != hash_val or (
+                    not (hash_val and existing_link.hash) and existing_link.size != size
                 ):
                     if verbose:
                         self._task.get_logger().report_text(
@@ -3741,6 +3758,7 @@ class Dataset:
                         relative_path=relative_path,
                         parent_dataset_id=self._id,
                         size=size,
+                        hash=hash_val,
                     )
                     num_modified += 1
                 else:
