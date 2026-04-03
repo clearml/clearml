@@ -110,6 +110,7 @@ from .binding.args import (
     argparser_parseargs_called,
     get_argparser_last_args,
     argparser_update_currenttask,
+    PatchArgumentParser,
 )
 from .utilities.dicts import ReadOnlyDict, merge_dicts, RequirementsDict
 from .utilities.proxy_object import (
@@ -2824,6 +2825,11 @@ class Task(_Task):
                 EnvironmentBind.update_current_task(None)
                 PatchJsonArgParse.update_current_task(None)
                 PatchOsFork.patch_fork(None)
+                # unbind argument parser bindings (these accumulate task-specific state)
+                PatchArgumentParser.update_current_task(None)
+                PatchClick.update_current_task(None)
+                PatchFire.update_current_task(None)
+                PatchGradio.update_current_task(None)
 
     def delete(
         self,
