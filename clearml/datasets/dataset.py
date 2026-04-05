@@ -2252,11 +2252,16 @@ class Dataset:
                     # if the previous entry already pointed to uploaded content (no local_path), skip uploading again
                     if getattr(prev_fe, "local_path", None) is None and prev_fe.artifact_name:
                         f.local_path = None
-                if verbose:
-                    self._task.get_logger().report_text("Add {}".format(f.relative_path))
                 self._dataset_file_entries[f.relative_path] = f
                 if f.relative_path not in self._dataset_link_entries:
-                    count += 1
+                    if verbose:
+                        self._task.get_logger().report_text("Add {}".format(f.relative_path))
+                else:
+                    modified_count += 1
+                    if verbose:
+                        self._task.get_logger().report_text("Modified {}".format(f.relative_path))
+                count += 1
+
             elif ds_cur_f.hash != f.hash:
                 if verbose:
                     self._task.get_logger().report_text("Modified {}".format(f.relative_path))
