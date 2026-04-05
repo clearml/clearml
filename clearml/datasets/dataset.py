@@ -795,7 +795,7 @@ class Dataset:
                 with ThreadPoolExecutor(max_workers=effective_workers) as _pool:
                     list(_pool.map(_upload_single, files_to_upload))
             self._dataset_file_entries = {}
-            self.add_external_files(dest_bucket_dir)
+            self.add_external_files(dest_bucket_dir, read_hash=True)
 
         self._task.get_logger().report_text(
             "Uploading dataset files: {}".format(
