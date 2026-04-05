@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy, copy
 from multiprocessing.pool import ThreadPool
 from tempfile import mkdtemp
-from typing import Union, Optional, Sequence, List, Dict, Mapping, Tuple, TYPE_CHECKING, Any
+from typing import Union, Optional, Sequence, List, Dict, Mapping, Tuple, TYPE_CHECKING, Any, Set
 from zipfile import ZIP_DEFLATED
 from collections import deque
 
@@ -113,6 +113,7 @@ class LinkEntry:
             relative_path=self.relative_path,
             parent_dataset_id=self.parent_dataset_id,
             size=self.size,
+            hash=self.hash,
         )
 
 
@@ -480,6 +481,7 @@ class Dataset:
         recursive: bool = True,
         verbose: bool = False,
         max_workers: Optional[int] = None,
+        read_hash: bool = False,
     ) -> int:
         """
         Adds external files or folders to the current dataset.
@@ -513,6 +515,11 @@ class Dataset:
         :param verbose: If True, print to console files added/modified
         :param max_workers: The number of threads to add the external files with. Useful when `source_url` is
             a sequence. Defaults to the number of logical cores
+        :param read_hash: If True, read the SHA-256 hash from each object's custom cloud metadata and store it
+            on the resulting LinkEntry. When available, hash comparison is used for change detection instead of
+            file size. Only effective for objects uploaded with ``upload_hash`` set in the StorageHelper extra dict.
+            Defaults to False.
+
         :return: Number of file links added
         """
         self._dirty = True
@@ -540,6 +547,7 @@ class Dataset:
                         dataset_path=dataset_path_,
                         recursive=recursive,
                         verbose=verbose,
+                        read_hash=read_hash,
                     )
                 )
         for future_ in futures_:
@@ -661,6 +669,10 @@ class Dataset:
         num_files = len(self._dataset_file_entries)
         self._dataset_file_entries = {k: f for k, f in self._dataset_file_entries.items() if filter_f(f)}
         num_removed = num_files - len(self._dataset_file_entries)
+        # also prune stale link entries
+        num_links = len(self._dataset_link_entries)
+        self._dataset_link_entries = {k: v for k, v in self._dataset_link_entries.items() if filter_f(v)}
+        num_removed += num_links - len(self._dataset_link_entries)
         # Update the internal state
         self.update_changed_files(num_files_removed=num_removed)
 
@@ -697,6 +709,7 @@ class Dataset:
         max_workers: Optional[int] = None,
         retries: int = 3,
         preview: bool = True,
+        upload_as_external_links: bool = False,
     ) -> Optional[bool]:
         """
         Start file uploading, the function returns when all files are uploaded.
@@ -716,6 +729,10 @@ class Dataset:
           - number of logical cores: otherwise
         :param int retries: Number of retries before failing to upload each zip. If 0, the upload is not retried.
         :param preview: If True (defaul) the dataset preview is uploaded and shown in the UI.
+        :param upload_as_external_links: If True, upload each local file entry directly to storage
+            as an individual object (instead of bundling into a zip artifact) and register it as an
+            external link entry. The destination path is ``<output_url>/external_links/<dataset_id>/``.
+            Requires ``output_url`` to be set (either as argument or as the task's output URI).
 
         :raise: If the upload failed (i.e. at least one zip failed to upload), raise a `ValueError`
         """
@@ -737,6 +754,48 @@ class Dataset:
                 if self._task.output_uri and self._task.output_uri.startswith(tuple(cloud_driver_schemes))
                 else psutil.cpu_count()
             )
+
+        if upload_as_external_links:
+            self._task.get_logger().report_text(
+            "Uploading dataset files as external links: {}".format(
+                dict(
+                    show_progress=show_progress,
+                    verbose=verbose,
+                    output_url=output_url,
+                    compression=compression,
+                )
+            ),
+            print_console=False,
+        )
+            dest_url = self.get_default_storage()
+            if not dest_url:
+                raise ValueError("output_url must be set when upload_as_external_links=True")
+            dest_bucket_dir = "{}/external_links/{}".format(dest_url.rstrip("/"), self._id)
+            files_to_upload = [
+                (f.local_path, "{}/{}".format(dest_bucket_dir, f.relative_path), f.hash)
+                for f in self._dataset_file_entries.values()
+                if f.local_path
+            ]
+            if files_to_upload:
+                effective_workers = max_workers or (
+                    1 if dest_url.startswith(tuple(cloud_driver_schemes)) else psutil.cpu_count()
+                )
+
+                def _upload_single(args):
+                    local_path, remote_path, file_hash = args
+                    helper = StorageHelper.get(remote_path)
+                    if helper is None:
+                        raise ValueError("No storage helper available for: {}".format(remote_path))
+                    helper.upload(
+                        src_path=local_path,
+                        dest_path=remote_path,
+                        extra={"upload_hash": file_hash} if file_hash else None,
+                    )
+
+                with ThreadPoolExecutor(max_workers=effective_workers) as _pool:
+                    list(_pool.map(_upload_single, files_to_upload))
+            self._dataset_file_entries = {}
+            self.add_external_files(dest_bucket_dir, read_hash=True)
 
         self._task.get_logger().report_text(
             "Uploading dataset files: {}".format(
@@ -871,6 +930,7 @@ class Dataset:
             verbose=verbose,
             output_url=output_url,
             compression=compression,
+            upload_as_external_links=upload_as_external_links,
         )
 
         self._dirty = False
@@ -1014,6 +1074,7 @@ class Dataset:
         num_parts: Optional[int] = None,
         raise_on_error: bool = True,
         max_workers: Optional[int] = None,
+        files: Optional[List[str]] = None,
     ) -> str:
         """
         Return a base folder with a read-only (immutable) local copy of the entire dataset
@@ -1034,6 +1095,10 @@ class Dataset:
         :param raise_on_error: If True, raise exception if dataset merging failed on any file
         :param max_workers: Number of threads to be spawned when getting the dataset copy. Defaults
             to the number of logical cores.
+        :param files: Optional list of relative file paths to pull. When provided, only those files
+            (and the chunks that contain them) are downloaded. The local cache folder is suffixed
+            with a short hash of the file list so it is stored independently from the full dataset
+            copy. When None (default), the full dataset is downloaded.
 
         :return: A base folder for the entire dataset
         """
@@ -1047,6 +1112,8 @@ class Dataset:
             raise ValueError("Cannot get a local copy of a dataset that was not finalized/closed")
         max_workers = max_workers or psutil.cpu_count()
 
+        files_of_interest = set(files) if files else None
+
         # now let's merge the parents
         target_folder = self._merge_datasets(
             use_soft_links=use_soft_links,
@@ -1054,6 +1121,7 @@ class Dataset:
             part=part,
             num_parts=num_parts,
             max_workers=max_workers,
+            files_of_interest=files_of_interest,
         )
         return target_folder
 
@@ -2227,11 +2295,13 @@ class Dataset:
         for f in file_entries:
             ds_cur_f = self._dataset_file_entries.get(f.relative_path)
             if not ds_cur_f:
-                if (
-                    f.relative_path in self._dataset_link_entries
-                    and f.size == self._dataset_link_entries[f.relative_path].size
-                ):
-                    continue
+                existing_link = self._dataset_link_entries.get(f.relative_path)
+                if existing_link is not None:
+                    same = (existing_link.hash and f.hash and existing_link.hash == f.hash) or (
+                        not existing_link.hash and f.size == existing_link.size
+                    )
+                    if same:
+                        continue
                 # de-duplication: if a previous file (possibly removed earlier in sync) has the same content hash,
                 # reuse its storage reference to avoid re-uploading
                 if f.hash and f.hash in prev_hash_lookup:
@@ -2694,9 +2764,12 @@ class Dataset:
         part: Optional[int] = None,
         num_parts: Optional[int] = None,
         lock_target_folder: bool = True,
+        subset_hash: Optional[str] = None,
     ) -> Tuple[Path, CacheManager.CacheContext]:
         cache = CacheManager.get_cache_manager(cache_context=self.__cache_context)
-        local_folder = Path(cache.get_cache_folder()) / self._get_cache_folder_name(part=part, num_parts=num_parts)
+        local_folder = Path(cache.get_cache_folder()) / self._get_cache_folder_name(
+            part=part, num_parts=num_parts, subset_hash=subset_hash
+        )
         if lock_target_folder:
             cache.lock_cache_folder(local_folder)
         local_folder.mkdir(parents=True, exist_ok=True)
@@ -2733,6 +2806,7 @@ class Dataset:
         part: Optional[int] = None,
         num_parts: Optional[int] = None,
         max_workers: Optional[int] = None,
+        files_of_interest: Optional[Set[str]] = None,
     ) -> str:
         """
         download and copy / soft-link, files from all the parent dataset versions
@@ -2748,9 +2822,14 @@ class Dataset:
             part=0 -> chunks[0,5], part=1 -> chunks[1,6], part=2 -> chunks[2,7], part=3 -> chunks[3, ]
         :param max_workers: Number of threads to be spawned when merging datasets. Defaults to the number
             of logical cores.
+        :param files_of_interest: Optional set of relative file paths. When provided, only those files
+            (and the chunks that contain them) are downloaded. The cache folder is suffixed with a short
+            hash derived from this set.
 
         :return: the target folder
         """
+        import hashlib
+
         assert part is None or (isinstance(part, int) and part >= 0)
         assert num_parts is None or (isinstance(num_parts, int) and num_parts >= 1)
 
@@ -2762,15 +2841,40 @@ class Dataset:
         if part is not None and not num_parts:
             num_parts = self.get_num_chunks()
 
-        # just create the dataset target folder
-        target_base_folder, _ = self._create_ds_target_folder(part=part, num_parts=num_parts, lock_target_folder=True)
+        # compute a deterministic 8-char suffix when a file subset is requested
+        subset_hash = None
+        link_entries_of_interest = None
+        if files_of_interest:
+            subset_hash = hashlib.sha256(
+                "\n".join(sorted(files_of_interest)).encode()
+            ).hexdigest()[:8]
+            link_entries_of_interest = {
+                k: v for k, v in self._dataset_link_entries.items() if k in files_of_interest
+            }
 
-        # selected specific chunks if `part` was passed
-        chunk_selection = None if part is None else self._build_chunk_selection(part=part, num_parts=num_parts)
+        # just create the dataset target folder
+        target_base_folder, _ = self._create_ds_target_folder(
+            part=part, num_parts=num_parts, lock_target_folder=True, subset_hash=subset_hash
+        )
+
+        # selected specific chunks if `part` was passed, or subset of files was requested
+        if files_of_interest:
+            chunk_selection = self._build_subset_chunk_selection(files_of_interest)
+            # if all requested files are link entries (no chunk-backed files), no chunk
+            # filtering is needed — fall back to None so the current dataset is still included
+            # in dependencies_by_order and its link entries can be downloaded.
+            if not chunk_selection:
+                chunk_selection = None
+        elif part is not None:
+            chunk_selection = self._build_chunk_selection(part=part, num_parts=num_parts)
+        else:
+            chunk_selection = None
 
         # check if target folder is not empty, see if it contains everything we need
         if target_base_folder and next(target_base_folder.iterdir(), None):
-            if self._verify_dataset_folder(target_base_folder, part, chunk_selection, max_workers):
+            if self._verify_dataset_folder(
+                target_base_folder, part, chunk_selection, max_workers, files_of_interest=files_of_interest
+            ):
                 target_base_folder.touch()
                 self._release_lock_ds_target_folder(target_base_folder)
                 return target_base_folder.as_posix()
@@ -2781,7 +2885,7 @@ class Dataset:
                 # make sure we recreate the dataset target folder
                 target_base_folder.mkdir(parents=True, exist_ok=True)
 
-        # get the dataset dependencies (if `part` was passed, only selected the ones in the selected part)
+        # get the dataset dependencies (if `part` was passed or subset requested, only select relevant ones)
         dependencies_by_order = (
             self._get_dependencies_by_order(include_unused=False, include_current=True)
             if chunk_selection is None
@@ -2796,6 +2900,7 @@ class Dataset:
                 cleanup_target_folder=True,
                 target_folder=target_base_folder,
                 max_workers=max_workers,
+                link_entries_of_interest=link_entries_of_interest,
             )
             dependencies_by_order.remove(self._id)
 
@@ -2815,10 +2920,13 @@ class Dataset:
             use_soft_links=use_soft_links,
             raise_on_error=False,
             force=False,
+            files_of_interest=files_of_interest,
         )
 
         # verify entire dataset (if failed, force downloading parent datasets)
-        if not self._verify_dataset_folder(target_base_folder, part, chunk_selection, max_workers):
+        if not self._verify_dataset_folder(
+            target_base_folder, part, chunk_selection, max_workers, files_of_interest=files_of_interest
+        ):
             LoggerRoot.get_base_logger().info("Dataset parents need refreshing, re-fetching all parent datasets")
             # we should delete the entire cache folder
             self._extract_parent_datasets(
@@ -2828,6 +2936,7 @@ class Dataset:
                 use_soft_links=use_soft_links,
                 raise_on_error=raise_on_error,
                 force=True,
+                files_of_interest=files_of_interest,
             )
 
         self._release_lock_ds_target_folder(target_base_folder)
@@ -3076,7 +3185,35 @@ class Dataset:
         )
         return dict(chunks_lookup)
 
-    def _get_cache_folder_name(self, part: Optional[int] = None, num_parts: Optional[int] = None) -> str:
+    def _build_subset_chunk_selection(self, files_of_interest: Set[str]) -> Dict[str, List[int]]:
+        """
+        Build a chunk_selection dict covering only the chunks that contain at least one file
+        from files_of_interest, across all datasets in the dependency graph.
+        :return: Dict mapping dataset_id to list of chunk indices needed for the requested files.
+        """
+        result = {}  # type: Dict[str, List[int]]
+        for ds_id in [self._id] + list(self._dependency_graph.keys()):
+            ds = self if ds_id == self._id else Dataset.get(dataset_id=ds_id)
+            for rel_path, entry in ds._dataset_file_entries.items():
+                if rel_path not in files_of_interest:
+                    continue
+                chunk_idx = self._get_chunk_idx_from_artifact_name(entry.artifact_name)
+                if chunk_idx < 0:
+                    continue
+                if ds_id not in result:
+                    result[ds_id] = []
+                if chunk_idx not in result[ds_id]:
+                    result[ds_id].append(chunk_idx)
+        return result
+
+    def _get_cache_folder_name(
+        self,
+        part: Optional[int] = None,
+        num_parts: Optional[int] = None,
+        subset_hash: Optional[str] = None,
+    ) -> str:
+        if subset_hash:
+            return "{}{}_{}".format(self.__cache_folder_prefix, self._id, subset_hash)
         if part is None:
             return "{}{}".format(self.__cache_folder_prefix, self._id)
         return "{}{}_{}_{}".format(self.__cache_folder_prefix, self._id, part, num_parts)
@@ -3511,10 +3648,16 @@ class Dataset:
         raise_on_error: bool,
         force: bool,
         max_workers: Optional[int] = None,
+        files_of_interest: Optional[Set[str]] = None,
     ) -> None:
         # create thread pool, for creating soft-links / copying
         max_workers = max_workers or psutil.cpu_count()
         pool = ThreadPool(max_workers)
+        link_entries_of_interest = (
+            {k: v for k, v in self._dataset_link_entries.items() if k in files_of_interest}
+            if files_of_interest
+            else self._dataset_link_entries
+        )
         for dataset_version_id in dependencies_by_order:
             # make sure we skip over empty dependencies
             if dataset_version_id not in self._dependency_graph:
@@ -3529,7 +3672,7 @@ class Dataset:
                     lock_target_folder=True,
                     cleanup_target_folder=False,
                     max_workers=max_workers,
-                    link_entries_of_interest=self._dataset_link_entries,
+                    link_entries_of_interest=link_entries_of_interest,
                 )
             )
             ds_base_folder.touch()
@@ -3539,6 +3682,8 @@ class Dataset:
                     selected_chunks is not None
                     and self._get_chunk_idx_from_artifact_name(file_entry.artifact_name) not in selected_chunks
                 ):
+                    return
+                if files_of_interest and file_entry.relative_path not in files_of_interest:
                     return
                 source = (ds_base_folder / file_entry.relative_path).as_posix()
                 target = (target_base_folder / file_entry.relative_path).as_posix()
@@ -3587,6 +3732,7 @@ class Dataset:
         part: int,
         chunk_selection: dict,
         max_workers: int,
+        files_of_interest: Optional[Set[str]] = None,
     ) -> bool:
         def __verify_file_or_link(
             target_base_folder: Path,
@@ -3616,6 +3762,8 @@ class Dataset:
             futures_ = []
             with ThreadPoolExecutor(max_workers=max_workers) as tp:
                 for f in self._dataset_file_entries.values():
+                    if files_of_interest and f.relative_path not in files_of_interest:
+                        continue
                     future = tp.submit(
                         __verify_file_or_link,
                         target_base_folder,
@@ -3626,6 +3774,8 @@ class Dataset:
                     futures_.append(future)
 
                 for f in self._dataset_link_entries.values():
+                    if files_of_interest and f.relative_path not in files_of_interest:
+                        continue
                     # don't check whether link is in dataset part, hence None for part and chunk_selection
                     future = tp.submit(__verify_file_or_link, target_base_folder, f, None, None)
                     futures_.append(future)
@@ -3652,6 +3802,7 @@ class Dataset:
         dataset_path: Optional[str] = None,
         recursive: bool = True,
         verbose: bool = False,
+        read_hash: bool = False,
     ) -> Tuple[int, int]:
         """
         Auxiliary function for `add_external_files`
@@ -3667,6 +3818,7 @@ class Dataset:
             'image.jpg' will be downloaded to 's3_files/image.jpg' (relative path to the dataset)
         :param recursive: If True match all wildcard files recursively
         :param verbose: If True print to console files added/modified
+        :param read_hash: If True, read SHA-256 from object metadata for hash-based change detection
         :return: Number of file links added and modified
         """
         if dataset_path:
@@ -3677,11 +3829,11 @@ class Dataset:
             if StorageManager.exists_file(source_url):
                 # handle local path provided without scheme
                 source_url = StorageHelper.sanitize_url(source_url)
-                remote_objects = [StorageManager.get_metadata(source_url, return_full_path=True)]
+                remote_objects = [StorageManager.get_metadata(source_url, return_full_path=True, read_hash=read_hash)]
             elif not source_url.startswith(("http://", "https://")):
                 if source_url[-1] != "/":
                     source_url = source_url + "/"
-                remote_objects = StorageManager.list(source_url, with_metadata=True, return_full_path=True)
+                remote_objects = StorageManager.list(source_url, with_metadata=True, return_full_path=True, read_hash=read_hash)
         except Exception:
             pass
         if not remote_objects:
@@ -3699,8 +3851,10 @@ class Dataset:
             try:
                 relative_path = Path(os.path.join(dataset_path or ".", relative_path)).as_posix()
                 size = remote_object.get("size")
+                hash_val = remote_object.get("hash")
                 already_added_file = self._dataset_file_entries.get(relative_path)
-                if relative_path not in self._dataset_link_entries:
+                existing_link = self._dataset_link_entries.get(relative_path)
+                if existing_link is None:
                     if verbose:
                         self._task.get_logger().report_text(
                             "External file {} added".format(link),
@@ -3711,9 +3865,12 @@ class Dataset:
                         relative_path=relative_path,
                         parent_dataset_id=self._id,
                         size=size,
+                        hash=hash_val,
                     )
                     num_added += 1
-                elif already_added_file and already_added_file.size != size:
+                elif already_added_file and (
+                    existing_link.hash != hash_val if (hash_val and existing_link.hash) else existing_link.size != size
+                ):
                     if verbose:
                         self._task.get_logger().report_text(
                             "External file {} modified".format(link),
@@ -3725,11 +3882,11 @@ class Dataset:
                         relative_path=relative_path,
                         parent_dataset_id=self._id,
                         size=size,
+                        hash=hash_val,
                     )
                     num_modified += 1
-                elif (
-                    relative_path in self._dataset_link_entries
-                    and self._dataset_link_entries[relative_path].size != size
+                elif hash_val and existing_link.hash and existing_link.hash != hash_val or (
+                    not (hash_val and existing_link.hash) and existing_link.size != size
                 ):
                     if verbose:
                         self._task.get_logger().report_text(
@@ -3741,6 +3898,7 @@ class Dataset:
                         relative_path=relative_path,
                         parent_dataset_id=self._id,
                         size=size,
+                        hash=hash_val,
                     )
                     num_modified += 1
                 else:
