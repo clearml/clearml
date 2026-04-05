@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import os
 import sys
 import threading
@@ -1302,7 +1303,10 @@ class _ModelAdapter:
         try:
             self._output_model.update_weights(weights_filename=filepath, auto_delete_file=True)
         except Exception as ex:
-            self._logger.error(str(ex))
+            self._logger.error(
+                str(ex),
+                exc_info=self._logger.isEnabledFor(logging.DEBUG),
+            )
 
     def save_weights(self, filepath: str, overwrite: bool = True) -> None:
         self._model.save_weights(filepath=filepath, overwrite=overwrite)
@@ -1310,7 +1314,10 @@ class _ModelAdapter:
         try:
             self._output_model.update_weights(weights_filename=filepath, auto_delete_file=True)
         except Exception as ex:
-            self._logger.error(str(ex))
+            self._logger.error(
+                str(ex),
+                exc_info=self._logger.isEnabledFor(logging.DEBUG),
+            )
 
 
 class PatchModelCheckPointCallback:

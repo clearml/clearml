@@ -14,6 +14,7 @@ from six.moves.urllib.parse import urlparse
 from .args import _Arguments
 from .repo import ScriptInfo
 from ...task import Task
+from ...config import deferred_config, DEVELOPMENT_DEFAULT_SHELL_BINARY_PATH
 
 
 class CreateAndPopulate:
@@ -26,6 +27,14 @@ class CreateAndPopulate:
         "$".format(regular=r"[^/@:#]")
     )
 
+    _DEFAULT_SHELL_BINARY_PATH = (
+        DEVELOPMENT_DEFAULT_SHELL_BINARY_PATH.get()
+        or deferred_config(
+            "development.default_shell_binary",
+            "/bin/bash",
+        )
+    )
+    
     def __init__(
         self,
         project_name: Optional[str] = None,
@@ -311,7 +320,7 @@ class CreateAndPopulate:
             task_state["script"]["working_dir"] = repo_info.script["working_dir"]
             task_state["script"]["entry_point"] = repo_info.script["entry_point"]
             task_state["script"]["binary"] = self.binary or (
-                "/bin/bash"
+                str(self._DEFAULT_SHELL_BINARY_PATH)
                 if (
                     (repo_info.script["entry_point"] or "").lower().strip().endswith(".sh")
                     and not (repo_info.script["entry_point"] or "").lower().strip().startswith("-m ")
@@ -397,7 +406,7 @@ class CreateAndPopulate:
                     force_single_script=True,
                 )
                 task_state["script"]["binary"] = self.binary or (
-                    "/bin/bash"
+                    str(self._DEFAULT_SHELL_BINARY_PATH)
                     if (
                         (repo_info.script["entry_point"] or "").lower().strip().endswith(".sh")
                         and not (repo_info.script["entry_point"] or "").lower().strip().startswith("-m ")
@@ -416,13 +425,21 @@ class CreateAndPopulate:
                     and entry_point.lower().strip().endswith(".sh")
                     and not entry_point.lower().strip().startswith("-m")
                 ):
-                    task_state["script"]["binary"] = "/bin/bash"
+                    task_state["script"]["binary"] = str(self._DEFAULT_SHELL_BINARY_PATH)
         else:
             # standalone task
             task_state["script"]["entry_point"] = (
                 self.script if self.script else ("-m {}".format(self.module) if self.module else "")
             )
             task_state["script"]["working_dir"] = "."
+            if self.binary:
+                task_state["script"]["binary"] = self.binary
+            elif (
+                task_state["script"]["entry_point"]
+                and task_state["script"]["entry_point"].lower().strip().endswith(".sh")
+                and not task_state["script"]["entry_point"].lower().strip().startswith("-m")
+            ):
+                task_state["script"]["binary"] = str(self._DEFAULT_SHELL_BINARY_PATH)
         # update requirements
         reqs = []
         if self.requirements_file:

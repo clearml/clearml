@@ -84,7 +84,10 @@ class InterfaceBase(SessionInterface):
                         ", ".join("%s=%s" % p for p in req.to_dict().items()),
                     )
                 if log:
-                    log.error(error_msg)
+                    log.error(
+                        error_msg,
+                        exc_info=log.isEnabledFor(logging.DEBUG),
+                    )
 
             except requests.exceptions.BaseHTTPError as e:
                 res = None
@@ -108,6 +111,7 @@ class InterfaceBase(SessionInterface):
                         "Field %s contains illegal schema: %s",
                         ".".join(e.path),
                         str(e.message),
+                        exc_info=log.isEnabledFor(logging.DEBUG),
                     )
                 if raise_on_errors:
                     raise ValidationError("Field %s contains illegal schema: %s" % (".".join(e.path), e.message))
@@ -208,9 +212,11 @@ class IdObjectBase(InterfaceBase, ABC):
         # noinspection PyBroadException
         try:
             self._data = self._reload()
-        except Exception as ex:
-            self.log.error("Failed reloading {} {}".format(type(self).__name__.lower(), self.id))
-            self.log.debug("Failed reloading {} {}: {}".format(type(self).__name__.lower(), self.id, ex))
+        except Exception:
+            self.log.error(
+                f"Failed reloading {type(self).__name__.lower()} {self.id}",
+                exc_info=self.log.isEnabledFor(logging.DEBUG),
+            )
 
     @classmethod
     def normalize_id(cls, id: str) -> str:

@@ -782,7 +782,10 @@ class DataEntryImage(DataEntry):
                     try:
                         se._annotations.append(roi)
                     except Exception as ex:
-                        log.error("Failed attaching ROI to subentry %s: %s", sid, ex)
+                        log.error(
+                            f"Failed attaching ROI to subentry {sid}: {ex}",
+                            exc_info=log.isEnabledFor(logging.DEBUG),
+                        )
             if (
                 resolved_entry_cls
                 and isinstance(entry, DataEntry)

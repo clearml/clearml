@@ -50,7 +50,11 @@ class Metrics(InterfaceBase):
             storage_uri = storage_uri or self._storage_uri
             return StorageHelper.get(storage_uri)
         except Exception as e:
-            self._get_logger().error("Failed getting storage helper for %s: %s" % (storage_uri, str(e)))
+            logger = self._get_logger()
+            logger.error(
+                f"Failed getting storage helper for {storage_uri}: {e}",
+                exc_info=logger.isEnabledFor(logging.DEBUG),
+            )
         finally:
             self._storage_lock.release()
 
@@ -132,10 +136,16 @@ class Metrics(InterfaceBase):
             return
         elif isinstance(res, Exception):
             # error
-            self.log.error("Error trying to send metrics: %s" % str(res))
+            self.log.error(
+                f"Error trying to send metrics: {res}",
+                exc_info=self.log.isEnabledFor(logging.DEBUG),
+            )
         elif not res.ok():
             # bad result, log error
-            self.log.error("Failed reporting metrics: %s" % str(res.meta))
+            self.log.error(
+                f"Failed reporting metrics: {res.meta}",
+                exc_info=self.log.isEnabledFor(logging.DEBUG),
+            )
         # call callback, even if we received an error
         if callback:
             callback(res)
@@ -257,11 +267,10 @@ class Metrics(InterfaceBase):
         error_events = [ev for ev in events if ev.upload_exception is not None]
 
         if error_events:
-            self._get_logger().error(
-                "Not uploading {}/{} events because the data upload failed".format(
-                    len(error_events),
-                    len(events),
-                )
+            logger = self._get_logger()
+            logger.error(
+                f"Not uploading {len(error_events)}/{len(events)} events because the data upload failed",
+                exc_info=logger.isEnabledFor(logging.DEBUG),
             )
 
         if good_events:

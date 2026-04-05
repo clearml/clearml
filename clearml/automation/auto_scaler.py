@@ -135,8 +135,11 @@ class AutoScaler:
     def sanity_check(self) -> bool:
         if has_duplicate_resource(self.queues):
             self.logger.error(
-                "Error: at least one resource name is used in multiple queues. "
-                "A resource name can only appear in a single queue definition."
+                (
+                    "Error: at least one resource name is used in multiple queues. "
+                    "A resource name can only appear in a single queue definition."
+                ),
+                exc_info=self.logger.isEnabledFor(logging.DEBUG),
             )
             return False
         return True

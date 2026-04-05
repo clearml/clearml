@@ -50,7 +50,10 @@ class ConfigEntry(Entry):
         return self.config.get(key, NotSet)
 
     def error(self, message: str) -> None:
-        log.error(message.capitalize())
+        log.error(
+            message.capitalize(),
+            exc_info=log.isEnabledFor(logging.DEBUG),
+        )
 
 
 class Config:
@@ -103,7 +106,7 @@ class Config:
     def env(self) -> str:
         return self._env
 
-    def logger(self, path: str = None) -> logging.Logger:
+    def logger(self, path: Optional[str] = None) -> logging.Logger:
         return logger(path)
 
     def load_relative_to(self, *module_paths: Any) -> None:

@@ -1697,7 +1697,7 @@ class InputModel(Model):
         if result.response.models:
             logger = get_logger()
 
-            logger.debug(f'A model with uri "{weights_url}" already exists. Selecting it')
+            logger.info(f'A model with uri "{weights_url}" already exists. Selecting it')
 
             model = get_single_result(
                 entity="model",

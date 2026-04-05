@@ -1419,7 +1419,7 @@ class Logger:
                     try:
                         # make sure we are writing to the original stdout
                         StdStreamPatch.stderr_original_write(
-                           f'clearml.Logger failed sending log [level {level}]: "{msg}"\n'
+                            f'clearml.Logger failed sending log [level {level}]: "{msg}"\n'
                         )
                     except Exception:
                         pass
@@ -1470,7 +1470,11 @@ class Logger:
 
         # if task was not started, we have to start it
         self._start_task_if_needed()
-        upload_uri = self.get_default_upload_destination()
+
+        # check if a dedicated plot upload destination is configured
+        plot_upload_destination = str(deferred_config("metrics.plot_upload_destination", "")).strip()
+
+        upload_uri = plot_upload_destination or self.get_default_upload_destination()
         if not upload_uri:
             upload_uri = Path(get_cache_dir()) / "debug_images"
             upload_uri.mkdir(parents=True, exist_ok=True)

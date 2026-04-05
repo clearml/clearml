@@ -252,7 +252,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             except StorageError:
                 raise
             except Exception as ex:
-                self.log.error("Failed trying to verify output destination: %s" % ex)
+                self.log.error(
+                    f"Failed trying to verify output destination: {ex}",
+                    exc_info=self.log.isEnabledFor(logging.DEBUG),
+                )
 
     @classmethod
     def _resolve_task_id(cls, task_id: Optional[str], log: Optional[logging.Logger] = None) -> Optional[str]:
@@ -939,8 +942,11 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             task = res.response.task
             if task.status == self.TaskStatusEnum.published:
                 if raise_on_error:
-                    raise self.DeleteError("Cannot delete published task {}".format(self.task_id))
-                self.log.error("Cannot delete published task {}".format(self.task_id))
+                    raise self.DeleteError(f"Cannot delete published task {self.task_id}")
+                self.log.error(
+                    f"Cannot delete published task {self.task_id}",
+                    exc_info=self.log.isEnabledFor(logging.DEBUG),
+                )
                 return False
 
             execution = {}
@@ -990,16 +996,22 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             task_deleted = self.send(tasks.DeleteRequest(self.task_id, force=True))
             if not task_deleted.ok():
                 if raise_on_error:
-                    raise self.DeleteError("Failed deleting task {}".format(self.task_id))
-                self.log.error("Failed deleting task {}".format(self.task_id))
+                    raise self.DeleteError(f"Failed deleting task {self.task_id}")
+                self.log.error(
+                    f"Failed deleting task {self.task_id}",
+                    exc_info=self.log.isEnabledFor(logging.DEBUG),
+                )
                 return False
 
         except self.DeleteError:
             raise
         except Exception as ex:
             if raise_on_error:
-                raise self.DeleteError("Task deletion failed: {}".format(ex))
-            self.log.error("Task deletion failed: {}".format(ex))
+                raise self.DeleteError(f"Task deletion failed: {ex}")
+            self.log.error(
+                f"Task deletion failed: {ex}",
+                exc_info=self.log.isEnabledFor(logging.DEBUG),
+            )
             return False
 
         failures = []
@@ -1040,10 +1052,11 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         failures = list(filter(None, failures))
         if len(failures):
-            error = "Failed deleting the following URIs:\n{}".format("\n".join(failures))
+            failure_contents = "\n".join(failures)
+            error_msg = f"Failed deleting the following URIs:\n{failure_contents}"
             if raise_on_error:
-                raise self.DeleteError(error)
-            self.log.error(error)
+                raise self.DeleteError(error_msg)
+            self.log.error(error_msg, exc_info=self.log.isEnabledFor(logging.DEBUG))
 
         return task_deleted
 
@@ -1055,7 +1068,10 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 self.log.debug("Deleted file: {}".format(uri))
                 return True
         except Exception as ex:
-            self.log.error("Failed deleting {}: {}".format(uri, str(ex)))
+            self.log.error(
+                f"Failed deleting {uri}: {ex}",
+                exc_info=self.log.isEnabledFor(logging.DEBUG),
+            )
             return False
         return False
 
@@ -3193,7 +3209,8 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 events_set.update(map(unique_selector, evs))
             except TypeError:
                 self.log.error(
-                    "Failed applying unique_selector on events (note the selector's result must be hashable)"
+                    "Failed applying unique_selector on events (note the selector's result must be hashable)",
+                    exc_info=self.log.isEnabledFor(logging.DEBUG),
                 )
                 raise
 

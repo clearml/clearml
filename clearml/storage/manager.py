@@ -1,4 +1,5 @@
 import fnmatch
+import logging
 import shutil
 import tarfile
 from multiprocessing.pool import ThreadPool
@@ -274,7 +275,10 @@ class StorageManager:
         base_logger = LoggerRoot.get_base_logger()
 
         if not Path(local_folder).is_dir():
-            base_logger.error("Local folder '{}' does not exist".format(local_folder))
+            base_logger.error(
+                f"Local folder '{local_folder}' does not exist",
+                exc_info=base_logger.isEnabledFor(logging.DEBUG),
+            )
             return
         local_folder = str(Path(local_folder))
         results = []
@@ -304,7 +308,10 @@ class StorageManager:
             if failed == 0:
                 return remote_url
 
-            base_logger.error("Failed uploading {}/{} files from {}".format(failed, success + failed, local_folder))
+            base_logger.error(
+                f"Failed uploading {failed}/{success + failed} files from {local_folder}",
+                exc_info=base_logger.isEnabledFor(logging.DEBUG),
+            )
 
     @classmethod
     def download_file(
@@ -441,7 +448,10 @@ class StorageManager:
             try:
                 Path(local_folder).mkdir(parents=True, exist_ok=True)
             except OSError as ex:
-                base_logger.error("Failed creating local folder '{}': {}".format(local_folder, ex))
+                base_logger.error(
+                    f"Failed creating local folder '{local_folder}': {ex}",
+                    exc_info=base_logger.isEnabledFor(logging.DEBUG),
+                )
                 return
         else:
             local_folder = CacheManager.get_cache_manager().get_cache_folder()

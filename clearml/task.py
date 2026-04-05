@@ -3412,6 +3412,7 @@ class Task(_Task):
         diff: Optional[str] = None,
         working_dir: Optional[str] = None,
         entry_point: Optional[str] = None,
+        binary: Optional[str] = None
     ) -> None:
         """
         Set task's script.
@@ -3433,6 +3434,7 @@ class Task(_Task):
         :param diff: Optional, set "git diff" section. use empty string ("") to clear git-diff entry.
         :param working_dir: Optional, Working directory to launch the script from.
         :param entry_point: Optional, Path to execute within the repository.
+        :param binary: Optional, binary used to launch the entry point
 
         """
         self.reload()
@@ -3451,6 +3453,8 @@ class Task(_Task):
             script.working_dir = str(working_dir)
         if entry_point is not None:
             script.entry_point = str(entry_point)
+        if binary is not None:
+            script.binary = str(binary)
         # noinspection PyProtectedMember
         self._update_script(script=script)
 
