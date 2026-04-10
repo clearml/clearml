@@ -107,6 +107,10 @@ class PatchHydra:
                 from ..task import Task
 
                 PatchHydra._current_task = Task.get_task(task_id=get_remote_task_id())
+            # Reload task data to ensure we have the latest parameters from the backend
+            # This is important when running remotely as the task may have been modified
+            # (e.g., cloned and edited) before being enqueued
+            PatchHydra._current_task.reload()
             # get the _parameter_allow_full_edit casted back to boolean
             connected_config = {}
             connected_config[PatchHydra._parameter_allow_full_edit] = False
