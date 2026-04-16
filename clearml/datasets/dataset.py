@@ -2116,7 +2116,7 @@ class Dataset:
                 "tags": d.tags,
                 "version": d.runtime.get("version"),
             }
-            for d in datasets if d.project is not None
+            for d in datasets if d.project is not None and d.project in project_id_lookup
         ]
 
     def _add_files(
