@@ -1,5 +1,6 @@
 import calendar
 import itertools
+import hashlib
 import json
 import logging
 import mimetypes
@@ -757,16 +758,16 @@ class Dataset:
 
         if upload_as_external_links:
             self._task.get_logger().report_text(
-            "Uploading dataset files as external links: {}".format(
-                dict(
-                    show_progress=show_progress,
-                    verbose=verbose,
-                    output_url=output_url,
-                    compression=compression,
-                )
-            ),
-            print_console=False,
-        )
+                "Uploading dataset files as external links: {}".format(
+                    dict(
+                        show_progress=show_progress,
+                        verbose=verbose,
+                        output_url=output_url,
+                        compression=compression,
+                    )
+                ),
+                print_console=False,
+            )
             dest_url = self.get_default_storage()
             if not dest_url:
                 raise ValueError("output_url must be set when upload_as_external_links=True")
@@ -2833,7 +2834,6 @@ class Dataset:
 
         :return: the target folder
         """
-        import hashlib
 
         assert part is None or (isinstance(part, int) and part >= 0)
         assert num_parts is None or (isinstance(num_parts, int) and num_parts >= 1)
@@ -3890,7 +3890,7 @@ class Dataset:
                         hash=hash_val,
                     )
                     num_modified += 1
-                elif hash_val and existing_link.hash and existing_link.hash != hash_val or (
+                elif (hash_val and existing_link.hash and existing_link.hash != hash_val) or (
                     not (hash_val and existing_link.hash) and existing_link.size != size
                 ):
                     if verbose:
