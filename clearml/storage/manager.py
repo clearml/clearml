@@ -496,6 +496,7 @@ class StorageManager:
         remote_url: str,
         return_full_path: bool = False,
         with_metadata: bool = False,
+        read_hash: bool = False,
     ) -> Optional[List[Union[str, dict]]]:
         """
         Return a list of object names inside the base path or dictionaries containing the corresponding
@@ -512,13 +513,15 @@ class StorageManager:
             containing the name and metadata of the remote file. Thus, each dictionary will contain the following
             keys: `name`, `size`.
             `return_full_path` will modify the name of each dictionary entry to the full path.
+        :param bool read_hash: If True and `with_metadata` is True, include SHA-256 hash in each metadata dict
+            when the object has it stored in its custom metadata.
 
         :return: The paths of all the objects the storage base path under prefix or the dictionaries containing the objects' metadata, relative to the base path.
             None in case of list operation is not supported (http and https protocols for example)
         """
         helper = cls.storage_helper.get(remote_url)
         try:
-            helper_list_result = helper.list(prefix=remote_url, with_metadata=with_metadata)
+            helper_list_result = helper.list(prefix=remote_url, with_metadata=with_metadata, read_hash=read_hash)
         except Exception as ex:
             LoggerRoot.get_base_logger().warning("Can not list files for '{}' - {}".format(remote_url, ex))
             return None
@@ -537,7 +540,12 @@ class StorageManager:
             return helper_list_result
 
     @classmethod
-    def get_metadata(cls, remote_url: str, return_full_path: bool = False) -> Optional[dict]:
+    def get_metadata(
+        cls,
+        remote_url: str,
+        return_full_path: bool = False,
+        read_hash: bool = False,
+    ) -> Optional[dict]:
         """
         Get the metadata of the remote object.
         The metadata is a dict containing the following keys: `name`, `size`.
@@ -546,6 +554,8 @@ class StorageManager:
             be created under the target local_folder. Supports S3/GS/Azure, shared filesystem and http(s).
             Example: 's3://bucket/data/'
         :param return_full_path: True for returning a full path (with the base url)
+        :param bool read_hash: If True, include SHA-256 hash in the returned dict when the object
+            has it stored in its custom metadata.
 
         :return: A dict containing the metadata of the remote object. In case of an error, `None` is returned
         """
@@ -553,7 +563,7 @@ class StorageManager:
         obj = helper.get_object(remote_url)
         if not obj:
             return None
-        metadata = helper.get_object_metadata(obj)
+        metadata = helper.get_object_metadata(obj, read_hash=read_hash)
         base_url = helper._resolve_base_url(remote_url)
         if return_full_path and not metadata["name"].startswith(base_url):
             metadata["name"] = base_url + ("/" if not base_url.endswith("/") else "") + metadata["name"]
