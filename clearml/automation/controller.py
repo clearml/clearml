@@ -1456,6 +1456,8 @@ class PipelineController:
             return True
         self._update_nodes_status()
         for node in self._nodes.values():
+            if node.job and node.job.is_cached_task():
+                continue
             if node.status not in success_status:
                 return False
         return True
