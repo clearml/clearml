@@ -27,13 +27,26 @@ class PatchClick:
     __patched = False
 
     @classmethod
+    def update_current_task(cls, task: Optional["Task"] = None) -> None:
+        cls._current_task = task
+        if not task:
+            # Reset accumulated state when task is None (cleanup for test isolation)
+            # Note: __patched is NOT reset - monkey-patching should persist
+            cls._args = {}
+            cls._args_desc = {}
+            cls._args_type = {}
+            cls._num_commands = 0
+            cls._PatchClick__remote_task_params = None
+            cls._PatchClick__remote_task_params_dict = {}
+            return
+        PatchClick._update_task_args()
+
+    @classmethod
     def patch(cls, task: Optional["Task"] = None) -> None:
         if Command is None:
             return
 
-        cls._current_task = task
-        if task:
-            PatchClick._update_task_args()
+        cls.update_current_task(task)
 
         if not cls.__patched:
             cls.__patched = True

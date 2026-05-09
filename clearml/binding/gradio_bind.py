@@ -40,6 +40,11 @@ class PatchGradio:
     @classmethod
     def update_current_task(cls, task: Optional[Any] = None) -> None:
         cls._current_task = task
+        if not task:
+            # Reset accumulated state when task is None (cleanup for test isolation)
+            # Note: __patched is NOT reset - monkey-patching should persist
+            cls._PatchGradio__server_config_warning = set()
+            return
         if cls.__patched:
             return
         if "gradio" in sys.modules:
