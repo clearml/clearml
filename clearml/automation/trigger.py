@@ -44,34 +44,56 @@ class BaseTrigger(BaseScheduleJob):
             "tags": ((self.tags or []) + (self.required_tags or [])) or None,
         }
 
+        query_timestamp = (
+            ref_time.isoformat()  # ruff-format-hint
+            if ref_time
+            else self.last_update.isoformat()
+        )
+
         if not server_supports_datetime_or_query:
-            query[self._update_field] = ">{}".format(ref_time.isoformat() if ref_time else self.last_update.isoformat())
+            query[self._update_field] = f">{query_timestamp}"
         else:
             query["_or_"] = {
                 "fields": [self._update_field, self._change_field],
-                "datetime": [">{}".format(ref_time.isoformat() if ref_time else self.last_update.isoformat())],
+                "datetime": [f">{query_timestamp}"],
             }
 
         return query
 
     def verify(self) -> None:
         super(BaseTrigger, self).verify()
-        if self.tags and (not isinstance(self.tags, (list, tuple)) or not all(isinstance(s, str) for s in self.tags)):
-            raise ValueError("Tags must be a list of strings: {}".format(self.tags))
-        if self.required_tags and (
-            not isinstance(self.required_tags, (list, tuple)) or not all(isinstance(s, str) for s in self.required_tags)
+        if (
+            self.tags  # ruff-format-hint
+            and (
+                not isinstance(self.tags, (list, tuple))
+                or not all(
+                    isinstance(s, str)  # ruff-format-hint
+                    for s in self.tags
+                )
+            )
         ):
-            raise ValueError("Required tags must be a list of strings: {}".format(self.required_tags))
+            raise ValueError(f"Tags must be a list of strings: {self.tags}")
+        if (
+            self.required_tags  # ruff-format-hint
+            and not (
+                isinstance(self.required_tags, (list, tuple))  # ruff-format-hint
+                and all(isinstance(s, str) for s in self.required_tags)
+            )
+        ):
+            raise ValueError(f"Required tags must be a list of strings: {self.required_tags}")
         if self.project and not isinstance(self.project, str):
-            raise ValueError("Project must be a string: {}".format(self.project))
+            raise ValueError(f"Project must be a string: {self.project}")
         if self.match_name and not isinstance(self.match_name, str):
-            raise ValueError("Match name must be a string: {}".format(self.match_name))
+            raise ValueError(f"Match name must be a string: {self.match_name}")
 
     def get_key(self) -> Optional[str]:
         return getattr(self, "_key", None)
 
     def get_ref_time(self, obj: Any) -> datetime:
-        return max(getattr(obj, self._update_field, 0), getattr(obj, self._change_field, 0))
+        return max(
+            getattr(obj, self._update_field, 0),
+            getattr(obj, self._change_field, 0),
+        )
 
 
 @attrs
@@ -84,18 +106,34 @@ class ModelTrigger(BaseTrigger):
     on_publish = attrib(type=bool, default=None)
     on_archive = attrib(type=bool, default=None)
 
-    def build_query(self, ref_time: datetime, client: Optional[APIClient] = None) -> dict:
+    def build_query(
+        self,
+        ref_time: datetime,
+        client: Optional[APIClient] = None,
+    ) -> dict:
         query = super(ModelTrigger, self).build_query(ref_time, client)
         if self.on_publish:
             query.update({"ready": True})
         if self.on_archive:
-            system_tags = list(set(query.get("system_tags", []) + ["archived"]))
+            system_tags = list(
+                {
+                    *query.get("system_tags", []),
+                    "archived",
+                }
+            )
             query.update({"system_tags": system_tags})
         return query
 
     @property
     def _only_fields(self) -> Set[str]:
-        return {"id", "name", "ready", "tags", self._update_field, self._change_field}
+        return {
+            "id",
+            "name",
+            "ready",
+            "tags",
+            self._update_field,
+            self._change_field,
+        }
 
 
 @attrs
@@ -112,14 +150,33 @@ class DatasetTrigger(BaseTrigger):
         query = super(DatasetTrigger, self).build_query(ref_time, client)
         query.update(
             {
-                "system_tags": list(set(query.get("system_tags", []) + ["dataset"])),
-                "task_types": list(set(query.get("task_types", []) + [str(Task.TaskTypes.data_processing)])),
-                "status": ["published" if self.on_publish else "completed"],
+                "system_tags": list(
+                    {
+                        *query.get("system_tags", []),
+                        "dataset",
+                    }
+                ),
+                "task_types": list(
+                    {
+                        *query.get("task_types", []),
+                        str(Task.TaskTypes.data_processing),
+                    }
+                ),
+                "status": [
+                    "published"  # ruff-format-hint
+                    if self.on_publish
+                    else "completed"
+                ],
             }
         )
 
         if self.on_archive:
-            system_tags = list(set(query.get("system_tags", []) + ["archived"]))
+            system_tags = list(
+                {
+                    *query.get("system_tags", []),  # ruff-format-hint
+                    "archived",
+                }
+            )
             query.update({"system_tags": system_tags})
 
         return query
@@ -151,33 +208,71 @@ class TaskTrigger(BaseTrigger):
     exclude_dev = attrib(default=None, type=bool)
     on_status = attrib(type=list, default=None)
 
-    def build_query(self, ref_time: datetime, client: Optional[APIClient] = None) -> dict:
+    def build_query(
+        self,
+        ref_time: datetime,
+        client: Optional[APIClient] = None,
+    ) -> dict:
         query = super(TaskTrigger, self).build_query(ref_time, client)
         if self.exclude_dev:
-            system_tags = list(set(query.get("system_tags", []) + ["-development"]))
+            system_tags = list(
+                {
+                    *query.get("system_tags", []),
+                    "-development",
+                }
+            )
             query.update({"system_tags": system_tags})
+
         if self.on_status:
             query.update({"status": self.on_status})
-        if self.metrics and self.variant and self.threshold:
-            metrics, title, series, values = ClearmlJob.get_metric_req_params(self.metrics, self.variant)
-            sign_max = (self.value_sign or "").lower() in ("max", "maximum")
-            filter_key = "last_metrics.{}.{}.{}".format(title, series, "max_value" if sign_max else "min_value")
-            filter_value = [self.threshold, None] if sign_max else [None, self.threshold]
+
+        if (
+            self.metrics  # ruff-format-hint
+            and self.variant
+            and self.threshold
+        ):
+            _, title, series, _ = ClearmlJob.get_metric_req_params(self.metrics, self.variant)
+            sign = (
+                "max_value"  # ruff-format-hint
+                if (self.value_sign or "").lower() in ("max", "maximum")
+                else "min_value"
+            )
+            filter_key = f"last_metrics.{title}.{series}.{sign}"
+            filter_value = {
+                "max_value": [self.threshold, None],
+                "min_value": [None, self.threshold],
+            }[sign]
             query.update({filter_key: filter_value})
+
         return query
 
     def verify(self) -> None:
         super(TaskTrigger, self).verify()
-        if (self.metrics or self.variant or self.threshold is not None) and not (
-            self.metrics and self.variant and self.threshold is not None
+        if (  # ruff-format-hint
+            (
+                self.metrics  # ruff-format-hint
+                or self.variant
+                or self.threshold is not None
+            )
+            and not (
+                self.metrics  # ruff-format-hint
+                and self.variant
+                and self.threshold is not None
+            )
         ):
             raise ValueError("You must provide metric/variant/threshold")
-        valid_status = [str(s) for s in Task.TaskStatusEnum]
-        if self.on_status and not all(s in valid_status for s in self.on_status):
-            raise ValueError("Your on_status contains invalid status value: {}".format(self.on_status))
+        valid_status = [
+            str(s)  # ruff-format-hint
+            for s in Task.TaskStatusEnum
+        ]
+        if (
+            self.on_status  # ruff-format-hint
+            and not all(s in valid_status for s in self.on_status)
+        ):
+            raise ValueError(f"Your on_status contains invalid status value: {self.on_status}")
         valid_signs = ["min", "minimum", "max", "maximum"]
         if self.value_sign and self.value_sign not in valid_signs:
-            raise ValueError("Invalid value_sign `{}`, valid options are: {}".format(self.value_sign, valid_signs))
+            raise ValueError(f"Invalid value_sign `{self.value_sign}`, valid options are: {valid_signs}")
 
     @property
     def _only_fields(self) -> Set[str]:
@@ -385,7 +480,7 @@ class TriggerScheduler(BaseScheduler):
         """
         if trigger_project:
             trigger_project_list = Task.get_projects(
-                name="^{}/\\.datasets/.*".format(trigger_project),
+                name=f"^{trigger_project}/\\.datasets/.*",
                 search_hidden=True,
                 _allow_extra_fields_=True,
             )
@@ -550,13 +645,13 @@ class TriggerScheduler(BaseScheduler):
                 objects = getattr(self._client, trigger.get_key()).get_all(
                     _allow_extra_fields_=True,
                     only_fields=list(trigger._only_fields or []),
-                    **trigger.build_query(ref_time, self._client)
+                    **trigger.build_query(ref_time, self._client),
                 )
                 trigger.last_update = max([trigger.get_ref_time(o) for o in objects] or [ref_time])
                 if not objects:
                     continue
             except Exception as ex:
-                self._log("Exception occurred while checking trigger '{}' state: {}".format(trigger, ex))
+                self._log(f"Exception occurred while checking trigger '{trigger}' state: {ex}")
 
             executed |= bool(objects)
 
@@ -580,7 +675,12 @@ class TriggerScheduler(BaseScheduler):
             task_parameters = None
             if job.task_parameters:
                 task_parameters = {
-                    k: trigger_id if v == job._task_param else v for k, v in job.task_parameters.items()  # noqa
+                    key: (
+                        trigger_id  # ruff-format-hint
+                        if value == job._task_param
+                        else value
+                    )
+                    for key, value in job.task_parameters.items()
                 }
             task_job = self._launch_job_task(
                 job,
@@ -669,7 +769,7 @@ class TriggerScheduler(BaseScheduler):
         try:
             return self.__deserialize_triggers(json.loads(json_str), trigger_class, current_triggers)
         except Exception as ex:
-            self._log("Failed deserializing configuration: {}".format(ex), level=logging.WARN)
+            self._log(f"Failed deserializing configuration: {ex}", level=logging.WARN)
             return current_triggers
 
     @staticmethod
@@ -743,37 +843,45 @@ class TriggerScheduler(BaseScheduler):
 
         task_link_template = (
             self._task.get_output_log_web_page()
-            .replace("/{}/".format(self._task.project), "/{project}/")
-            .replace("/{}/".format(self._task.id), "/{task}/")
+            .replace(f"/{self._task.project}/", "/{project}/")
+            .replace(f"/{self._task.id}/", "/{task}/")
         )
 
         # plot the already executed Tasks
         executed_table = [["trigger", "name", "task id", "started", "finished"]]
-        for executed_job in sorted(self._executed_triggers, key=lambda x: x.started, reverse=True):
+        for executed_job in sorted(
+            self._executed_triggers,
+            key=lambda x: x.started,
+            reverse=True,
+        ):
             if not executed_job.finished:
                 if executed_job.task_id:
-                    t = Task.get_task(task_id=executed_job.task_id)
-                    if t.status not in ("in_progress", "queued"):
-                        executed_job.finished = t.data.completed or datetime.now(timezone.utc)
+                    task = Task.get_task(task_id=executed_job.task_id)
+                    if task.status not in ("in_progress", "queued"):
+                        executed_job.finished = task.data.completed or datetime.now(timezone.utc)
                 elif executed_job.thread_id:
                     # noinspection PyBroadException
                     try:
-                        a_thread = [t for t in enumerate_threads() if t.ident == executed_job.thread_id]
+                        a_thread = [
+                            thread  # ruff-format-hint
+                            for thread in enumerate_threads()
+                            if thread.ident == executed_job.thread_id
+                        ]
                         if not a_thread or not a_thread[0].is_alive():
                             executed_job.finished = datetime.now(timezone.utc)
                     except Exception:
                         pass
 
+            href = task_link_template.format(project="*", task=executed_job.task_id)
             executed_table += [
                 [
                     executed_job.trigger,
                     executed_job.name,
-                    '<a href="{}">{}</a>'.format(
-                        task_link_template.format(project="*", task=executed_job.task_id),
-                        executed_job.task_id,
-                    )
-                    if executed_job.task_id
-                    else "function",
+                    (
+                        f'<a href="{href}">{executed_job.task_id}</a>'  # ruff-format-hint
+                        if executed_job.task_id
+                        else "function"
+                    ),
                     str(executed_job.started).split(".", 1)[0],
                     str(executed_job.finished).split(".", 1)[0],
                 ]
@@ -786,49 +894,73 @@ class TriggerScheduler(BaseScheduler):
             iteration=0,
             table_plot=executed_table,
         )
-        self.__report_trigger_table(triggers=self._model_triggers, title="Model Triggers")
-        self.__report_trigger_table(triggers=self._dataset_triggers, title="Dataset Triggers")
-        self.__report_trigger_table(triggers=self._task_triggers, title="Task Triggers")
+        self.__report_trigger_table(
+            triggers=self._model_triggers,
+            title="Model Triggers",
+        )
+        self.__report_trigger_table(
+            triggers=self._dataset_triggers,
+            title="Dataset Triggers",
+        )
+        self.__report_trigger_table(
+            triggers=self._task_triggers,
+            title="Task Triggers",
+        )
 
-    def __report_trigger_table(self, triggers: List[BaseTrigger], title: str) -> None:
+    def __report_trigger_table(
+        self,
+        triggers: List[BaseTrigger],
+        title: str,
+    ) -> None:
         if not triggers:
             return
 
         task_link_template = (
             self._task.get_output_log_web_page()
-            .replace("/{}/".format(self._task.project), "/{project}/")
-            .replace("/{}/".format(self._task.id), "/{task}/")
+            .replace(f"/{self._task.project}/", "/{project}/")
+            .replace(f"/{self._task.id}/", "/{task}/")
         )
 
-        columns = [k for k in BaseTrigger().__dict__.keys() if not k.startswith("_")]
-        columns += [k for k in triggers[0].__dict__.keys() if k not in columns and not k.startswith("_")]
+        columns = [
+            key  # ruff-format-hint
+            for key in BaseTrigger().__dict__.keys()
+            if not key.startswith("_")
+        ]
+        columns += [
+            key  # ruff-format-hint
+            for key in triggers[0].__dict__.keys()
+            if key not in columns and not key.startswith("_")
+        ]
 
         column_task_id = columns.index("base_task_id")
 
         scheduler_table = [columns]
-        for j in triggers:
-            j_dict = j.to_dict()
-            j_dict["base_function"] = (
-                "{}.{}".format(
-                    getattr(j.base_function, "__module__", ""),
-                    getattr(j.base_function, "__name__", ""),
-                )
-                if j.base_function
+        for trigger in triggers:
+            trigger_dict = trigger.to_dict()
+            base_function_module = getattr(trigger.base_function, "__module__", "")
+            base_function_name = getattr(trigger.base_function, "__name__", "")
+            trigger_dict["base_function"] = (
+                f"{base_function_module}.{base_function_name}"
+                if trigger.base_function
                 else ""
             )
 
-            if not j_dict.get("base_task_id"):
-                j_dict["clone_task"] = ""
+            if not trigger_dict.get("base_task_id"):
+                trigger_dict["clone_task"] = ""
 
             row = [
-                str(j_dict.get(c)).split(".", 1)[0] if isinstance(j_dict.get(c), datetime) else str(j_dict.get(c) or "")
-                for c in columns
-            ]
-            if row[column_task_id]:
-                row[column_task_id] = '<a href="{}">{}</a>'.format(
-                    task_link_template.format(project="*", task=row[column_task_id]),
-                    row[column_task_id],
+                (
+                    str(trigger_dict.get(column)).split(".", 1)[0]
+                    if isinstance(trigger_dict.get(column), datetime)
+                    else str(trigger_dict.get(column) or "")
                 )
+                for column in columns
+            ]
+
+            if row[column_task_id]:
+                href = task_link_template.format(project="*", task=row[column_task_id])
+                row[column_task_id] = f'<a href="{href}">{row[column_task_id]}</a>'
+
             scheduler_table += [row]
 
         self._task.get_logger().report_table(title=title, series=" ", iteration=0, table_plot=scheduler_table)

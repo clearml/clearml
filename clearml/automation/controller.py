@@ -1,5 +1,6 @@
 import atexit
 import functools
+import itertools
 import inspect
 import json
 import os
@@ -70,7 +71,7 @@ class PipelineController:
     _evaluated_return_values = {}  # TID: pipeline_name
     _add_to_evaluated_return_values = {}  # TID: bool
     _retries = {}  # Node.name: int
-    _retries_callbacks = {}  # Node.name: Callable[[PipelineController, PipelineController.Node, int], bool]  # noqa
+    _retries_callbacks = {}  # Node.name: Callable[[PipelineController, PipelineController.Node, int], bool]
     _status_change_callbacks = {}  # Node.name: Callable[PipelineController, PipelineController.Node, str]
     _final_failure = {}  # Node.name: bool
     _task_template_header = CreateFromFunction.default_task_template_header
@@ -228,11 +229,8 @@ class PipelineController:
         abort_on_failure: bool = False,
         add_run_number: bool = True,
         retry_on_failure: Optional[
-            Union[
-                int,
-                Callable[["PipelineController", "PipelineController.Node", int], bool],
-            ]
-        ] = None,  # noqa
+            Union[int, Callable[["PipelineController", "PipelineController.Node", int], bool]]
+        ] = None,
         docker: Optional[str] = None,
         docker_args: Optional[str] = None,
         docker_bash_setup_script: Optional[str] = None,
@@ -362,7 +360,7 @@ class PipelineController:
         self._always_create_from_code = bool(always_create_from_code)
         self._version = str(version).strip() if version else None
         if self._version and not Version.is_valid_version_string(self._version):
-            raise ValueError("Setting non-semantic pipeline version '{}'".format(self._version))
+            raise ValueError(f"Setting non-semantic pipeline version '{self._version}'")
         self._pool_frequency = pool_frequency * 60.0
         self._thread = None
         self._pipeline_args = dict()
@@ -447,15 +445,16 @@ class PipelineController:
         if self._pipeline_as_sub_project() and self._task:
             if add_run_number and self._task.running_locally():
                 self._add_pipeline_name_run_number(self._task)
+
+            app_server = self._task._get_app_server()
+            task_project = (
+                self._task.project  # ruff-format-hint
+                if self._task.project is not None
+                else "*"
+            )
             # noinspection PyProtectedMember
             self._task.get_logger().report_text(
-                "ClearML pipeline page: {}".format(
-                    "{}/pipelines/{}/experiments/{}".format(
-                        self._task._get_app_server(),
-                        self._task.project if self._task.project is not None else "*",
-                        self._task.id,
-                    )
-                )
+                f"ClearML pipeline page: {app_server}/pipelines/{task_project}/experiments/{self._task.id}"
             )
 
     @classmethod
@@ -498,26 +497,18 @@ class PipelineController:
         base_task_name: Optional[str] = None,
         clone_base_task: bool = True,
         continue_on_fail: bool = False,
-        pre_execute_callback: Optional[
-            Callable[["PipelineController", "PipelineController.Node", dict], bool]
-        ] = None,  # noqa
+        pre_execute_callback: Optional[Callable[["PipelineController", "PipelineController.Node", dict], bool]] = None,
         post_execute_callback: Optional[Callable[["PipelineController", "PipelineController.Node"], None]] = None,
-        # noqa
         cache_executed_step: bool = False,
         base_task_factory: Optional[Callable[["PipelineController.Node"], Task]] = None,
         retry_on_failure: Optional[
-            Union[
-                int,
-                Callable[["PipelineController", "PipelineController.Node", int], bool],
-            ]
-        ] = None,  # noqa
-        status_change_callback: Optional[
-            Callable[["PipelineController", "PipelineController.Node", str], None]
-        ] = None,  # noqa
+            Union[int, Callable[["PipelineController", "PipelineController.Node", int], bool]]
+        ] = None,
+        status_change_callback: Optional[Callable[["PipelineController", "PipelineController.Node", str], None]] = None,
         recursively_parse_parameters: bool = False,
         output_uri: Optional[Union[str, bool]] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
     ) -> bool:
         """
         Add a step to the pipeline execution DAG.
@@ -715,13 +706,11 @@ class PipelineController:
             )
             if not base_task:
                 raise ValueError(
-                    "Could not find base_task_project={} base_task_name={}".format(base_task_project, base_task_name)
+                    f"Could not find base_task_project={base_task_project} base_task_name={base_task_name}"
                 )
             if Task.archived_tag in base_task.get_system_tags():
                 LoggerRoot.get_base_logger().warning(
-                    "Found base_task_project={} base_task_name={} but it is archived".format(
-                        base_task_project, base_task_name
-                    )
+                    f"Found base_task_project={base_task_project} base_task_name={base_task_name} but it is archived"
                 )
             base_task_id = base_task.id
 
@@ -732,7 +721,7 @@ class PipelineController:
             ):
                 raise ValueError(
                     "configuration_overrides must be a dictionary, with all values "
-                    "either dicts or strings, got '{}' instead".format(configuration_overrides)
+                    f"either dicts or strings, got '{configuration_overrides}' instead"
                 )
 
         if task_overrides:
@@ -757,7 +746,7 @@ class PipelineController:
             monitor_models=monitor_models or [],
             output_uri=self._output_uri if output_uri is None else output_uri,
             continue_behaviour=continue_behaviour,
-            stage=stage
+            stage=stage,
         )
         self._retries[name] = 0
         self._retries_callbacks[name] = (
@@ -806,27 +795,19 @@ class PipelineController:
         monitor_models: Optional[List[Union[str, Tuple]]] = None,
         time_limit: Optional[float] = None,
         continue_on_fail: bool = False,
-        pre_execute_callback: Optional[
-            Callable[["PipelineController", "PipelineController.Node", dict], bool]
-        ] = None,  # noqa
+        pre_execute_callback: Optional[Callable[["PipelineController", "PipelineController.Node", dict], bool]] = None,
         post_execute_callback: Optional[Callable[["PipelineController", "PipelineController.Node"], None]] = None,
-        # noqa
         cache_executed_step: bool = False,
         retry_on_failure: Optional[
-            Union[
-                int,
-                Callable[["PipelineController", "PipelineController.Node", int], bool],
-            ]
-        ] = None,  # noqa
-        status_change_callback: Optional[
-            Callable[["PipelineController", "PipelineController.Node", str], None]
-        ] = None,  # noqa
+            Union[int, Callable[["PipelineController", "PipelineController.Node", int], bool]]
+        ] = None,
+        status_change_callback: Optional[Callable[["PipelineController", "PipelineController.Node", str], None]] = None,
         tags: Optional[Union[str, Sequence[str]]] = None,
         output_uri: Optional[Union[str, bool]] = None,
         draft: Optional[bool] = False,
         working_dir: Optional[str] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
     ) -> bool:
         """
         Create a Task from a function, including wrapping the function input arguments
@@ -1065,7 +1046,7 @@ class PipelineController:
             draft=draft,
             working_dir=working_dir,
             continue_behaviour=continue_behaviour,
-            stage=stage
+            stage=stage,
         )
 
     def start(
@@ -1073,10 +1054,10 @@ class PipelineController:
         queue: str = "services",
         step_task_created_callback: Optional[
             Callable[["PipelineController", "PipelineController.Node", dict], bool]
-        ] = None,  # noqa
+        ] = None,
         step_task_completed_callback: Optional[
             Callable[["PipelineController", "PipelineController.Node"], None]
-        ] = None,  # noqa
+        ] = None,
         wait: bool = True,
     ) -> bool:
         """
@@ -1554,14 +1535,35 @@ class PipelineController:
         return self._pipeline_args
 
     @classmethod
-    def _create_pipeline_project_args(cls, name: str, project: str) -> dict:
-        task_name = name or project or "{}".format(datetime.now())
-        if cls._pipeline_as_sub_project():
-            parent_project = (project + "/" if project else "") + cls._project_section
-            project_name = "{}/{}".format(parent_project, task_name)
-        else:
-            parent_project = None
-            project_name = project or "Pipelines"
+    def _create_pipeline_project_args(
+        cls,
+        name: str,
+        project: str,
+    ) -> dict:
+        task_name = (
+            name  # ruff-format-hint
+            or project
+            or str(datetime.now())
+        )
+        is_pipeline_as_sub_project = cls._pipeline_as_sub_project()
+        parent_project = (
+            (
+                f"{project}/{cls._project_section}"  # ruff-format-hint
+                if project
+                else f"{cls._project_section}"
+            )
+            if is_pipeline_as_sub_project
+            else None
+        )
+        project_name = (
+            f"{parent_project}/{task_name}"  # ruff-format-hint
+            if is_pipeline_as_sub_project
+            else (
+                project  # ruff-format-hint
+                or "Pipelines"
+            )
+        )
+
         return {
             "task_name": task_name,
             "parent_project": parent_project,
@@ -1606,7 +1608,7 @@ class PipelineController:
         add_run_number: bool = True,
         binary: Optional[str] = None,
         module: Optional[str] = None,
-        detect_repository: bool = True
+        detect_repository: bool = True,
     ) -> "PipelineController":
         """
         Manually create and populate a new Pipeline in the system.
@@ -1668,7 +1670,7 @@ class PipelineController:
             force_single_script_file=force_single_script_file,
             binary=binary,
             module=module,
-            detect_repository=detect_repository
+            detect_repository=detect_repository,
         )
         cls._create_pipeline_projects(
             task=pipeline_controller,
@@ -1833,13 +1835,21 @@ class PipelineController:
             _require_at_least_one=False,
         )
         if not pipeline_id:
-            pipeline_project_hidden = "{}/{}/{}".format(pipeline_project, cls._project_section, pipeline_name)
-            name_with_runtime_number_regex = r"^{}( #[0-9]+)*$".format(re.escape(pipeline_name))
+            pipeline_project_hidden = f"{pipeline_project}/{cls._project_section}/{pipeline_name}"
+            name_with_runtime_number_regex = rf"^{re.escape(pipeline_name)}( #[0-9]+)*$"
             pipelines = Task._query_tasks(
                 pipeline_project=[pipeline_project_hidden],
                 task_name=name_with_runtime_number_regex,
-                fetch_only_first_page=False if not pipeline_version else shallow_search,
-                only_fields=["id"] if not pipeline_version else ["id", "runtime.version"],
+                fetch_only_first_page=(
+                    False  # ruff-format-hint
+                    if not pipeline_version
+                    else shallow_search
+                ),
+                only_fields=(
+                    ["id"]  # ruff-format-hint
+                    if not pipeline_version
+                    else ["id", "runtime.version"]
+                ),
                 system_tags=[cls._tag],
                 order_by=["-last_update"],
                 tags=pipeline_tags,
@@ -1865,12 +1875,15 @@ class PipelineController:
                             pipeline_id = pipeline.id
                             break
             if not pipeline_id:
-                error_msg = "Could not find dataset with pipeline_project={}, pipeline_name={}".format(
-                    pipeline_project, pipeline_name
+                dataset_props_description = ", ".join(
+                    f"{key}={value}"
+                    for key, value in {
+                        "pipeline_project": pipeline_project,
+                        "pipeline_name": pipeline_name,
+                        **({"pipeline_version": pipeline_version} if pipeline_version else {}),
+                    }.items()
                 )
-                if pipeline_version:
-                    error_msg += ", pipeline_version={}".format(pipeline_version)
-                raise ValueError(error_msg)
+                raise ValueError(f"Could not find dataset with {dataset_props_description}")
         pipeline_task = Task.get_task(task_id=pipeline_id)
         return cls._create_pipeline_controller_from_task(pipeline_task)
 
@@ -1969,10 +1982,10 @@ class PipelineController:
         self,
         step_task_created_callback: Optional[
             Callable[["PipelineController", "PipelineController.Node", dict], bool]
-        ] = None,  # noqa
+        ] = None,
         step_task_completed_callback: Optional[
             Callable[["PipelineController", "PipelineController.Node"], None]
-        ] = None,  # noqa
+        ] = None,
         wait: bool = True,
     ) -> bool:
         """
@@ -2033,10 +2046,10 @@ class PipelineController:
         self,
         step_task_created_callback: Optional[
             Callable[["PipelineController", "PipelineController.Node", dict], bool]
-        ] = None,  # noqa
+        ] = None,
         step_task_completed_callback: Optional[
             Callable[["PipelineController", "PipelineController.Node"], None]
-        ] = None,  # noqa
+        ] = None,
     ) -> None:
         # type (...) -> None
 
@@ -2098,8 +2111,8 @@ class PipelineController:
                 # noinspection PyProtectedMember
                 self._task._set_parameters(
                     {
-                        "{}/{}".format(args_map_inversed.get(k, self._args_section), k): v
-                        for k, v in pipeline_args.items()
+                        f"{args_map_inversed.get(key, self._args_section)}/{key}": value
+                        for key, value in pipeline_args.items()
                     },
                     __parameters_descriptions=self._pipeline_args_desc,
                     __parameters_types=self._pipeline_args_type,
@@ -2118,7 +2131,7 @@ class PipelineController:
                 # noinspection PyProtectedMember
                 self._task._set_runtime_properties(
                     {
-                        self._runtime_property_hash: "{}:{}".format(pipeline_hash, self._version),
+                        self._runtime_property_hash: f"{pipeline_hash}:{self._version}",
                         "version": self._version,
                     }
                 )
@@ -2146,7 +2159,7 @@ class PipelineController:
                     # noinspection PyProtectedMember
                     self._task._set_runtime_properties(
                         {
-                            self._runtime_property_hash: "{}:{}".format(pipeline_hash, self._version),
+                            self._runtime_property_hash: f"{pipeline_hash}:{self._version}",
                         }
                     )
                     params["continue_pipeline"] = False
@@ -2308,45 +2321,45 @@ class PipelineController:
         :return: Return True iff the specific node is verified
         """
         if not node.base_task_id and not node.task_factory_func:
-            raise ValueError("Node '{}', base_task_id is empty".format(node.name))
+            raise ValueError(f"Node '{node.name}', base_task_id is empty")
 
         if not self._default_execution_queue and not node.queue:
             raise ValueError(
-                "Node '{}' missing execution queue, "
-                "no default queue defined and no specific node queue defined".format(node.name)
+                f"Node '{node.name}' missing execution queue, "
+                "no default queue defined and no specific node queue defined"
             )
 
         task = node.task_factory_func or Task.get_task(task_id=node.base_task_id)
         if not task:
-            raise ValueError("Node '{}', base_task_id={} is invalid".format(node.name, node.base_task_id))
+            raise ValueError(f"Node '{node.name}', base_task_id={node.base_task_id} is invalid")
 
         pattern = self._step_ref_pattern
 
         # verify original node parents
         if node.parents and not all(isinstance(p, str) and p in self._nodes for p in node.parents):
-            raise ValueError("Node '{}', parents={} is invalid".format(node.name, node.parents))
+            raise ValueError(f"Node '{node.name}', parents={node.parents} is invalid")
 
         parents = set()
-        for k, v in node.parameters.items():
-            if isinstance(v, str):
-                for g in pattern.findall(v):
+        for key, value in node.parameters.items():
+            if isinstance(value, str):
+                for g in pattern.findall(value):
                     ref_step = self.__verify_step_reference(node, g)
                     if ref_step:
                         parents.add(ref_step)
             # verify we have a section name
-            if "/" not in k:
+            if "/" not in key:
                 raise ValueError(
-                    'Section name is missing in parameter "{}", '
+                    f'Section name is missing in parameter "{value}", '
                     "parameters should be in the form of "
-                    '"`section-name`/parameter", example: "Args/param"'.format(v)
+                    '"`section-name`/parameter", example: "Args/param"'
                 )
 
-        if parents and parents != set(node.parents or []):
+        if parents not in [set(), set(node.parents or [])]:
             parents = parents - set(node.parents or [])
             getLogger("clearml.automation.controller").info(
-                'Node "{}" missing parent reference, adding: {}'.format(node.name, parents)
+                f'Node "{node.name}" missing parent reference, adding: {parents}'
             )
-            node.parents = (node.parents or []) + list(parents)
+            node.parents = [*(node.parents or []), *parents]
 
         # verify and fix monitoring sections:
         def _verify_monitors(
@@ -2359,27 +2372,32 @@ class PipelineController:
 
             if nested_pairs:
                 if not all(isinstance(x, (list, tuple)) and x for x in monitors):
-                    raise ValueError("{} should be a list of tuples, found: {}".format(monitor_type, monitors))
+                    raise ValueError(f"{monitor_type} should be a list of tuples, found: {monitors}")
                 # convert single pair into a pair of pairs:
-                conformed_monitors = [pair if isinstance(pair[0], (list, tuple)) else (pair, pair) for pair in monitors]
+                conformed_monitors = [
+                    (
+                        pair  # ruff-format-hint
+                        if isinstance(pair[0], (list, tuple))
+                        else (pair, pair)
+                    )
+                    for pair in monitors
+                ]
                 # verify the pair of pairs
                 if not all(
-                    isinstance(x[0][0], str)
-                    and isinstance(x[0][1], str)
-                    and isinstance(x[1][0], str)
-                    and isinstance(x[1][1], str)
+                    isinstance(x[i][j], str)
                     for x in conformed_monitors
+                    for i, j in itertools.product(range(2), range(2))
                 ):
-                    raise ValueError("{} should be a list of tuples, found: {}".format(monitor_type, monitors))
+                    raise ValueError(f"{monitor_type} should be a list of tuples, found: {monitors}")
             else:
                 # verify a list of tuples
                 if not all(isinstance(x, (list, tuple, str)) and x for x in monitors):
-                    raise ValueError("{} should be a list of tuples, found: {}".format(monitor_type, monitors))
+                    raise ValueError(f"{monitor_type} should be a list of tuples, found: {monitors}")
                 # convert single str into a pair of pairs:
                 conformed_monitors = [pair if isinstance(pair, (list, tuple)) else (pair, pair) for pair in monitors]
                 # verify the pair of pairs
                 if not all(isinstance(x[0], str) and isinstance(x[1], str) for x in conformed_monitors):
-                    raise ValueError("{} should be a list of tuples, found: {}".format(monitor_type, monitors))
+                    raise ValueError(f"{monitor_type} should be a list of tuples, found: {monitors}")
 
             return conformed_monitors
 
@@ -2436,27 +2454,19 @@ class PipelineController:
         monitor_models: Optional[List[Union[str, Tuple[str, str]]]] = None,
         time_limit: Optional[float] = None,
         continue_on_fail: bool = False,
-        pre_execute_callback: Optional[
-            Callable[["PipelineController", "PipelineController.Node", dict], bool]
-        ] = None,  # noqa
+        pre_execute_callback: Optional[Callable[["PipelineController", "PipelineController.Node", dict], bool]] = None,
         post_execute_callback: Optional[Callable[["PipelineController", "PipelineController.Node"], None]] = None,
-        # noqa
         cache_executed_step: bool = False,
         retry_on_failure: Optional[
-            Union[
-                int,
-                Callable[["PipelineController", "PipelineController.Node", int], bool],
-            ]
-        ] = None,  # noqa
-        status_change_callback: Optional[
-            Callable[["PipelineController", "PipelineController.Node", str], None]
-        ] = None,  # noqa
+            Union[int, Callable[["PipelineController", "PipelineController.Node", int], bool]]
+        ] = None,
+        status_change_callback: Optional[Callable[["PipelineController", "PipelineController.Node", str], None]] = None,
         tags: Optional[Union[str, Sequence[str]]] = None,
         output_uri: Optional[Union[str, bool]] = None,
         draft: Optional[bool] = False,
         working_dir: Optional[str] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
     ) -> bool:
         """
         Create a Task from a function, including wrapping the function input arguments
@@ -2660,38 +2670,62 @@ class PipelineController:
 
         function_input_artifacts = {}
         # go over function_kwargs, split it into string and input artifacts
-        for k, v in function_kwargs.items():
-            if v is None:
+        for key, value in function_kwargs.items():
+            if value is None:
                 continue
-            if self._step_ref_pattern.match(str(v)):
+            if self._step_ref_pattern.match(str(value)):
                 # check for step artifacts
-                step, _, artifact = v[2:-1].partition(".")
-                if step in self._nodes and artifact in self._nodes[step].return_artifacts:
-                    function_input_artifacts[k] = "${{{}.id}}.{}".format(step, artifact)
+                step, _, artifact = value[2:-1].partition(".")
+                if (
+                    step in self._nodes  # ruff-format-hint
+                    and artifact in self._nodes[step].return_artifacts
+                ):
+                    function_input_artifacts[key] = f"${{{step}.id}}.{artifact}"
                     continue
                 # verify the reference only if we are running locally (on remote when we have multiple
                 # steps from tasks the _nodes is till empty, only after deserializing we will have the full DAG)
                 if self._task.running_locally():
-                    self.__verify_step_reference(node=self.Node(name=name), step_ref_string=v)
-            elif not isinstance(v, (float, int, bool, str)):
-                function_input_artifacts[k] = "{}.{}.{}".format(self._task.id, name, k)
-                self._upload_pipeline_artifact(artifact_name="{}.{}".format(name, k), artifact_object=v)
+                    self.__verify_step_reference(
+                        node=self.Node(name=name),
+                        step_ref_string=value,
+                    )
+            elif not isinstance(value, (float, int, bool, str)):
+                function_input_artifacts[key] = f"{self._task.id}.{name}.{key}"
+                self._upload_pipeline_artifact(
+                    artifact_name=f"{name}.{key}",
+                    artifact_object=value,
+                )
 
-        function_kwargs = {k: v for k, v in function_kwargs.items() if k not in function_input_artifacts}
-        parameters = {"{}/{}".format(CreateFromFunction.kwargs_section, k): v for k, v in function_kwargs.items()}
+        function_kwargs = {
+            key: value  # ruff-format-hint
+            for key, value in function_kwargs.items()
+            if key not in function_input_artifacts
+        }
+        parameters = {
+            f"{CreateFromFunction.kwargs_section}/{key}": value  # ruff-format-hint
+            for key, value in function_kwargs.items()
+        }
         if function_input_artifacts:
             parameters.update(
                 {
-                    "{}/{}".format(CreateFromFunction.input_artifact_section, k): str(v)
-                    for k, v in function_input_artifacts.items()
+                    f"{CreateFromFunction.input_artifact_section}/{key}": str(value)
+                    for key, value in function_input_artifacts.items()
                 }
             )
 
         job_code_section = name
-        task_name = task_name or name or None
+        task_name = (
+            task_name  # ruff-format-hint
+            or name
+            or None
+        )
 
         if self._mock_execution:
-            project_name = project_name or self._get_target_project() or self._task.get_project_name()
+            project_name = (
+                project_name  # ruff-format-hint
+                or self._get_target_project()
+                or self._task.get_project_name()
+            )
 
             task_definition = self._create_task_from_function(
                 docker,
@@ -2789,7 +2823,7 @@ class PipelineController:
             output_uri=output_uri,
             draft=draft,
             continue_behaviour=continue_behaviour,
-            stage=stage
+            stage=stage,
         )
         self._retries[name] = 0
         self._retries_callbacks[name] = (
@@ -2810,17 +2844,17 @@ class PipelineController:
     def _relaunch_node(self, node: "PipelineController.Node") -> None:
         if not node.job:
             getLogger("clearml.automation.controller").warning(
-                "Could not relaunch node {} (job object is missing)".format(node.name)
+                f"Could not relaunch node {node.name} (job object is missing)"
             )
             return
         self._retries[node.name] = self._retries.get(node.name, 0) + 1
         getLogger("clearml.automation.controller").warning(
-            "Node '{}' failed. Retrying... (this is retry number {})".format(node.name, self._retries[node.name])
+            f"Node '{node.name}' failed. Retrying... (this is retry number {self._retries[node.name]})"
         )
         node.job.task.mark_stopped(force=True, status_message=self._relaunch_status_message)
         node.job.task.set_progress(0)
         node.job.task.get_logger().report_text(
-            "\nNode '{}' failed. Retrying... (this is retry number {})\n".format(node.name, self._retries[node.name])
+            f"\nNode '{node.name}' failed. Retrying... (this is retry number {self._retries[node.name]})\n"
         )
         parsed_queue_name = self._parse_step_ref(node.queue)
         node.job.launch(queue_name=parsed_queue_name or self._default_execution_queue)
@@ -2839,10 +2873,10 @@ class PipelineController:
             node.job_type = None
 
         if node.job or node.executed:
-            print("Skipping cached/executed step [{}]".format(node.name))
+            print(f"Skipping cached/executed step [{node.name}]")
             return False
 
-        print("Launching step [{}]".format(node.name))
+        print(f"Launching step [{node.name}]")
 
         updated_hyper_parameters = {}
         for k, v in node.parameters.items():
@@ -2880,9 +2914,11 @@ class PipelineController:
                 base_task_id=task_id,
                 parameter_override=updated_hyper_parameters,
                 configuration_overrides=node.configurations,
-                tags=["{} {}".format(self._node_tag_prefix, self._task.id)]
-                if self._add_pipeline_tags and self._task
-                else None,
+                tags=(
+                    [f"{self._node_tag_prefix} {self._task.id}"]  # ruff-format-hint
+                    if self._add_pipeline_tags and self._task
+                    else None
+                ),
                 parent=self._task.id if self._task else None,
                 disable_clone_task=disable_clone_task,
                 task_overrides=task_overrides,
@@ -2904,7 +2940,7 @@ class PipelineController:
 
         if skip_node is False:
             # skipping node
-            getLogger("clearml.automation.controller").warning("Skipping node {} on callback request".format(node))
+            getLogger("clearml.automation.controller").warning(f"Skipping node {node} on callback request")
             # delete the job we just created
             node.job.delete()
             node.skip_job = True
@@ -2957,13 +2993,22 @@ class PipelineController:
         while nodes:
             next_nodes = []
             for node in nodes:
-                if not all(p in visited for p in node.parents or []):
+                if not all(
+                    p in visited  # ruff-format-hint
+                    for p in (node.parents or [])
+                ):
                     next_nodes.append(node)
                     continue
                 visited.append(node.name)
                 idx = len(visited) - 1
-                parents = [visited.index(p) for p in node.parents or []]
-                if node.job and node.job.task_parameter_override is not None:
+                parents = [
+                    visited.index(p)  # ruff-format-hint
+                    for p in (node.parents or [])
+                ]
+                if (
+                    node.job  # ruff-format-hint
+                    and node.job.task_parameter_override is not None
+                ):
                     node.job.task_parameter_override.update(node.parameters or {})
                 node_params.append(
                     (
@@ -2973,14 +3018,31 @@ class PipelineController:
                     )
                     or {}
                 )
+
+                def shorten_long_value_with_ellipses(value: Any) -> str:
+                    shortening_length = 24
+                    return (
+                        value  # ruff-format-hint
+                        if len(str(value)) < shortening_length
+                        else f"{str(value)[:shortening_length]} ..."
+                    )
+
                 # sankey_node['label'].append(node.name)
                 # sankey_node['customdata'].append(
-                #     '<br />'.join('{}: {}'.format(k, v) for k, v in (node.parameters or {}).items()))
+                #     '<br />'.join(f'{k}: {v}' for k, v in (node.parameters or {}).items()))
                 sankey_node["label"].append(
-                    "{}<br />".format(node.name)
-                    + "<br />".join(
-                        "{}: {}".format(k, v if len(str(v)) < 24 else (str(v)[:24] + " ..."))
-                        for k, v in (node.parameters or {}).items()
+                    "<br />".join(
+                        [
+                            node.name,
+                            *(
+                                [
+                                    f"{key}: {shorten_long_value_with_ellipses(value)}"
+                                    for key, value in (node.parameters or {}).items()
+                                ]
+                                or [""]
+                            ),  # or [''] ensures `node.name` is suffixed by <br />
+                            # if `node.parameters` is falsy
+                        ]
                     )
                 )
 
@@ -3090,8 +3152,8 @@ class PipelineController:
         """
         task_link_template = (
             self._task.get_output_log_web_page()
-            .replace("/{}/".format(self._task.project), "/{project}/")
-            .replace("/{}/".format(self._task.id), "/{task}/")
+            .replace(f"/{self._task.project}/", "/{project}/")
+            .replace(f"/{self._task.id}/", "/{task}/")
         )
 
         table_values = [["Pipeline Step", "Task ID", "Task Name", "Status", "Parameters"]]
@@ -3104,16 +3166,24 @@ class PipelineController:
 
             step_name = name
             if self._nodes[name].base_task_id:
-                step_name += '\n[<a href="{}"> {} </a>]'.format(
-                    task_link_template.format(project="*", task=self._nodes[name].base_task_id),
-                    "base task",
+                task_link = task_link_template.format(
+                    project="*",
+                    task=self._nodes[name].base_task_id,
                 )
+                step_name += f'\n[<a href="{task_link}"> base task </a>]'
 
             table_values.append(
                 [
                     step_name,
-                    self.__create_task_link(self._nodes[name], task_link_template),
-                    self._nodes[name].job.task.name if self._nodes[name].job else "",
+                    self.__create_task_link(
+                        self._nodes[name],
+                        task_link_template,
+                    ),
+                    (
+                        self._nodes[name].job.task.name  # ruff-format-hint
+                        if self._nodes[name].job
+                        else ""
+                    ),
                     str(self._nodes[name].status or ""),
                     param_str,
                 ]
@@ -3130,7 +3200,7 @@ class PipelineController:
             return self._retries_callbacks[node.name](self, node, self._retries.get(node.name, 0))
         except Exception as e:
             getLogger("clearml.automation.controller").warning(
-                "Failed calling the retry callback for node '{}'. Error is '{}'".format(node.name, e)
+                f"Failed calling the retry callback for node '{node.name}'. Error is '{e}'"
             )
             return False
 
@@ -3234,7 +3304,7 @@ class PipelineController:
                 self._status_change_callbacks[node.name](self, node, previous_status)
             except Exception as e:
                 getLogger("clearml.automation.controller").warning(
-                    "Failed calling the status change callback for node '{}'. Error is '{}'".format(node.name, e)
+                    f"Failed calling the status change callback for node '{node.name}'. Error is '{e}'"
                 )
 
     def _update_dag_state_artifact(self) -> None:
@@ -3365,11 +3435,7 @@ class PipelineController:
 
             # check if we need to stop the pipeline, and abort all running steps
             if nodes_failed_stop_pipeline:
-                print(
-                    "Aborting pipeline and stopping all running steps, node {} failed".format(
-                        nodes_failed_stop_pipeline
-                    )
-                )
+                print(f"Aborting pipeline and stopping all running steps, node {nodes_failed_stop_pipeline} failed")
                 break
 
             # Pull the next jobs in the pipeline, based on the completed list
@@ -3383,29 +3449,28 @@ class PipelineController:
                     next_nodes.append(node.name)
 
             # update the execution graph
-            print("Launching the next {} steps".format(len(next_nodes)))
+            print(f"Launching the next {len(next_nodes)} steps")
             node_launch_success = launch_thread_pool.map(self._launch_node, [self._nodes[name] for name in next_nodes])
             for name, success in zip(next_nodes, node_launch_success):
                 if success and not self._nodes[name].skip_job:
                     if self._nodes[name].job and self._nodes[name].job.task_parameter_override is not None:
                         self._nodes[name].job.task_parameter_override.update(self._nodes[name].parameters or {})
-                    print("Launching step: {}".format(name))
-                    print(
-                        "Parameters:\n{}".format(
-                            self._nodes[name].job.task_parameter_override
-                            if self._nodes[name].job
-                            else self._nodes[name].parameters
-                        )
+                    print(f"Launching step: {name}")
+                    node_parameters = (
+                        self._nodes[name].job.task_parameter_override
+                        if self._nodes[name].job
+                        else self._nodes[name].parameters
                     )
-                    print("Configurations:\n{}".format(self._nodes[name].configurations))
-                    print("Overrides:\n{}".format(self._nodes[name].task_overrides))
+                    print(f"Parameters:\n{node_parameters}")
+                    print(f"Configurations:\n{self._nodes[name].configurations}")
+                    print(f"Overrides:\n{self._nodes[name].task_overrides}")
                     launched_nodes.add(name)
                     # check if node is cached do not wait for event but run the loop again
                     if self._nodes[name].executed:
                         pooling_counter = 0
                 else:
                     getLogger("clearml.automation.controller").warning(
-                        "Skipping launching step '{}': {}".format(name, self._nodes[name])
+                        f"Skipping launching step '{name}': {self._nodes[name]}"
                     )
 
             # update current state (in configuration, so that we could later continue an aborted pipeline)
@@ -3482,9 +3547,9 @@ class PipelineController:
 
     def _verify_node_name(self, name: str) -> None:
         if name in self._nodes:
-            raise ValueError("Node named '{}' already exists in the pipeline dag".format(name))
+            raise ValueError(f"Node named '{name}' already exists in the pipeline dag")
         if name in self._reserved_pipeline_names:
-            raise ValueError("Node named '{}' is a reserved keyword, use a different name".format(name))
+            raise ValueError(f"Node named '{name}' is a reserved keyword, use a different name")
 
     def _scan_monitored_nodes(self) -> None:
         """
@@ -3624,7 +3689,7 @@ class PipelineController:
         page_size = 100
         # find exact name or " #<num>" extension
         prev_pipelines_ids = task.query_tasks(
-            task_name=r"^{}(| #\d+)$".format(task_name),
+            task_name=rf"^{task_name}(| #\d+)$",
             task_filter=dict(
                 project=[task.project],
                 system_tags=[cls._tag],
@@ -3656,12 +3721,12 @@ class PipelineController:
                             pass
             except Exception as ex:
                 getLogger("clearml.automation.controller").warning(
-                    "Pipeline auto run increment failed (skipping): {}".format(ex)
+                    f"Pipeline auto run increment failed (skipping): {ex}"
                 )
                 max_value = 0
 
         if max_value > 1:
-            task.set_name(task_name + " #{}".format(max_value))
+            task.set_name(f"{task_name} #{max_value}")
 
     @classmethod
     def _get_pipeline_task(cls) -> Task:
@@ -3695,44 +3760,40 @@ class PipelineController:
         parts = step_ref_string[2:-1].split(".")
         v = step_ref_string
         if len(parts) < 2:
-            raise ValueError("Node '{}', parameter '{}' is invalid".format(node.name, v))
+            raise ValueError(f"Node '{node.name}', parameter '{v}' is invalid")
         prev_step = parts[0]
         input_type = parts[1]
 
         # check if we reference the pipeline arguments themselves
         if prev_step == self._pipeline_step_ref:
             if input_type not in self._pipeline_args:
-                raise ValueError("Node '{}', parameter '{}', step name '{}' is invalid".format(node.name, v, prev_step))
+                raise ValueError(f"Node '{node.name}', parameter '{v}', step name '{prev_step}' is invalid")
             return None
 
         if prev_step not in self._nodes:
-            raise ValueError("Node '{}', parameter '{}', step name '{}' is invalid".format(node.name, v, prev_step))
+            raise ValueError(f"Node '{node.name}', parameter '{v}', step name '{prev_step}' is invalid")
         if input_type not in ("artifacts", "parameters", "models", "id"):
-            raise ValueError("Node {}, parameter '{}', input type '{}' is invalid".format(node.name, v, input_type))
+            raise ValueError(f"Node {node.name}, parameter '{v}', input type '{input_type}' is invalid")
 
         if input_type != "id" and len(parts) < 3:
-            raise ValueError("Node '{}', parameter '{}' is invalid".format(node.name, v))
+            raise ValueError(f"Node '{node.name}', parameter '{v}' is invalid")
 
         if input_type == "models":
             try:
                 model_type = parts[2].lower()
             except Exception:
                 raise ValueError(
-                    "Node '{}', parameter '{}', input type '{}', model_type is missing {}".format(
-                        node.name, v, input_type, parts
-                    )
+                    f"Node '{node.name}', parameter '{v}', input type '{input_type}', model_type is missing {parts}"
                 )
             if model_type not in ("input", "output"):
                 raise ValueError(
-                    "Node '{}', parameter '{}', input type '{}', "
-                    "model_type is invalid (input/output) found {}".format(node.name, v, input_type, model_type)
+                    f"Node '{node.name}', parameter '{v}', input type '{input_type}', "
+                    f"model_type is invalid (input/output) found {model_type}"
                 )
 
             if len(parts) < 4:
                 raise ValueError(
-                    "Node '{}', parameter '{}', input type '{}', model index is missing".format(
-                        node.name, v, input_type
-                    )
+                    f"Node '{node.name}', parameter '{v}', input type '{input_type}', model index is missing"
                 )
 
             # check casting
@@ -3740,23 +3801,17 @@ class PipelineController:
                 int(parts[3])
             except Exception:
                 raise ValueError(
-                    "Node '{}', parameter '{}', input type '{}', model index is missing {}".format(
-                        node.name, v, input_type, parts
-                    )
+                    f"Node '{node.name}', parameter '{v}', input type '{input_type}', model index is missing {parts}"
                 )
 
             if len(parts) < 5:
                 raise ValueError(
-                    "Node '{}', parameter '{}', input type '{}', model property is missing".format(
-                        node.name, v, input_type
-                    )
+                    f"Node '{node.name}', parameter '{v}', input type '{input_type}', model property is missing"
                 )
 
             if not hasattr(BaseModel, parts[4]):
                 raise ValueError(
-                    "Node '{}', parameter '{}', input type '{}', model property is invalid {}".format(
-                        node.name, v, input_type, parts[4]
-                    )
+                    f"Node '{node.name}', parameter '{v}', input type '{input_type}', model property is invalid {parts[4]}"
                 )
         return prev_step
 
@@ -3768,7 +3823,7 @@ class PipelineController:
         """
         parts = step_ref_string[2:-1].split(".")
         if len(parts) < 2:
-            raise ValueError("Could not parse reference '{}'".format(step_ref_string))
+            raise ValueError(f"Could not parse reference '{step_ref_string}'")
         prev_step = parts[0]
         input_type = parts[1].lower()
 
@@ -3776,8 +3831,7 @@ class PipelineController:
         if prev_step == self._pipeline_step_ref:
             if parts[1] not in self._pipeline_args:
                 raise ValueError(
-                    "Could not parse reference '{}', "
-                    "pipeline argument '{}' could not be found".format(step_ref_string, parts[1])
+                    f"Could not parse reference '{step_ref_string}', pipeline argument '{parts[1]}' could not be found"
                 )
             return self._pipeline_args[parts[1]]
 
@@ -3786,9 +3840,7 @@ class PipelineController:
             and not self._nodes[prev_step].executed
             and not self._nodes[prev_step].base_task_id
         ):
-            raise ValueError(
-                "Could not parse reference '{}', step '{}' could not be found".format(step_ref_string, prev_step)
-            )
+            raise ValueError(f"Could not parse reference '{step_ref_string}', step '{prev_step}' could not be found")
 
         if input_type not in (
             "artifacts",
@@ -3805,9 +3857,9 @@ class PipelineController:
             "system_tags",
             "project",
         ):
-            raise ValueError("Could not parse reference '{}', type '{}' not valid".format(step_ref_string, input_type))
+            raise ValueError(f"Could not parse reference '{step_ref_string}', type '{input_type}' not valid")
         if input_type != "id" and len(parts) < 3:
-            raise ValueError("Could not parse reference '{}', missing fields in '{}'".format(step_ref_string, parts))
+            raise ValueError(f"Could not parse reference '{step_ref_string}', missing fields in '{parts}'")
 
         task = (
             self._nodes[prev_step].job.task
@@ -3828,30 +3880,24 @@ class PipelineController:
                 elif hasattr(obj, p):
                     obj = getattr(obj, p)
                 else:
-                    raise ValueError(
-                        "Could not locate artifact {} on previous step {}".format(".".join(parts[1:]), prev_step)
-                    )
+                    raise ValueError(f"Could not locate artifact {'.'.join(parts[1:])} on previous step {prev_step}")
             return str(obj)
         elif input_type == "parameters":
             step_params = task.get_parameters()
             param_name = ".".join(parts[2:])
             if param_name not in step_params:
-                raise ValueError(
-                    "Could not locate parameter {} on previous step {}".format(".".join(parts[1:]), prev_step)
-                )
+                raise ValueError(f"Could not locate parameter {'.'.join(parts[1:])} on previous step {prev_step}")
             return step_params.get(param_name)
         elif input_type == "models":
             model_type = parts[2].lower()
             if model_type not in ("input", "output"):
-                raise ValueError("Could not locate model {} on previous step {}".format(".".join(parts[1:]), prev_step))
+                raise ValueError(f"Could not locate model {'.'.join(parts[1:])} on previous step {prev_step}")
             try:
                 model_idx = int(parts[3])
                 model = task.models[model_type][model_idx]
             except Exception:
                 raise ValueError(
-                    "Could not locate model {} on previous step {}, index {} is invalid".format(
-                        ".".join(parts[1:]), prev_step, parts[3]
-                    )
+                    f"Could not locate model {'.'.join(parts[1:])} on previous step {prev_step}, index {parts[3]} is invalid"
                 )
 
             return str(getattr(model, parts[4]))
@@ -3897,7 +3943,8 @@ class PipelineController:
         if not task_id:
             return ""
 
-        return '<a href="{}"> {} </a>'.format(task_link_template.format(project=project_id, task=task_id), task_id)
+        task_link = task_link_template.format(project=project_id, task=task_id)
+        return f'<a href="{task_link}"> {task_id} </a>'
 
     def _default_retry_on_failure_callback(
         self,
@@ -3945,7 +3992,7 @@ class PipelineDecorator(PipelineController):
         add_run_number: bool = True,
         retry_on_failure: Optional[
             Union[int, Callable[[PipelineController, PipelineController.Node, int], bool]]
-        ] = None,  # noqa
+        ] = None,
         docker: Optional[str] = None,
         docker_args: Optional[str] = None,
         docker_bash_setup_script: Optional[str] = None,
@@ -4190,11 +4237,7 @@ class PipelineDecorator(PipelineController):
 
             # check if we need to stop the pipeline, and abort all running steps
             if nodes_failed_stop_pipeline:
-                print(
-                    "Aborting pipeline and stopping all running steps, node {} failed".format(
-                        nodes_failed_stop_pipeline
-                    )
-                )
+                print(f"Aborting pipeline and stopping all running steps, node {nodes_failed_stop_pipeline} failed")
                 break
 
             # update current state (in configuration, so that we could later continue an aborted pipeline)
@@ -4250,7 +4293,7 @@ class PipelineDecorator(PipelineController):
         # check if we have a new step on the DAG
         eager_artifacts = []
         for a in artifacts:
-            if a.key and a.key.startswith("{}:".format(self._eager_step_artifact)):
+            if a.key and a.key.startswith(f"{self._eager_step_artifact}:"):
                 # expected value: '"eager_step":"parent-node-task-id":"eager-step-task-id'
                 eager_artifacts.append(a)
 
@@ -4277,10 +4320,10 @@ class PipelineDecorator(PipelineController):
                 # should not happen
                 continue
 
-            new_step_node_name = "{}_{}".format(parent_node.name, eager_node_name)
+            new_step_node_name = f"{parent_node.name}_{eager_node_name}"
             counter = 1
             while new_step_node_name in self._nodes:
-                new_step_node_name = "{}_{}".format(new_step_node_name, counter)
+                new_step_node_name = f"{new_step_node_name}_{counter}"
                 counter += 1
 
             eager_node_def["name"] = new_step_node_name
@@ -4384,13 +4427,14 @@ class PipelineDecorator(PipelineController):
         """
         if task_hash.get("hyper_params"):
             updated_params = {}
-            for k, v in task_hash["hyper_params"].items():
-                if k.startswith("{}/".format(CreateFromFunction.input_artifact_section)) and str(v).startswith(
-                    "{}.".format(self._task.id)
+            for key, value in task_hash["hyper_params"].items():
+                if (
+                    key.startswith(f"{CreateFromFunction.input_artifact_section}/")  # ruff-format-hint
+                    and str(value).startswith(f"{self._task.id}.")
                 ):
-                    task_id, artifact_name = str(v).split(".", 1)
+                    _, artifact_name = str(value).split(".", 1)
                     if artifact_name in self._task.artifacts:
-                        updated_params[k] = self._task.artifacts[artifact_name].hash
+                        updated_params[key] = self._task.artifacts[artifact_name].hash
             task_hash["hyper_params"].update(updated_params)
 
         return task_hash
@@ -4442,21 +4486,16 @@ class PipelineDecorator(PipelineController):
         monitor_models: Optional[List[Union[str, Tuple[str, str]]]] = None,
         retry_on_failure: Optional[
             Union[int, Callable[[PipelineController, PipelineController.Node, int], bool]]
-        ] = None,  # noqa
-        pre_execute_callback: Optional[
-            Callable[[PipelineController, PipelineController.Node, dict], bool]
-        ] = None,  # noqa
+        ] = None,
+        pre_execute_callback: Optional[Callable[[PipelineController, PipelineController.Node, dict], bool]] = None,
         post_execute_callback: Optional[Callable[[PipelineController, PipelineController.Node], None]] = None,
-        # noqa
-        status_change_callback: Optional[
-            Callable[[PipelineController, PipelineController.Node, str], None]
-        ] = None,  # noqa
+        status_change_callback: Optional[Callable[[PipelineController, PipelineController.Node, str], None]] = None,
         tags: Optional[Union[str, Sequence[str]]] = None,
         output_uri: Optional[Union[str, bool]] = None,
         draft: Optional[bool] = False,
         working_dir: Optional[str] = None,
         continue_behaviour: Optional[dict] = None,
-        stage: Optional[str] = None
+        stage: Optional[str] = None,
     ) -> Callable:
         """
         pipeline component function to be executed remotely
@@ -4670,7 +4709,7 @@ class PipelineDecorator(PipelineController):
                 draft=draft,
                 working_dir=working_dir,
                 continue_behaviour=continue_behaviour,
-                stage=stage
+                stage=stage,
             )
 
             if cls._singleton:
@@ -4801,7 +4840,7 @@ class PipelineDecorator(PipelineController):
                         and cls._singleton._nodes[_node.name].job_code_section
                         != cls._singleton._nodes[_node_name].job_code_section
                     ):
-                        _node.name = "{}_{}".format(_node_name, counter)
+                        _node.name = f"{_node_name}_{counter}"
                         counter += 1
                     # Copy callbacks to the replicated node
                     if cls._singleton._pre_step_callbacks.get(_node_name):
@@ -4859,15 +4898,13 @@ class PipelineDecorator(PipelineController):
                     if not _node.job:
                         if not _node.executed:
                             raise ValueError("Job was not created and is also not cached/executed")
-                        return "{}.{}".format(_node.executed, return_name)
+                        return f"{_node.executed}.{return_name}"
 
                     if _node.job.is_failed() and not _node.continue_on_fail:
-                        raise ValueError(
-                            'Pipeline step "{}", Task ID={} failed'.format(_node.name, _node.job.task_id())
-                        )
+                        raise ValueError(f'Pipeline step "{_node.name}", Task ID={_node.job.task_id()} failed')
 
                     _node.executed = _node.job.task_id()
-                    return "{}.{}".format(_node.job.task_id(), return_name)
+                    return f"{_node.job.task_id()}.{return_name}"
 
                 def result_wrapper(return_name: str) -> Any:
                     # wait until launch is completed
@@ -4885,9 +4922,7 @@ class PipelineDecorator(PipelineController):
                     if (_node.job.is_failed() and not _node.continue_on_fail) or (
                         _node.job.is_aborted() and not _node.continue_on_abort
                     ):
-                        raise ValueError(
-                            'Pipeline step "{}", Task ID={} failed'.format(_node.name, _node.job.task_id())
-                        )
+                        raise ValueError(f'Pipeline step "{_node.name}", Task ID={_node.job.task_id()} failed')
 
                     _node.executed = _node.job.task_id()
 
@@ -4946,7 +4981,7 @@ class PipelineDecorator(PipelineController):
         start_controller_locally: bool = False,
         retry_on_failure: Optional[
             Union[int, Callable[[PipelineController, PipelineController.Node, int], bool]]
-        ] = None,  # noqa
+        ] = None,
         docker: Optional[str] = None,
         docker_args: Optional[str] = None,
         docker_bash_setup_script: Optional[str] = None,
@@ -5348,45 +5383,55 @@ class PipelineDecorator(PipelineController):
         _node_name = node_name
         _node = node
         # update artifacts kwargs
-        for k, v in kwargs_artifacts.items():
-            if k in kwargs:
-                kwargs.pop(k, None)
-            _node.parameters.pop("{}/{}".format(CreateFromFunction.kwargs_section, k), None)
-            _node.parameters["{}/{}".format(CreateFromFunction.input_artifact_section, k)] = v
-            if v and "." in str(v):
-                parent_id, _ = str(v).split(".", 1)
+        for key, value in kwargs_artifacts.items():
+            if key in kwargs:
+                kwargs.pop(key, None)
+            _node.parameters.pop(f"{CreateFromFunction.kwargs_section}/{key}", None)
+            _node.parameters[f"{CreateFromFunction.input_artifact_section}/{key}"] = value
+            if value and "." in str(value):
+                parent_id, _ = str(value).split(".", 1)
                 # find parent and push it into the _node.parents
-                for n, node in sorted(list(cls._singleton._nodes.items()), reverse=True):
-                    if n != _node.name and node.executed and node.executed == parent_id:
-                        if n not in _node.parents:
-                            _node.parents.append(n)
+                for node_key, node in sorted(list(cls._singleton._nodes.items()), reverse=True):
+                    if (
+                        node_key != _node.name  # ruff-format-hint
+                        and node.executed
+                        and node.executed == parent_id
+                    ):
+                        if node_key not in _node.parents:
+                            _node.parents.append(node_key)
                         break
 
         leaves = cls._singleton._find_executed_node_leaves()
-        _node.parents = (_node.parents or []) + [x for x in cls._evaluated_return_values.get(tid, []) if x in leaves]
+        _node.parents = [
+            *(_node.parents or []),
+            *(
+                value  # ruff-format-hint
+                for value in cls._evaluated_return_values.get(tid, [])
+                if value in leaves
+            ),
+        ]
 
         if not cls._singleton._abort_running_steps_on_failure:
             for parent in _node.parents:
                 parent = cls._singleton._nodes[parent]
                 if (
-                    parent.status == "failed"
-                    and parent.skip_children_on_fail
-                    or parent.status == "aborted"
-                    and parent.skip_children_on_abort
+                    (parent.status == "failed" and parent.skip_children_on_fail)
+                    or (parent.status == "aborted" and parent.skip_children_on_abort)
                     or parent.status == "skipped"
                 ):
                     _node.skip_job = True
                     return
 
-        for k, v in kwargs.items():
-            if v is None or isinstance(v, (float, int, bool, str)):
-                _node.parameters["{}/{}".format(CreateFromFunction.kwargs_section, k)] = v
+        for key, value in kwargs.items():
+            if value is None or isinstance(value, (float, int, bool, str)):
+                _node.parameters[f"{CreateFromFunction.kwargs_section}/{key}"] = value
             else:
                 # we need to create an artifact
-                artifact_name = "result_{}_{}".format(re.sub(r"\W+", "", _node.name), k)
-                cls._singleton._upload_pipeline_artifact(artifact_name=artifact_name, artifact_object=v)
-                _node.parameters["{}/{}".format(CreateFromFunction.input_artifact_section, k)] = "{}.{}".format(
-                    cls._singleton._task.id, artifact_name
+                sanitized_node_name = re.sub(r'\W+', '', _node.name)  # Removes any non-[a-zA-Z0-9_] character
+                artifact_name = f"result_{sanitized_node_name}_{key}"
+                cls._singleton._upload_pipeline_artifact(artifact_name=artifact_name, artifact_object=value)
+                _node.parameters[f"{CreateFromFunction.input_artifact_section}/{key}"] = (
+                    f"{cls._singleton._task.id}.{artifact_name}"
                 )
 
         # verify the new step
@@ -5411,11 +5456,7 @@ class PipelineDecorator(PipelineController):
             from clearml.backend_api.services import tasks
 
             artifact = tasks.Artifact(
-                key="{}:{}:{}".format(
-                    cls._eager_step_artifact,
-                    Task.current_task().id,
-                    _node.job.task_id(),
-                ),
+                key=f"{cls._eager_step_artifact}:{Task.current_task().id}:{_node.job.task_id()}",
                 type="json",
                 mode="output",
                 type_data=tasks.ArtifactTypeData(
@@ -5563,19 +5604,19 @@ class PipelineDecorator(PipelineController):
                     execution_details = json.loads(p["plot_str"])
                     execution_details["layout"]["name"] += " - " + str(pipeline_task_id)
             except Exception as ex:
-                getLogger("clearml.automation.controller").warning("Multi-pipeline plot update failed: {}".format(ex))
+                getLogger("clearml.automation.controller").warning(f"Multi-pipeline plot update failed: {ex}")
 
         if execution_flow:
             Task.current_task().get_logger().report_plotly(
                 title=cls._report_plot_execution_flow["title"],
-                series="{} - {}".format(cls._report_plot_execution_flow["series"], pipeline_task_id),
+                series=f"{cls._report_plot_execution_flow['series']} - {pipeline_task_id}",
                 iteration=0,
                 figure=execution_flow,
             )
         if execution_details:
             Task.current_task().get_logger().report_plotly(
                 title=cls._report_plot_execution_details["title"],
-                series="{} - {}".format(cls._report_plot_execution_details["series"], pipeline_task_id),
+                series=f"{cls._report_plot_execution_details['series']} - {pipeline_task_id}",
                 iteration=0,
                 figure=execution_details,
             )
