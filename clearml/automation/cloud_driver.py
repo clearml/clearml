@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from os import environ
+import os
 from typing import List, Tuple, Any
 
 import attr
@@ -85,7 +85,13 @@ class CloudDriver(ABC):
             self.session = Session()
 
     @abstractmethod
-    def spin_up_worker(self, resource: dict, worker_prefix: str, queue_name: str, task_id: str) -> None:
+    def spin_up_worker(
+        self,
+        resource: dict,
+        worker_prefix: str,
+        queue_name: str,
+        task_id: str,
+    ) -> None:
         """Creates a new worker for clearml.
 
         First, create an instance in the cloud and install some required packages.
@@ -139,16 +145,31 @@ class CloudDriver(ABC):
             files_server=self.files_server,
             secret_key=self.secret_key or "",
             web_server=self.web_server,
-            bash_script=("export NVIDIA_VISIBLE_DEVICES=none; " if cpu_only else "") + self.extra_vm_bash_script,
+            bash_script=(
+                f"export NVIDIA_VISIBLE_DEVICES=none; {self.extra_vm_bash_script}"  # ruff-format-hint
+                if cpu_only
+                else self.extra_vm_bash_script
+            ),
             driver_extra=self.driver_bash_extra(task_id),
-            docker="--docker '{}'".format(self.docker_image) if self.docker_image else "",
+            docker=(
+                f"--docker '{self.docker_image}'"  # ruff-format-hint
+                if self.docker_image
+                else ""
+            ),
             instance_id_command=self.instance_id_command(),
         )
 
     def clearml_conf(self) -> str:
-        # TODO: This need to be documented somewhere
-        git_user = environ.get(env_git_user) or self.git_user or ""
-        git_pass = environ.get(env_git_pass) or self.git_pass or ""
+        git_user = (
+            os.environ.get(env_git_user)  # ruff-format-hint
+            or self.git_user
+            or ""
+        )
+        git_pass = (
+            os.environ.get(env_git_pass)  # ruff-format-hint
+            or self.git_pass
+            or ""
+        )
 
         return clearml_conf_template.format(
             git_user=git_user,
@@ -157,9 +178,11 @@ class CloudDriver(ABC):
         )
 
     def driver_bash_extra(self, task_id: str) -> str:
-        if not task_id:
-            return ""
-        return "python -m clearml_agent --config-file ~/clearml.conf execute --id {}".format(task_id)
+        return (
+            f"python -m clearml_agent --config-file ~/clearml.conf execute --id {task_id}"
+            if task_id  # ruff-format-hint
+            else ""
+        )
 
     @classmethod
     def from_config(cls, config: dict) -> "CloudDriver":
