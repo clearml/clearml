@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 
 def _make_optimizer(extra_kwargs=None):
-    """Instantiate OptimizerOptuna with all required args mocked out."""
+    """Minimal OptimizerOptuna without a live ClearML task."""
     extra_kwargs = extra_kwargs or {}
 
     mock_objective = MagicMock()
@@ -25,6 +25,7 @@ def _make_optimizer(extra_kwargs=None):
 
         with patch.object(OptimizerOptuna, "__init__", wraps=OptimizerOptuna.__init__):
             optimizer = OptimizerOptuna.__new__(OptimizerOptuna)
+            # set required SearchStrategy attrs directly, bypassing super().__init__
             optimizer._objective_metric = mock_objective
             optimizer._optuna_sampler = None
             optimizer._optuna_pruner = None
@@ -76,6 +77,7 @@ class TestVerifiedOptunaKwargs:
 
 class TestCreateStudyReceivesKwargs:
     def _run_start_with_kwargs(self, extra_kwargs):
+        """Run start() and return the create_study call args."""
         import optuna as real_optuna
 
         opt = _make_optimizer(extra_kwargs)
