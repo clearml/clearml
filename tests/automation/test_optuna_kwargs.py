@@ -10,17 +10,13 @@ to optuna.create_study(), while unrecognised kwargs are silently dropped
 from unittest.mock import MagicMock, patch
 
 
-# ---------------------------------------------------------------------------
-# Helpers — build a minimal OptimizerOptuna without a live ClearML task
-# ---------------------------------------------------------------------------
-
 def _make_optimizer(extra_kwargs=None):
     """Instantiate OptimizerOptuna with all required args mocked out."""
     extra_kwargs = extra_kwargs or {}
 
     mock_objective = MagicMock()
     mock_objective.len = 1
-    mock_objective.get_objective_sign.return_value = [-1]  # "minimize"
+    mock_objective.get_objective_sign.return_value = [-1]
 
     mock_param = MagicMock()
 
@@ -29,7 +25,6 @@ def _make_optimizer(extra_kwargs=None):
 
         with patch.object(OptimizerOptuna, "__init__", wraps=OptimizerOptuna.__init__):
             optimizer = OptimizerOptuna.__new__(OptimizerOptuna)
-            # bypass super().__init__ by setting required SearchStrategy attrs manually
             optimizer._objective_metric = mock_objective
             optimizer._optuna_sampler = None
             optimizer._optuna_pruner = None
@@ -47,7 +42,6 @@ def _make_optimizer(extra_kwargs=None):
             optimizer._base_task_id = "base_task_id"
             optimizer._execution_queue = "default"
 
-            # run only the kwargs logic
             verified_optuna_kwargs = ["storage", "load_if_exists"]
             optimizer._optuna_kwargs = dict(
                 (k, v) for k, v in extra_kwargs.items() if k in verified_optuna_kwargs
@@ -55,11 +49,6 @@ def _make_optimizer(extra_kwargs=None):
             optimizer._optuna_kwargs.setdefault("load_if_exists", False)
 
     return optimizer
-
-
-# ---------------------------------------------------------------------------
-# __init__ — kwargs storage
-# ---------------------------------------------------------------------------
 
 
 class TestVerifiedOptunaKwargs:
@@ -85,14 +74,8 @@ class TestVerifiedOptunaKwargs:
         assert set(opt._optuna_kwargs.keys()) == {"load_if_exists"}
 
 
-# ---------------------------------------------------------------------------
-# start() — kwargs forwarded to optuna.create_study
-# ---------------------------------------------------------------------------
-
-
 class TestCreateStudyReceivesKwargs:
     def _run_start_with_kwargs(self, extra_kwargs):
-        """Call the create_study portion of start() and capture its call args."""
         import optuna as real_optuna
 
         opt = _make_optimizer(extra_kwargs)
@@ -108,7 +91,6 @@ class TestCreateStudyReceivesKwargs:
             opt._objective_metric.len = 1
             opt._objective_metric.get_objective_sign.return_value = [-1]
 
-            # call only the study-creation part
             with patch("clearml.automation.optuna.optuna.OptunaObjective"):
                 opt.start()
 
@@ -127,7 +109,6 @@ class TestCreateStudyReceivesKwargs:
         assert call_args.kwargs.get("load_if_exists") is False
 
     def test_clearml_managed_params_still_present(self):
-        """direction, sampler, pruner must always be passed by ClearML."""
         call_args = self._run_start_with_kwargs({})
         assert "direction" in call_args.kwargs
         assert "sampler" in call_args.kwargs
