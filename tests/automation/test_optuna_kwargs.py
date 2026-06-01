@@ -7,8 +7,7 @@ to optuna.create_study(), while unrecognised kwargs are silently dropped
 (consistent with OptimizerBOHB's verified_bohb_kwargs pattern).
 """
 
-from unittest.mock import MagicMock, patch, call
-import pytest
+from unittest.mock import MagicMock, patch
 
 
 # ---------------------------------------------------------------------------
