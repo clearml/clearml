@@ -159,7 +159,11 @@ class OptimizerOptuna(SearchStrategy):
             when time limit is exceeded job is aborted
         :param float compute_time_limit: The maximum compute time in minutes. When time limit is exceeded,
             all jobs aborted. (Optional)
-        :param optuna_kwargs: arguments passed directly to the Optuna object
+        :param optuna_kwargs: optional arguments passed directly to ``optuna.create_study()``.
+            Supported keys: ``storage`` (str or optuna storage object, for persistent/distributed studies),
+            ``load_if_exists`` (bool, default False, load an existing study from storage if one exists).
+            ClearML-managed arguments (``direction``, ``directions``, ``sampler``, ``pruner``,
+            ``study_name``) are always set by ClearML and cannot be overridden via this parameter.
         """
         super(OptimizerOptuna, self).__init__(
             base_task_id=base_task_id,
@@ -176,8 +180,12 @@ class OptimizerOptuna(SearchStrategy):
         )
         self._optuna_sampler = optuna_sampler
         self._optuna_pruner = optuna_pruner
-        verified_optuna_kwargs = []
+        verified_optuna_kwargs = [
+            "storage",
+            "load_if_exists",
+        ]
         self._optuna_kwargs = dict((k, v) for k, v in optuna_kwargs.items() if k in verified_optuna_kwargs)
+        self._optuna_kwargs.setdefault("load_if_exists", False)
         self._param_iterator = None
         self._objective = None
         self._study = continue_previous_study if continue_previous_study else None
@@ -194,18 +202,18 @@ class OptimizerOptuna(SearchStrategy):
         """
         if self._objective_metric.len != 1:
             self._study = optuna.create_study(
+                **self._optuna_kwargs,
                 directions=[
                     "minimize" if sign_ < 0 else "maximize" for sign_ in self._objective_metric.get_objective_sign()
                 ],
-                load_if_exists=False,
                 sampler=self._optuna_sampler,
                 pruner=self._optuna_pruner,
                 study_name=self._optimizer_task.id if self._optimizer_task else None,
             )
         else:
             self._study = optuna.create_study(
+                **self._optuna_kwargs,
                 direction="minimize" if self._objective_metric.get_objective_sign()[0] < 0 else "maximize",
-                load_if_exists=False,
                 sampler=self._optuna_sampler,
                 pruner=self._optuna_pruner,
                 study_name=self._optimizer_task.id if self._optimizer_task else None,
