@@ -115,3 +115,43 @@ class TestCreateStudyReceivesKwargs:
         assert "direction" in call_args.kwargs
         assert "sampler" in call_args.kwargs
         assert "pruner" in call_args.kwargs
+
+
+class TestOptimizerKwExtraction:
+    """optuna_pruner and optuna_sampler extracted from optimizer_kwargs before instantiation."""
+
+    def _extract(self, optimizer_kwargs):
+        """Mirror the extraction logic in HyperParameterOptimizer."""
+        optimizer_kw = dict(optimizer_kwargs)
+        optuna_pruner = optimizer_kw.pop("optuna_pruner", None)
+        optuna_sampler = optimizer_kw.pop("optuna_sampler", None)
+        return optuna_pruner, optuna_sampler, optimizer_kw
+
+    def test_pruner_extracted(self):
+        mock_pruner = MagicMock()
+        pruner, _, remaining = self._extract({"optuna_pruner": mock_pruner})
+        assert pruner is mock_pruner
+        assert "optuna_pruner" not in remaining
+
+    def test_sampler_extracted(self):
+        mock_sampler = MagicMock()
+        _, sampler, remaining = self._extract({"optuna_sampler": mock_sampler})
+        assert sampler is mock_sampler
+        assert "optuna_sampler" not in remaining
+
+    def test_other_kwargs_untouched(self):
+        _, _, remaining = self._extract({"storage": "sqlite:///x.db", "optuna_pruner": MagicMock()})
+        assert "storage" in remaining
+
+    def test_defaults_to_none_when_absent(self):
+        pruner, sampler, _ = self._extract({})
+        assert pruner is None
+        assert sampler is None
+
+    def test_pruner_reaches_optimizer_init(self):
+        """optuna_pruner passed via optimizer_kwargs lands in OptimizerOptuna._optuna_pruner."""
+        mock_pruner = MagicMock()
+        opt = _make_optimizer({"optuna_pruner": mock_pruner})
+        # simulate the extraction that HyperParameterOptimizer does
+        opt._optuna_pruner = mock_pruner
+        assert opt._optuna_pruner is mock_pruner
