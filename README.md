@@ -21,19 +21,19 @@
 ClearML is a ML/DL development and production suite. It contains FIVE main modules:
 
 - [Experiment Manager](#clearml-experiment-manager) - Automagical experiment tracking, environments and results
-- [MLOps / LLMOps](https://github.com/clearml/clearml-agent) - Orchestration, Automation & Pipelines solution for ML/DL/GenAI jobs (Kubernetes / Cloud / bare-metal)  
-- [Data-Management](https://github.com/clearml/clearml/blob/master/docs/datasets.md) - Fully differentiable data management & version control solution on top of object-storage 
-  (S3 / GS / Azure / NAS)  
-- [Model-Serving](https://github.com/clearml/clearml-serving) - *cloud-ready* Scalable model serving solution! 
-  - **Deploy new model endpoints in under 5 minutes** 
-  - Includes optimized GPU serving support backed by Nvidia-Triton 
-  - **with out-of-the-box  Model Monitoring** 
-- [Reports](https://clear.ml/docs/latest/docs/webapp/webapp_reports) - Create and share rich MarkDown documents supporting embeddable online content 
+- [MLOps / LLMOps](https://github.com/clearml/clearml-agent) - Orchestration, Automation & Pipelines solution for ML/DL/GenAI jobs (Kubernetes / Cloud / bare-metal)
+- [Data-Management](https://github.com/clearml/clearml/blob/master/docs/datasets.md) - Fully differentiable data management & version control solution on top of object-storage
+  (S3 / GS / Azure / NAS)
+- [Model-Serving](https://github.com/clearml/clearml-serving) - *cloud-ready* Scalable model serving solution!
+  - **Deploy new model endpoints in under 5 minutes**
+  - Includes optimized GPU serving support backed by Nvidia-Triton
+  - **with out-of-the-box  Model Monitoring**
+- [Reports](https://clear.ml/docs/latest/docs/webapp/webapp_reports) - Create and share rich MarkDown documents supporting embeddable online content
 - :fire: [Orchestration Dashboard](https://clear.ml/docs/latest/docs/webapp/webapp_orchestration_dash/) - Live rich dashboard for your entire compute cluster (Cloud / Kubernetes / On-Prem)
 - 🔥 💥 [Fractional GPUs](https://github.com/clearml/clearml-fractional-gpu) - Container based, driver level GPU memory limitation 🙀 !!!
-  
 
-Instrumenting these components is the **ClearML-server**, see [Self-Hosting](https://clear.ml/docs/latest/docs/deploying_clearml/clearml_server) & [Free tier Hosting](https://app.clear.ml)  
+
+Instrumenting these components is the **ClearML-server**, see [Self-Hosting](https://clear.ml/docs/latest/docs/deploying_clearml/clearml_server) & [Free tier Hosting](https://app.clear.ml)
 
 
 ---
@@ -121,14 +121,14 @@ Instrumenting these components is the **ClearML-server**, see [Self-Hosting](htt
     * Supported ML/DL frameworks: [PyTorch](https://github.com/clearml/clearml/tree/master/examples/frameworks/pytorch) (incl' [ignite](https://github.com/clearml/clearml/tree/master/examples/frameworks/ignite) / [lightning](https://github.com/clearml/clearml/tree/master/examples/frameworks/pytorch-lightning)), [Tensorflow](https://github.com/clearml/clearml/tree/master/examples/frameworks/tensorflow), [Keras](https://github.com/clearml/clearml/tree/master/examples/frameworks/keras), [AutoKeras](https://github.com/clearml/clearml/tree/master/examples/frameworks/autokeras), [FastAI](https://github.com/clearml/clearml/tree/master/examples/frameworks/fastai), [XGBoost](https://github.com/clearml/clearml/tree/master/examples/frameworks/xgboost), [LightGBM](https://github.com/clearml/clearml/tree/master/examples/frameworks/lightgbm), [MegEngine](https://github.com/clearml/clearml/tree/master/examples/frameworks/megengine) and [Scikit-Learn](https://github.com/clearml/clearml/tree/master/examples/frameworks/scikit-learn)
     * Seamless integration (including version control) with [**Jupyter Notebook**](https://jupyter.org/)
     and [*PyCharm* remote debugging](https://github.com/clearml/trains-pycharm-plugin)
-      
-#### [Start using ClearML](https://clear.ml/docs/latest/docs/getting_started/ds/ds_first_steps) 
+
+#### [Start using ClearML](https://clear.ml/docs/latest/docs/getting_started/ds/ds_first_steps)
 
 
 1. Sign up for free to the [ClearML Hosted Service](https://app.clear.ml) (alternatively, you can set up your own server, see [here](https://clear.ml/docs/latest/docs/deploying_clearml/clearml_server)).
 
     > **_ClearML Demo Server:_** ClearML no longer uses the demo server by default. To enable the demo server, set the `CLEARML_NO_DEFAULT_SERVER=0`
-    > environment variable. Credentials aren't needed, but experiments launched to the demo server are public, so make sure not 
+    > environment variable. Credentials aren't needed, but experiments launched to the demo server are public, so make sure not
     > to launch sensitive experiments if using the demo server.
 
 1. Install the `clearml` python package:
@@ -138,7 +138,7 @@ Instrumenting these components is the **ClearML-server**, see [Self-Hosting](htt
     ```
 
 1. Connect the ClearML SDK to the server by [creating credentials](https://app.clear.ml/settings/workspace-configuration), then execute the command
-below and follow the instructions: 
+below and follow the instructions:
 
     ```bash
     clearml-init
@@ -152,7 +152,7 @@ below and follow the instructions:
 
 And you are done! Everything your process outputs is now automagically logged into ClearML.
 
-Next step, automation! **Learn more about ClearML's two-click automation [here](https://clear.ml/docs/latest/docs/getting_started/mlops/mlops_first_steps)**. 
+Next step, automation! **Learn more about ClearML's two-click automation [here](https://clear.ml/docs/latest/docs/getting_started/mlops/mlops_first_steps)**.
 
 ## ClearML Architecture
 
@@ -164,15 +164,15 @@ The ClearML run-time components:
 
 <img src="https://raw.githubusercontent.com/clearml/clearml-docs/main/docs/img/clearml_architecture.png" width="100%" alt="clearml-architecture">
 
-## Additional Modules 
+## Additional Modules
 
 - [clearml-session](https://github.com/clearml/clearml-session) - **Launch remote JupyterLab / VSCode-server inside any docker, on Cloud/On-Prem machines**
-- [clearml-task](https://github.com/clearml/clearml/blob/master/docs/clearml-task.md) - Run any codebase on remote machines with full remote logging of Tensorboard, Matplotlib & Console outputs 
-- [clearml-data](https://github.com/clearml/clearml/blob/master/docs/datasets.md) - **CLI for managing and versioning your datasets, including creating / uploading / downloading of data from S3/GS/Azure/NAS** 
+- [clearml-task](https://github.com/clearml/clearml/blob/master/docs/clearml-task.md) - Run any codebase on remote machines with full remote logging of Tensorboard, Matplotlib & Console outputs
+- [clearml-data](https://github.com/clearml/clearml/blob/master/docs/datasets.md) - **CLI for managing and versioning your datasets, including creating / uploading / downloading of data from S3/GS/Azure/NAS**
 - [AWS Auto-Scaler](https://clear.ml/docs/latest/docs/guides/services/aws_autoscaler) - Automatically spin EC2 instances based on your workloads with preconfigured budget! No need for AKE!
 - [Hyper-Parameter Optimization](https://clear.ml/docs/latest/docs/guides/optimization/hyper-parameter-optimization/examples_hyperparam_opt) - Optimize any code with black-box approach and state-of-the-art Bayesian optimization algorithms
-- [Automation Pipeline](https://clear.ml/docs/latest/docs/guides/pipeline/pipeline_controller) - Build pipelines based on existing experiments / jobs, supports building pipelines of pipelines!  
-- [Slack Integration](https://clear.ml/docs/latest/docs/guides/services/slack_alerts) - Report experiments progress / failure directly to Slack (fully customizable!)  
+- [Automation Pipeline](https://clear.ml/docs/latest/docs/guides/pipeline/pipeline_controller) - Build pipelines based on existing experiments / jobs, supports building pipelines of pipelines!
+- [Slack Integration](https://clear.ml/docs/latest/docs/guides/services/slack_alerts) - Report experiments progress / failure directly to Slack (fully customizable!)
 
 ## Why ClearML?
 
@@ -182,9 +182,9 @@ ClearML tracks and controls the process by associating code version control, res
 performance metrics, and model provenance.
 
 We designed ClearML specifically to require effortless integration so that teams can preserve their existing methods
-and practices. 
+and practices.
 
-  - Use it on a daily basis to boost collaboration and visibility in your team 
+  - Use it on a daily basis to boost collaboration and visibility in your team
   - Create a remote job from any experiment with a click of a button
   - Automate processes and create pipelines to collect your experimentation logs, outputs, and data
   - Store all your data on any object-storage solution, with the most straightforward interface possible
@@ -195,7 +195,7 @@ experiment management, MLOps, and data management.
 
 ## Who We Are
 
-ClearML is supported by you and the [clear.ml](https://clear.ml) team, which helps enterprise companies build scalable MLOps. 
+ClearML is supported by you and the [clear.ml](https://clear.ml) team, which helps enterprise companies build scalable MLOps.
 
 We built ClearML to track and control the glorious but messy process of training production-grade deep learning models.
 We are committed to vigorously supporting and expanding the capabilities of ClearML.
@@ -206,7 +206,7 @@ We promise to always be backwardly compatible, making sure all your logs, data, 
 
 Apache License, Version 2.0 (see the [LICENSE](https://www.apache.org/licenses/LICENSE-2.0.html) for more information)
 
-If ClearML is part of your development process / project / publication, please cite us :heart: : 
+If ClearML is part of your development process / project / publication, please cite us :heart: :
 ```
 @misc{clearml,
 title = {ClearML - Your entire MLOps stack in one open-source tool},

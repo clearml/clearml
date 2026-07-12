@@ -52,7 +52,7 @@ Before you submit a new PR:
 
 * Verify the work you plan to merge addresses an existing [issue](https://github.com/allegroai/clearml/issues) (If not, open a new one)
 * Check related discussions in the [ClearML slack community](https://joinslack.clear.ml) (Or start your own discussion on the `#clearml-dev` channel)
-* Make sure your code conforms to the ClearML coding standards by running:  
+* Make sure your code conforms to the ClearML coding standards by running:
   `flake8 --max-line-length=120 --statistics --show-source --extend-ignore=E501 ./clearml*`
 
 In your PR include:
