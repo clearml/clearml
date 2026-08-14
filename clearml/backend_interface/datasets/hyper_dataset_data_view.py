@@ -31,6 +31,7 @@ class DataViewManagementBackend(IdObjectBase):
         versions: Optional[Iterable[Union[Mapping[str, str], Sequence[str]]]] = None,
         project_name: Optional[str] = None,
         labels_enumeration: Optional[Mapping[str, int]] = None,
+        mapping_rules: Optional[Sequence[Any]] = None,  # Optional[Sequence[dataviews.MappingRule]]
     ) -> str:
         """
         Create a DataView on the backend using the structured create request.
@@ -48,6 +49,7 @@ class DataViewManagementBackend(IdObjectBase):
             with project-scoped RBAC.
         :param labels_enumeration: Optional label-string to integer enumeration stored
             with the DataView
+        :param mapping_rules: Optional label mapping rules stored with the DataView
 
         :return: Identifier of the created DataView
         """
@@ -84,6 +86,11 @@ class DataViewManagementBackend(IdObjectBase):
                 **(
                     {"labels_enumeration": dict(labels_enumeration)}
                     if labels_enumeration
+                    else {}
+                ),
+                **(
+                    {"mapping": dataviews.Mapping(rules=list(mapping_rules))}
+                    if mapping_rules
                     else {}
                 ),
             ),
@@ -284,6 +291,59 @@ class DataViewManagementBackend(IdObjectBase):
         return response.response.updated >= 1
 
     @classmethod
+    def create_mapping_rule(
+        cls,
+        from_labels: Union[str, Sequence[str]],
+        to_label: str,
+        dataset: Optional[str] = None,
+        version: Optional[str] = None,
+    ) -> Any:  # dataviews.MappingRule
+        """
+        Build a label mapping rule structure compatible with DataView create/update requests.
+
+        :param from_labels: Source label or list of labels (AND connection). An ROI must match
+            all of the labels for the mapping to take place
+        :param to_label: Target label name the source labels are converted to
+        :param dataset: Dataset identifier the rule applies to; '*' (default) for all datasets in view
+        :param version: Dataset version identifier the rule applies to; '*' (default) for all versions
+
+        :return: Dataview mapping rule object
+        """
+        labels = [from_labels] if isinstance(from_labels, str) else list(from_labels)
+        return dataviews.MappingRule(
+            source=dataviews.LabelSource(
+                labels=labels,
+                dataset=dataset or "*",
+                version=version or "*",
+            ),
+            target=to_label,
+        )
+
+    @classmethod
+    def update_mapping_rules(
+        cls,
+        dataview_id: str,
+        mapping_rules: Sequence[Any],  # Sequence[dataviews.MappingRule]
+    ) -> bool:
+        """
+        Replace the label mapping rules associated with a DataView.
+
+        :param dataview_id: Identifier of the DataView being updated
+        :param mapping_rules: Iterable of mapping rule objects compatible with the API
+
+        :return: True when the backend confirms a successful update
+        """
+        response = cls._send(
+            session=cls._get_default_session(),
+            req=dataviews.UpdateRequest(
+                dataview=dataview_id,
+                mapping=dataviews.Mapping(rules=list(mapping_rules)),
+            ),
+        )
+
+        return response.response.updated >= 1
+
+    @classmethod
     def build_inline_dataview(
         cls,
         versions: Optional[Iterable[Any]] = None,
@@ -291,12 +351,13 @@ class DataViewManagementBackend(IdObjectBase):
         iteration: Optional[Any] = None,
         output_rois: Optional[str] = None,
         labels_enumeration: Optional[Mapping[str, int]] = None,
+        mapping: Optional[Any] = None,  # Optional[dataviews.Mapping]
     ) -> Any:
         """
         Build a `frames.Dataview` payload usable with the inline count / next-frame endpoints.
 
-        Accepts SDK-side `dataviews.*` objects (`DataviewEntry`, `FilterRule`, `Iteration`) or
-        raw dicts; round-trips them through `frames.Dataview.from_dict()`.
+        Accepts SDK-side `dataviews.*` objects (`DataviewEntry`, `FilterRule`, `Iteration`,
+        `Mapping`) or raw dicts; round-trips them through `frames.Dataview.from_dict()`.
         """
         def convert_value_to_dict(value: Any) -> dict:
             return (
@@ -335,6 +396,11 @@ class DataViewManagementBackend(IdObjectBase):
             **(
                 {"labels_enumeration": dict(labels_enumeration)}
                 if labels_enumeration
+                else {}
+            ),
+            **(
+                {"mapping": convert_value_to_dict(mapping)}
+                if mapping is not None
                 else {}
             ),
         })
