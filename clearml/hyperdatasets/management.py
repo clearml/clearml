@@ -1,3 +1,4 @@
+import logging
 from typing import (
     Optional,
     Sequence,
@@ -363,4 +364,54 @@ class HyperDatasetManagement:
         return HyperDatasetManagementBackend.get_version_metadata(
             dataset_id=self._dataset_id,
             version_id=self._version_id,
+        )
+
+    def get_iterator(
+        self,
+        projection: Optional[Sequence[str]] = None,
+        batch_size: Optional[int] = None,
+    ):
+        """
+        Return an iterator over all the data entries (frames) of the bound dataset version.
+
+        This is a convenience wrapper around a single-query `DataView` pinned to this
+        version: entries stream through the same iteration pipeline as DataView
+        iteration (background prefetching, entry-class conversion), but no DataView
+        object is persisted on the server and no Task is attached.
+
+        For filtered, weighted, or multi-version iteration, build a `DataView` instead.
+
+        :param projection: Optional list of frame fields to return, using dot-separated
+            notation (for example ``["id", "sources"]``). When set, entries are
+            reconstructed from the projected fields only — non-projected fields are
+            missing from the returned objects
+        :param batch_size: Optional number of entries fetched per backend request
+
+        :return: Iterator yielding `DataEntry`-derived objects
+        """
+        if not getattr(self, "_version_id", None) or not getattr(self, "_dataset_id", None):
+            raise ValueError("HyperDataset instance is not bound to a dataset version")
+
+        version = HyperDatasetManagementBackend.get_version_by_id(
+            dataset_id=self._dataset_id,
+            version_id=self._version_id,
+            only_fields=["id", "status"],
+        )
+        if version is None:
+            raise ValueError(f"Version not found: {self._version_id} (dataset={self._dataset_id})")
+        if str(getattr(version, "status", None) or "") != "published":
+            logging.getLogger("HyperDataset").warning(
+                "Iterating over a non-published dataset version %s", self._version_id
+            )
+
+        # Local import to avoid a circular dependency (data_view imports this module)
+        from .data_view import DataView
+
+        dataview = DataView(auto_connect_with_task=False)
+        # Version iteration must not litter the server with anonymous DataView objects
+        dataview._store_on_iteration = False
+        dataview.add_query(dataset_id=self._dataset_id, version_id=self._version_id)
+        return dataview.get_iterator(
+            projection=projection,
+            **({"query_cache_size": int(batch_size)} if batch_size else {}),
         )

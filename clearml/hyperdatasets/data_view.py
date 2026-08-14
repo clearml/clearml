@@ -292,6 +292,9 @@ class DataView:
         self._tags = tags
         self._project_name = project_name
         self._id = None
+        # Internal: when False, iteration never auto-stores this DataView on the server
+        # (reads go through the inline frames endpoints, which require no stored id)
+        self._store_on_iteration = True
         self._filter_rules: List[Any] = []
         self._labels_enumeration: Optional[dict] = None  # Dict[str, int]
         self._mapping_rules: List[Any] = []  # List[dataviews.MappingRule]
@@ -932,6 +935,8 @@ class DataView:
                 pass
             if not running_remotely():
                 return
+        if not getattr(self, "_store_on_iteration", True):
+            return
         if not bool(self._store_dataviews_on_creation):
             return
         try:
@@ -1396,6 +1401,8 @@ class DataView:
             """
             Fetch the next data-entry object, respecting synthetic epoch limits.
             """
+            if not self._started:
+                self.__iter__()
             if self._limit is not None and self._yielded >= self._limit:
                 self._stop_event.set()
                 self._closed = True
