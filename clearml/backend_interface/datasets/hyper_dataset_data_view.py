@@ -437,6 +437,8 @@ class DataViewManagementBackend(IdObjectBase):
         :param clean_subfields: Whether to drop nested subfields with empty content
 
         :return: Backend response object containing frames and continuation metadata
+        :raises SendError: When the backend rejects the request (the server error
+            message is included), instead of silently returning nothing
         """
         response = cls._send(
             session=cls._get_default_session(),
@@ -453,7 +455,6 @@ class DataViewManagementBackend(IdObjectBase):
                 remove_none_values=remove_none_values,
                 clean_subfields=clean_subfields,
             ),
-            raise_on_errors=False,
         )
         return getattr(response, "response", None)
 

@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -207,6 +208,94 @@ class HyperDataset(HyperDatasetManagement):
             self.commit_version()
 
         return deleted
+
+    def set_metadata(self, metadata: Dict[str, Any]) -> bool:
+        """
+        Store metadata (dict) of user-defined values on this HyperDataset version.
+
+        The supplied dictionary replaces any previously stored metadata.
+
+        :param metadata: Key/value dictionary (with support for nested dictionaries).
+            Keys must not include '$' and '.'
+
+        :return: True if successful (locked/published versions cannot change version metadata)
+        """
+        if not isinstance(metadata, dict):
+            raise ValueError("set_metadata expects a key/value dictionary")
+        if not getattr(self, "_version_id", None) or not getattr(self, "_dataset_id", None):
+            raise ValueError("HyperDataset instance is not bound to a dataset version")
+
+        return HyperDatasetManagementBackend.set_version_metadata(
+            dataset_id=self._dataset_id,
+            version_id=self._version_id,
+            metadata=metadata,
+        )
+
+    def get_metadata(self) -> Dict[str, Any]:
+        """
+        Return the metadata (dict) of user-defined values stored on this HyperDataset version.
+
+        The metadata is fetched from the backend on every call.
+
+        :return: Metadata dictionary; empty when none was set
+        """
+        if not getattr(self, "_version_id", None) or not getattr(self, "_dataset_id", None):
+            raise ValueError("HyperDataset instance is not bound to a dataset version")
+
+        return HyperDatasetManagementBackend.get_version_metadata(
+            dataset_id=self._dataset_id,
+            version_id=self._version_id,
+        )
+
+    def get_iterator(
+        self,
+        projection: Optional[Sequence[str]] = None,
+        batch_size: Optional[int] = None,
+    ):
+        """
+        Return an iterator over all the data entries (frames) of this HyperDataset version.
+
+        This is a convenience wrapper around a single-query `DataView` pinned to this
+        version: entries stream through the same iteration pipeline as DataView
+        iteration (background prefetching, entry-class conversion), but no DataView
+        object is persisted on the server and no Task is attached.
+
+        For filtered, weighted, or multi-version iteration, build a `DataView` instead.
+
+        :param projection: Optional list of frame fields to return, using dot-separated
+            notation (for example ``["id", "sources"]``). When set, entries are
+            reconstructed from the projected fields only — non-projected fields are
+            missing from the returned objects
+        :param batch_size: Optional number of entries fetched per backend request
+
+        :return: Iterator yielding `DataEntry`-derived objects
+        """
+        if not getattr(self, "_version_id", None) or not getattr(self, "_dataset_id", None):
+            raise ValueError("HyperDataset instance is not bound to a dataset version")
+
+        version = HyperDatasetManagementBackend.get_version_by_id(
+            dataset_id=self._dataset_id,
+            version_id=self._version_id,
+            only_fields=["id", "status"],
+        )
+        if version is None:
+            raise ValueError(f"Version not found: {self._version_id} (dataset={self._dataset_id})")
+        if str(getattr(version, "status", None) or "") != "published":
+            logging.getLogger("HyperDataset").warning(
+                "Iterating over a non-published dataset version %s", self._version_id
+            )
+
+        # Local import to avoid a circular dependency (data_view imports this module)
+        from .data_view import DataView
+
+        dataview = DataView(auto_connect_with_task=False)
+        # Version iteration must not litter the server with anonymous DataView objects
+        dataview._store_on_iteration = False
+        dataview.add_query(dataset_id=self._dataset_id, version_id=self._version_id)
+        return dataview.get_iterator(
+            projection=projection,
+            **({"query_cache_size": int(batch_size)} if batch_size else {}),
+        )
 
     @staticmethod
     def _verify_upload_destination(upload_destination: Optional[str] = None):

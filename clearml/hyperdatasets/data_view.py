@@ -1360,6 +1360,10 @@ class DataView:
             self._data_entries_queue: Queue = Queue(maxsize=capacity)
             self._stop_event = threading.Event()
             self._started = False
+            # True once iteration has ever begun on this instance; unlike _started it is
+            # never cleared when the fetch thread finishes, so a bare next() can tell a
+            # fresh iterator apart from a finished one (and must not restart the latter)
+            self._ever_started = False
             self._closed = False
             self._error = None
             self._fetch_thread = threading.Thread(target=self._fetcher_daemon, name="HDVFetcher", daemon=True)
@@ -1394,6 +1398,7 @@ class DataView:
             if not self._started or self._closed or getattr(self, "_eof_reached", False):
                 self._reset_fetch()
                 self._started = True
+                self._ever_started = True
                 self._fetch_thread.start()
             return self
 
@@ -1401,7 +1406,11 @@ class DataView:
             """
             Fetch the next data-entry object, respecting synthetic epoch limits.
             """
-            if not self._started:
+            if not self._ever_started:
+                # Calling next() directly on a fresh iterator: start the fetch thread.
+                # Never restart a finished iterator here — the fetch thread clears
+                # _started when it completes, and restarting would reset the yield
+                # counters and iterate forever (opening a new backend scroll per epoch)
                 self.__iter__()
             if self._limit is not None and self._yielded >= self._limit:
                 self._stop_event.set()
@@ -1619,7 +1628,9 @@ class DataView:
                     current_scroll_id = getattr(resp, "scroll_id", None)
                     if current_scroll_id:
                         last_scroll_id = current_scroll_id
-                    scroll_id = current_scroll_id
+                    # Never downgrade to a bare request: a request without a scroll id
+                    # opens a new server-side scroll context on every call
+                    scroll_id = current_scroll_id or scroll_id
                     frames = getattr(resp, "frames", []) or []
                     items = []
                     for frame in frames:
