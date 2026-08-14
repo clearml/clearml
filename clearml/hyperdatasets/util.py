@@ -7,6 +7,30 @@ if TYPE_CHECKING:
     from clearml.backend_interface.task.task import Task
 
 
+def _rebuild_mapping_rules(mapping: Any, backend_cls: Any) -> list:
+    """
+    Rebuild `dataviews.MappingRule` objects from a serialized mapping container
+    (a dict/object holding a `rules` list of dicts).
+    """
+    rules = mapping.get("rules") if isinstance(mapping, dict) else getattr(mapping, "rules", None)
+    rebuilt = []
+    for rule in rules or []:
+        try:
+            source = (rule.get("source") if isinstance(rule, dict) else getattr(rule, "source", None)) or {}
+            labels = source.get("labels") if isinstance(source, dict) else getattr(source, "labels", None)
+            rebuilt.append(
+                backend_cls.create_mapping_rule(
+                    from_labels=labels or [],
+                    to_label=rule.get("target") if isinstance(rule, dict) else getattr(rule, "target", None),
+                    dataset=source.get("dataset") if isinstance(source, dict) else getattr(source, "dataset", None),
+                    version=source.get("version") if isinstance(source, dict) else getattr(source, "version", None),
+                )
+            )
+        except Exception:
+            continue
+    return rebuilt
+
+
 def set_dataview(task: "Task", dataview) -> None:
     """
     Store a HyperDatasets DataView definition into this Task using task properties
@@ -69,6 +93,7 @@ def set_dataview(task: "Task", dataview) -> None:
         filters: Sequence[Mapping[str, Any]],
         iteration: Mapping[str, Any],
         labels_enumeration: Optional[Mapping[str, int]] = None,
+        mapping_rules: Sequence[Mapping[str, Any]] = (),
     ) -> Dict[str, Any]:
         return {
             "input": {
@@ -84,10 +109,21 @@ def set_dataview(task: "Task", dataview) -> None:
                     "random_seed": iteration.get("random_seed") or 1337,
                 },
                 "labels_enumeration": dict(labels_enumeration or {}),
+                "mapping": {"rules": list(mapping_rules or [])},
                 # No auxiliary dataviews mapping in this simplified flow
                 "dataviews": {},
             },
         }
+
+    # Helper: label mapping rules as plain dicts from a backend/SDK mapping container
+    def _mapping_rules_to_dicts(rules: Any) -> list:
+        result = []
+        for rule in rules or []:
+            try:
+                result.append(rule.to_dict() if hasattr(rule, "to_dict") else dict(rule))
+            except Exception:
+                continue
+        return result
 
     try:
         private_map = (
@@ -149,10 +185,16 @@ def set_dataview(task: "Task", dataview) -> None:
                             "infinite": bool(it.get("infinite", False)),
                             "random_seed": it.get("random_seed"),
                         }
-            # Extract label enumeration
+            # Extract label enumeration and label mapping rules
             labels_enumeration = dict(getattr(dv, "labels_enumeration", None) or {})
+            dv_mapping = getattr(dv, "mapping", None)
+            mapping_rules = _mapping_rules_to_dicts(getattr(dv_mapping, "rules", None))
             payload = _serialize_from_parts(
-                versions=versions, filters=filters, iteration=iteration, labels_enumeration=labels_enumeration
+                versions=versions,
+                filters=filters,
+                iteration=iteration,
+                labels_enumeration=labels_enumeration,
+                mapping_rules=mapping_rules,
             )
             # also store as a named dataview (using backend name or auto-generated)
             dv_name = getattr(dv, "name", None) or _generate_unique_name()
@@ -187,6 +229,7 @@ def set_dataview(task: "Task", dataview) -> None:
                 },
                 "augmentation": {},
                 "labels_enumeration": dict(labels_enumeration or {}),
+                "mapping": {"rules": list(mapping_rules or [])},
             }
             existing_meta = private_map.get(dv_name)
             if isinstance(existing_meta, dict) and existing_meta:
@@ -250,8 +293,13 @@ def set_dataview(task: "Task", dataview) -> None:
                 "random_seed": getattr(dataview, "_iteration_random_seed", None),
             }
             labels_enumeration = dict(getattr(dataview, "_labels_enumeration", None) or {})
+            mapping_rules = _mapping_rules_to_dicts(getattr(dataview, "_mapping_rules", None))
             payload = _serialize_from_parts(
-                versions=versions, filters=filters, iteration=iteration, labels_enumeration=labels_enumeration
+                versions=versions,
+                filters=filters,
+                iteration=iteration,
+                labels_enumeration=labels_enumeration,
+                mapping_rules=mapping_rules,
             )
             # also store as a named dataview
             mapping = (
@@ -284,6 +332,7 @@ def set_dataview(task: "Task", dataview) -> None:
                 },
                 "augmentation": {},
                 "labels_enumeration": dict(labels_enumeration or {}),
+                "mapping": {"rules": list(mapping_rules or [])},
             }
             private_meta = getattr(dataview, "_private_metadata", None)
             if isinstance(private_meta, dict) and private_meta:
@@ -383,6 +432,8 @@ def get_dataviews(task: "Task") -> Dict[str, Any]:
                 item.get("labels_enumeration") if isinstance(item, dict) else getattr(item, "labels_enumeration", None)
             )
             dv._labels_enumeration = dict(labels_enumeration) if labels_enumeration else None
+            mapping = (item.get("mapping") if isinstance(item, dict) else getattr(item, "mapping", None)) or {}
+            dv._mapping_rules = _rebuild_mapping_rules(mapping, DataViewManagementBackend)
             versions = (item.get("versions") if isinstance(item, dict) else getattr(item, "versions", None)) or []
             for ve in versions or []:
                 ds = ve.get("dataset")
@@ -442,6 +493,9 @@ def get_dataviews(task: "Task") -> Dict[str, Any]:
             dv._filter_rules = rebuilt
             labels_enumeration = getattr(data_input, "labels_enumeration", None)
             dv._labels_enumeration = dict(labels_enumeration) if labels_enumeration else None
+            dv._mapping_rules = _rebuild_mapping_rules(
+                getattr(data_input, "mapping", None) or {}, DataViewManagementBackend
+            )
             # versions -> queries
             view = getattr(data_input, "view", None) or {}
             entries = getattr(view, "entries", None) or (view.get("entries") if isinstance(view, dict) else [])

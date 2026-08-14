@@ -294,6 +294,7 @@ class DataView:
         self._id = None
         self._filter_rules: List[Any] = []
         self._labels_enumeration: Optional[dict] = None  # Dict[str, int]
+        self._mapping_rules: List[Any] = []  # List[dataviews.MappingRule]
         self._queries: List[HyperDatasetQuery] = []
         # Concrete (dataset, version) pairs stored as the backend dataview's version
         # pool; wildcard filter rules select from this pool
@@ -426,6 +427,9 @@ class DataView:
 
         labels_enumeration = getattr(backend_dataview, "labels_enumeration", None)
         self._labels_enumeration = dict(labels_enumeration) if labels_enumeration else None
+
+        mapping = getattr(backend_dataview, "mapping", None)
+        self._mapping_rules = list(getattr(mapping, "rules", None) or [])
 
         version_entries = getattr(backend_dataview, "versions", None) or []
         self._version_pool = [
@@ -715,6 +719,92 @@ class DataView:
         """
         return dict(self._labels_enumeration or {})
 
+    def add_mapping_rule(
+        self,
+        from_labels: Union[str, Sequence[str]],
+        to_label: str,
+        dataset_id: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+        version_id: Optional[str] = None,
+        version_name: Optional[str] = None,
+        project_name: Optional[str] = None,
+    ) -> Optional[Any]:  # Optional[dataviews.MappingRule]
+        """
+        Add a label mapping rule to the dataview.
+
+        Mapping automatically converts label names to canonical names in the ROIs
+        returned for frames while iterating over the dataview. This is used to
+        make sure that different naming in different datasets will not produce
+        two different classes for the same object.
+
+        Example: If one dataset has ROIs with the label 'pedestrian' and another
+        has ROIs with the label 'person', both can be used in a single dataview
+        to create a person detector by adding a mapping from 'pedestrian' to 'person'.
+
+        If the dataview already exists on the backend, the stored mapping rules are
+        updated immediately and the attached task is re-synchronised.
+
+        .. note::
+            Label mapping is performed **after** the frame is matched against
+            the dataview's queries. For that reason, the queries must be defined
+            according to the dataset's original labels.
+
+        :param from_labels: Label or list of labels to map to ``to_label``. An ROI must
+            match *all* of the labels for the mapping to take place
+        :param to_label: Label to change ``from_labels`` to
+        :param dataset_id: The ID of the dataset to apply the mapping rule to.
+            Defaults to '*' (all datasets in the view). Mutually exclusive with ``dataset_name``
+        :param dataset_name: The name of the dataset to apply the mapping rule to
+        :param version_id: The ID of the dataset version to apply the mapping rule to.
+            Defaults to '*' (all versions of the dataset in the view). Mutually
+            exclusive with ``version_name``
+        :param version_name: The name of the dataset version to apply the mapping rule to.
+            Requires ``dataset_id`` or ``dataset_name``
+        :param project_name: Optional project filter used when resolving ``dataset_name``
+        :return: The created `dataviews.MappingRule` object
+        """
+        if not to_label or not isinstance(to_label, str):
+            raise ValueError("add_mapping_rule expects a non-empty to_label string")
+        if not from_labels:
+            raise ValueError("add_mapping_rule expects a label or a non-empty list of labels in from_labels")
+
+        if not self._mutation_allowed():
+            return None
+
+        dataset_id, version_id = HyperDatasetManagement._resolve_dataset_and_version(
+            dataset_id=dataset_id,
+            dataset_name=dataset_name,
+            version_id=version_id,
+            version_name=version_name,
+            project_name=project_name,
+        )
+
+        rule = DataViewManagementBackend.create_mapping_rule(
+            from_labels=from_labels,
+            to_label=to_label,
+            dataset=dataset_id,
+            version=version_id,
+        )
+        self._mapping_rules.append(rule)
+
+        if self._id:
+            if not DataViewManagementBackend.update_mapping_rules(
+                dataview_id=self._id,
+                mapping_rules=self._mapping_rules,
+            ):
+                raise ValueError(f"Failed updating DataView {self._id}")
+
+        self._resync_task_attachment()
+        return rule
+
+    def get_mapping_rules(self) -> List[Any]:  # List[dataviews.MappingRule]
+        """
+        Return the current label mapping rules attached to this dataview.
+
+        :return: List of `dataviews.MappingRule` objects
+        """
+        return list(self._mapping_rules)
+
     def _resolve_project_name(self) -> Optional[str]:
         """Explicit `project_name` wins; otherwise fall back to the current Task's project."""
         if self._project_name:
@@ -793,6 +883,11 @@ class DataView:
                 limit=self._iteration_limit,
             ),
             labels_enumeration=self._labels_enumeration,
+            mapping=(
+                _dataviews.Mapping(rules=list(self._mapping_rules))
+                if self._mapping_rules
+                else None
+            ),
         )
 
     def store(self, project_name: Optional[str] = None) -> str:
@@ -874,6 +969,7 @@ class DataView:
             versions=versions,
             project_name=self._resolve_project_name(),
             labels_enumeration=self._labels_enumeration,
+            mapping_rules=self._mapping_rules or None,
         )
 
         if self._filter_rules:
@@ -1053,6 +1149,7 @@ class DataView:
         self._filter_rules = list(getattr(other, "_filter_rules", []))
         labels_enumeration = getattr(other, "_labels_enumeration", None)
         self._labels_enumeration = dict(labels_enumeration) if labels_enumeration else None
+        self._mapping_rules = list(getattr(other, "_mapping_rules", []) or [])
         self._queries = list(getattr(other, "_queries", []))
         self._version_pool = list(getattr(other, "_version_pool", []) or [])
         self._synthetic_epoch_limit = getattr(other, "_synthetic_epoch_limit", self._synthetic_epoch_limit)

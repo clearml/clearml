@@ -4,12 +4,13 @@ from typing import (
     List,
     Dict,
     Any,
+    Tuple,
     Type,
     TypeVar,
 )
 
 from clearml.backend_api import Session
-from clearml.backend_interface.util import get_existing_project
+from clearml.backend_interface.util import get_existing_project, mutually_exclusive
 from clearml.backend_interface.datasets.hyper_dataset import HyperDatasetManagementBackend
 
 
@@ -137,6 +138,68 @@ class HyperDatasetManagement:
 
         version = HyperDatasetManagementBackend.get_version(dataset_id=dataset_id, version_name=version_name)
         return bool(version)
+
+    @classmethod
+    def _resolve_dataset_and_version(
+        cls,
+        dataset_id: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+        version_id: Optional[str] = None,
+        version_name: Optional[str] = None,
+        project_name: Optional[str] = None,
+    ) -> Tuple[str, str]:
+        """
+        Resolve any mix of dataset/version selectors into a concrete, validated
+        ``(dataset_id, version_id)`` pair, where an omitted selector resolves to
+        the ``'*'`` wildcard.
+
+        Selector rules:
+        - ``dataset_id``/``dataset_name`` are mutually exclusive, as are
+          ``version_id``/``version_name``
+        - ``version_name`` requires a dataset selector (names are only unique per dataset)
+        - names are resolved through ``get()``; explicit ids are verified with ``exists()``
+        - no selectors at all is valid and resolves to ``('*', '*')``
+
+        :param dataset_id: Dataset identifier, or '*' / None for any dataset
+        :param dataset_name: Dataset name to resolve into an id
+        :param version_id: Version identifier, or '*' / None for any version
+        :param version_name: Version name to resolve into an id
+        :param project_name: Optional project filter used when resolving ``dataset_name``
+        :return: Tuple of (dataset id or '*', version id or '*')
+        :raises ValueError: On conflicting selectors or when the referenced
+            dataset/version does not exist
+        """
+        mutually_exclusive(
+            _exception_cls=ValueError, _require_at_least_one=False, dataset_id=dataset_id, dataset_name=dataset_name
+        )
+        mutually_exclusive(
+            _exception_cls=ValueError, _require_at_least_one=False, version_id=version_id, version_name=version_name
+        )
+        if version_name and not (dataset_name or dataset_id):
+            raise ValueError("version_name requires dataset_id or dataset_name to be provided")
+
+        # Name-based selectors: a single get() resolves and validates everything
+        if dataset_name or version_name:
+            resolved = cls.get(
+                dataset_name=dataset_name,
+                version_name=version_name,
+                project_name=project_name,
+                dataset_id=None if dataset_name else dataset_id,
+            )
+            # get() always resolves a concrete version; only adopt it when one was requested
+            resolved_version_id = resolved.version_id if version_name else (version_id or "*")
+            return resolved.dataset_id, resolved_version_id
+
+        # Id-based selectors: verify existence of concrete ids, pass wildcards through
+        if dataset_id and dataset_id != "*":
+            if not cls.exists(
+                dataset_id=dataset_id,
+                version_id=version_id if version_id not in (None, "*") else None,
+            ):
+                raise ValueError(
+                    f"Dataset/version not found: dataset_id={dataset_id} version_id={version_id}"
+                )
+        return dataset_id or "*", version_id or "*"
 
     @classmethod
     def list(
