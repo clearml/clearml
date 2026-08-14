@@ -6,6 +6,7 @@ from queue import Queue
 from typing import (
     Any,
     List,
+    Mapping,
     Optional,
     Tuple,
     Union,
@@ -292,6 +293,7 @@ class DataView:
         self._project_name = project_name
         self._id = None
         self._filter_rules: List[Any] = []
+        self._labels_enumeration: Optional[dict] = None  # Dict[str, int]
         self._queries: List[HyperDatasetQuery] = []
         # Concrete (dataset, version) pairs stored as the backend dataview's version
         # pool; wildcard filter rules select from this pool
@@ -421,6 +423,9 @@ class DataView:
             self._iteration_random_seed = getattr(iteration, "random_seed", None)
             limit = getattr(iteration, "limit", None)
             self._iteration_limit = int(limit) if limit is not None else None
+
+        labels_enumeration = getattr(backend_dataview, "labels_enumeration", None)
+        self._labels_enumeration = dict(labels_enumeration) if labels_enumeration else None
 
         version_entries = getattr(backend_dataview, "versions", None) or []
         self._version_pool = [
@@ -663,6 +668,53 @@ class DataView:
 
         self._append_queries(normalized)
 
+    def set_labels(self, label_dict: Mapping[str, int]) -> None:
+        """
+        Set the dataview label enumeration.
+
+        Label enumeration maps label strings to integers, for later use within the
+        network. While iterating over the dataview, each ROI whose label appears in
+        the enumeration is returned with a matching ``label_num`` value.
+
+        Example: ``{'person': 1, 'pedestrian': 1, 'background': 0}`` maps both
+        'person' and 'pedestrian' ROIs to class 1.
+
+        If the dataview already exists on the backend, the stored enumeration is
+        updated immediately and the attached task is re-synchronised.
+
+        :param label_dict: Mapping from a label string to its integer representation,
+            e.g. ``{'cat': 0, 'dog': 1, 'hound': 1}``. Pass an empty dict to clear
+            the enumeration
+        """
+        if not isinstance(label_dict, dict) or not all(
+            isinstance(key, str) and isinstance(value, int) and not isinstance(value, bool)
+            for key, value in label_dict.items()
+        ):
+            raise ValueError("set_labels expects a label string to integer dictionary")
+
+        if not self._mutation_allowed():
+            return
+
+        self._labels_enumeration = dict(label_dict) if label_dict else None
+
+        if self._id:
+            if not DataViewManagementBackend.update_labels_enumeration(
+                dataview_id=self._id,
+                labels_enumeration=self._labels_enumeration or {},
+            ):
+                raise ValueError(f"Failed updating DataView {self._id}")
+
+        self._resync_task_attachment()
+
+    def get_labels(self) -> dict:
+        """
+        Return the current dataview label enumeration (label string to integer).
+
+        :return: Dictionary of label string to integer, e.g. ``{'cat': 0, 'dog': 1}``.
+            Empty when no enumeration was set
+        """
+        return dict(self._labels_enumeration or {})
+
     def _resolve_project_name(self) -> Optional[str]:
         """Explicit `project_name` wins; otherwise fall back to the current Task's project."""
         if self._project_name:
@@ -740,6 +792,7 @@ class DataView:
                 random_seed=self._iteration_random_seed,
                 limit=self._iteration_limit,
             ),
+            labels_enumeration=self._labels_enumeration,
         )
 
     def store(self, project_name: Optional[str] = None) -> str:
@@ -820,6 +873,7 @@ class DataView:
             limit=self._iteration_limit,
             versions=versions,
             project_name=self._resolve_project_name(),
+            labels_enumeration=self._labels_enumeration,
         )
 
         if self._filter_rules:
@@ -997,6 +1051,8 @@ class DataView:
         self._iteration_random_seed = getattr(other, "_iteration_random_seed", self._iteration_random_seed)
         self._iteration_limit = getattr(other, "_iteration_limit", self._iteration_limit)
         self._filter_rules = list(getattr(other, "_filter_rules", []))
+        labels_enumeration = getattr(other, "_labels_enumeration", None)
+        self._labels_enumeration = dict(labels_enumeration) if labels_enumeration else None
         self._queries = list(getattr(other, "_queries", []))
         self._version_pool = list(getattr(other, "_version_pool", []) or [])
         self._synthetic_epoch_limit = getattr(other, "_synthetic_epoch_limit", self._synthetic_epoch_limit)

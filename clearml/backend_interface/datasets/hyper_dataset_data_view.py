@@ -30,6 +30,7 @@ class DataViewManagementBackend(IdObjectBase):
         limit: Optional[int] = None,
         versions: Optional[Iterable[Union[Mapping[str, str], Sequence[str]]]] = None,
         project_name: Optional[str] = None,
+        labels_enumeration: Optional[Mapping[str, int]] = None,
     ) -> str:
         """
         Create a DataView on the backend using the structured create request.
@@ -45,6 +46,8 @@ class DataViewManagementBackend(IdObjectBase):
         :param project_name: Optional project name. When set, the project is resolved
             (created on demand) and the DataView is attached to it. Required on servers
             with project-scoped RBAC.
+        :param labels_enumeration: Optional label-string to integer enumeration stored
+            with the DataView
 
         :return: Identifier of the created DataView
         """
@@ -78,6 +81,11 @@ class DataViewManagementBackend(IdObjectBase):
                     limit=limit,
                 ),
                 project=project_id,
+                **(
+                    {"labels_enumeration": dict(labels_enumeration)}
+                    if labels_enumeration
+                    else {}
+                ),
             ),
         )
 
@@ -252,12 +260,37 @@ class DataViewManagementBackend(IdObjectBase):
         )
 
     @classmethod
+    def update_labels_enumeration(
+        cls,
+        dataview_id: str,
+        labels_enumeration: Mapping[str, int],
+    ) -> bool:
+        """
+        Replace the label enumeration associated with a DataView.
+
+        :param dataview_id: Identifier of the DataView being updated
+        :param labels_enumeration: Mapping of label strings to integers
+
+        :return: True when the backend confirms a successful update
+        """
+        response = cls._send(
+            session=cls._get_default_session(),
+            req=dataviews.UpdateRequest(
+                dataview=dataview_id,
+                labels_enumeration=dict(labels_enumeration),
+            ),
+        )
+
+        return response.response.updated >= 1
+
+    @classmethod
     def build_inline_dataview(
         cls,
         versions: Optional[Iterable[Any]] = None,
         filters: Optional[Iterable[Any]] = None,
         iteration: Optional[Any] = None,
         output_rois: Optional[str] = None,
+        labels_enumeration: Optional[Mapping[str, int]] = None,
     ) -> Any:
         """
         Build a `frames.Dataview` payload usable with the inline count / next-frame endpoints.
@@ -297,6 +330,11 @@ class DataViewManagementBackend(IdObjectBase):
             **(
                 {"output_rois": output_rois}
                 if output_rois is not None
+                else {}
+            ),
+            **(
+                {"labels_enumeration": dict(labels_enumeration)}
+                if labels_enumeration
                 else {}
             ),
         })
