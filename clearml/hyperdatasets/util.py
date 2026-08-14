@@ -1,5 +1,5 @@
 """Utilities for HyperDataset DataView interactions used by Task."""
-from typing import Any, Dict, Mapping, Sequence, TYPE_CHECKING
+from typing import Any, Dict, Mapping, Optional, Sequence, TYPE_CHECKING
 
 from clearml.debugging import get_logger
 
@@ -68,6 +68,7 @@ def set_dataview(task: "Task", dataview) -> None:
         versions: Sequence[Mapping[str, Any]],
         filters: Sequence[Mapping[str, Any]],
         iteration: Mapping[str, Any],
+        labels_enumeration: Optional[Mapping[str, int]] = None,
     ) -> Dict[str, Any]:
         return {
             "input": {
@@ -82,6 +83,7 @@ def set_dataview(task: "Task", dataview) -> None:
                     "infinite": bool(iteration.get("infinite", False)),
                     "random_seed": iteration.get("random_seed") or 1337,
                 },
+                "labels_enumeration": dict(labels_enumeration or {}),
                 # No auxiliary dataviews mapping in this simplified flow
                 "dataviews": {},
             },
@@ -147,7 +149,11 @@ def set_dataview(task: "Task", dataview) -> None:
                             "infinite": bool(it.get("infinite", False)),
                             "random_seed": it.get("random_seed"),
                         }
-            payload = _serialize_from_parts(versions=versions, filters=filters, iteration=iteration)
+            # Extract label enumeration
+            labels_enumeration = dict(getattr(dv, "labels_enumeration", None) or {})
+            payload = _serialize_from_parts(
+                versions=versions, filters=filters, iteration=iteration, labels_enumeration=labels_enumeration
+            )
             # also store as a named dataview (using backend name or auto-generated)
             dv_name = getattr(dv, "name", None) or _generate_unique_name()
             # input.dataviews mapping
@@ -180,6 +186,7 @@ def set_dataview(task: "Task", dataview) -> None:
                     "random_seed": iteration.get("random_seed"),
                 },
                 "augmentation": {},
+                "labels_enumeration": dict(labels_enumeration or {}),
             }
             existing_meta = private_map.get(dv_name)
             if isinstance(existing_meta, dict) and existing_meta:
@@ -242,7 +249,10 @@ def set_dataview(task: "Task", dataview) -> None:
                 "infinite": bool(getattr(dataview, "_iteration_infinite", False)),
                 "random_seed": getattr(dataview, "_iteration_random_seed", None),
             }
-            payload = _serialize_from_parts(versions=versions, filters=filters, iteration=iteration)
+            labels_enumeration = dict(getattr(dataview, "_labels_enumeration", None) or {})
+            payload = _serialize_from_parts(
+                versions=versions, filters=filters, iteration=iteration, labels_enumeration=labels_enumeration
+            )
             # also store as a named dataview
             mapping = (
                 task._get_task_property("input.dataviews", raise_on_error=False, log_on_error=False, default={})
@@ -273,6 +283,7 @@ def set_dataview(task: "Task", dataview) -> None:
                     "random_seed": iteration.get("random_seed"),
                 },
                 "augmentation": {},
+                "labels_enumeration": dict(labels_enumeration or {}),
             }
             private_meta = getattr(dataview, "_private_metadata", None)
             if isinstance(private_meta, dict) and private_meta:
@@ -368,6 +379,10 @@ def get_dataviews(task: "Task") -> Dict[str, Any]:
                 except Exception:
                     continue
             dv._filter_rules = rebuilt
+            labels_enumeration = (
+                item.get("labels_enumeration") if isinstance(item, dict) else getattr(item, "labels_enumeration", None)
+            )
+            dv._labels_enumeration = dict(labels_enumeration) if labels_enumeration else None
             versions = (item.get("versions") if isinstance(item, dict) else getattr(item, "versions", None)) or []
             for ve in versions or []:
                 ds = ve.get("dataset")
@@ -425,6 +440,8 @@ def get_dataviews(task: "Task") -> Dict[str, Any]:
                 except Exception:
                     continue
             dv._filter_rules = rebuilt
+            labels_enumeration = getattr(data_input, "labels_enumeration", None)
+            dv._labels_enumeration = dict(labels_enumeration) if labels_enumeration else None
             # versions -> queries
             view = getattr(data_input, "view", None) or {}
             entries = getattr(view, "entries", None) or (view.get("entries") if isinstance(view, dict) else [])
