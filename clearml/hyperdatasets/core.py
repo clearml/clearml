@@ -157,6 +157,57 @@ class HyperDataset(HyperDatasetManagement):
                 errors["register"][COMMIT_ERROR_KEY] = exc
         return errors
 
+    def delete_data_entries(
+        self,
+        data_entries: Sequence[Union[DataEntry, str]],
+        batch_size: int = 1000,
+        refresh_version_stats: bool = True,
+        force: bool = False,
+    ) -> int:
+        """
+        Delete data entries (frames) from this HyperDataset version.
+
+        Entries may be passed as `DataEntry` objects (for example, objects yielded by
+        `get_iterator()`) or as entry id strings. Entries are deleted by their ids;
+        all other attributes are ignored.
+
+        .. note:: Only writable (non-published) versions can delete their entries.
+
+        :param data_entries: Sequence of `DataEntry` instances and/or entry id strings
+        :param batch_size: Number of entry ids sent per delete request (default 1000).
+            It does not limit the number of entries per call
+        :param refresh_version_stats: Commit the version after deleting to refresh its
+            statistics (default True)
+        :param force: Ignore ongoing annotation tasks using this version as input
+
+        :return: Total number of entries the backend reports as deleted
+        """
+        entry_ids = []
+        for data_entry in data_entries:
+            entry_id = data_entry if isinstance(data_entry, str) else getattr(data_entry, "id", None)
+            if not entry_id or not isinstance(entry_id, str):
+                raise ValueError(
+                    f"delete_data_entries expects DataEntry objects or entry id strings, got {data_entry!r}"
+                )
+            entry_ids.append(entry_id)
+
+        if not entry_ids:
+            return 0
+
+        batch_size = max(1, int(batch_size))
+        deleted = 0
+        for i in range(0, len(entry_ids), batch_size):
+            deleted += HyperDatasetManagementBackend.delete_data_entries(
+                version_id=self.version_id,
+                entry_ids=entry_ids[i: i + batch_size],
+                force=force,
+            )
+
+        if deleted and refresh_version_stats:
+            self.commit_version()
+
+        return deleted
+
     @staticmethod
     def _verify_upload_destination(upload_destination: Optional[str] = None):
         """

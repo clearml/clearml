@@ -148,6 +148,32 @@ class HyperDatasetManagementBackend(IdObjectBase):
         return res.response
 
     @classmethod
+    def delete_data_entries(
+        cls,
+        version_id: str,
+        entry_ids: Sequence[str],
+        force: bool = False,
+    ) -> int:
+        """
+        Delete data entries (frames) from a writable dataset version by their identifiers.
+
+        :param version_id: Dataset version identifier the entries are deleted from
+        :param entry_ids: Identifiers of the entries to delete
+        :param force: Ignore ongoing annotation tasks using this version as input
+
+        :return: Number of entries the backend reports as deleted
+        """
+        response = cls._send(
+            session=cls._get_default_session(),
+            req=datasets.DeleteFramesRequest(
+                version=version_id,
+                frames=list(entry_ids),
+                force=force,
+            ),
+        )
+        return int(getattr(response.response, "deleted", 0) or 0)
+
+    @classmethod
     def commit_version(
         cls,
         version_id: str,
