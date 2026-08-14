@@ -263,3 +263,41 @@ class HyperDatasetManagement:
             force=force,
             publishing_task=publishing_task,
         )
+
+    def set_metadata(self, metadata: Dict[str, Any]) -> bool:
+        """
+        Store metadata (dict) of user-defined values on the bound dataset version.
+
+        The supplied dictionary replaces any previously stored metadata.
+
+        :param metadata: Key/value dictionary (with support for nested dictionaries).
+            Keys must not include '$' and '.'
+
+        :return: True if successful (locked/published versions cannot change version metadata)
+        """
+        if not isinstance(metadata, dict):
+            raise ValueError("set_metadata expects a key/value dictionary")
+        if not getattr(self, "_version_id", None) or not getattr(self, "_dataset_id", None):
+            raise ValueError("HyperDataset instance is not bound to a dataset version")
+
+        return HyperDatasetManagementBackend.set_version_metadata(
+            dataset_id=self._dataset_id,
+            version_id=self._version_id,
+            metadata=metadata,
+        )
+
+    def get_metadata(self) -> Dict[str, Any]:
+        """
+        Return the metadata (dict) of user-defined values stored on the bound dataset version.
+
+        The metadata is fetched from the backend on every call.
+
+        :return: Metadata dictionary; empty when none was set
+        """
+        if not getattr(self, "_version_id", None) or not getattr(self, "_dataset_id", None):
+            raise ValueError("HyperDataset instance is not bound to a dataset version")
+
+        return HyperDatasetManagementBackend.get_version_metadata(
+            dataset_id=self._dataset_id,
+            version_id=self._version_id,
+        )
