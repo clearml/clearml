@@ -247,8 +247,8 @@ class ListField(BaseField):
             return value
         else:
             if len(self.items_types) != 1:
-                tpl = 'Cannot decide which type to choose from "{types}".'
-                raise ValidationError(tpl.format(types=", ".join([t.__name__ for t in self.items_types])))
+                types = ", ".join([t.__name__ for t in self.items_types])
+                raise ValidationError(f'Cannot decide which type to choose from "{types}".')
             return self.items_types[0](**value)
 
     def _finish_initialization(self, owner: type) -> None:

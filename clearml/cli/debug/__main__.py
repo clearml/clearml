@@ -22,17 +22,20 @@ def print_(msg: str, verbosity: int = 0) -> None:
 
 
 def do_dump(args: argparse.Namespace) -> None:
-    print_("Connecting to ClearML Server at {}".format(Session.get_api_server_host(config=ConfigWrapper._init())))
+    print_(f"Connecting to ClearML Server at {Session.get_api_server_host(config=ConfigWrapper._init())}")
 
     session = Task._get_default_session()
 
     print_(
-        "Server version {} ({} feature set), API version {}".format(
-            session.server_version, Session.feature_set, Session.api_version
-        )
+        f"Server version {session.server_version} ({Session.feature_set} feature set), "
+        f"API version {Session.api_version}"
     )
 
-    msg = "Configuration dump{}:".format("" if not args.path else " ({})".format(args.path))
+    msg = (
+        f"Configuration dump: ({args.path})"  # rfh
+        if args.path
+        else "Configuration dump:"
+    )
     print_(msg)
     print_("=" * len(msg))
 
@@ -103,7 +106,7 @@ def cli() -> None:
     global verbose
     verbose = args.verbose
 
-    print_("ClearML Version {}".format(__version__))
+    print_(f"ClearML Version {__version__}")
 
     if len(sys.argv) < 2:
         parser.print_help()
@@ -118,7 +121,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nUser aborted")
     except Exception as ex:
-        print("\nError: {}".format(ex))
+        print(f"\nError: {ex}")
         exit(1)
 
 

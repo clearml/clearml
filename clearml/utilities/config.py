@@ -71,9 +71,8 @@ def config_dict_to_text(config: Union[str, dict, list]) -> str:
                         continue
                     if any(key_char in special_chars for key_char in key):
                         raise ValueError(
-                            "Configuration dictionary keys cannot contain any of the following characters: {}".format(
-                                special_chars
-                            )
+                            "Configuration dictionary keys cannot contain any of the following characters: "
+                            f"{special_chars}"
                         )
                 for val in config_.values():
                     raise_on_special_key(val)
@@ -101,14 +100,10 @@ def text_to_config_dict(text: str) -> dict:
     try:
         return hocon_unquote_key(ConfigFactory.parse_string(text))
     except pyparsing.ParseBaseException as ex:
-        pos = "at char {}, line:{}, col:{}".format(ex.loc, ex.lineno, ex.column)
-        raise ValueError(
-            "Could not parse configuration text ({}):\n{}".format(pos, text),
-        ) from None
+        pos = f"at char {ex.loc}, line:{ex.lineno}, col:{ex.column}"
+        raise ValueError(f"Could not parse configuration text ({pos}):\n{text}") from None
     except Exception:
-        raise ValueError(
-            "Could not parse configuration text:\n{}".format(text)
-        ) from None
+        raise ValueError(f"Could not parse configuration text:\n{text}") from None
 
 
 def verify_basic_value(value: Any) -> bool:

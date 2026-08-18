@@ -67,12 +67,12 @@ while True:
             order_by=["-last_update"],
             page_size=page_size,
             page=page,
-            status_changed=["<{}".format(datetime.utcfromtimestamp(timestamp))],
+            status_changed=[f"<{datetime.utcfromtimestamp(timestamp)}"],
         )
         page += 1
 
         if tasks:
-            print("Deleting {} tasks".format(len(tasks)))
+            print(f"Deleting {len(tasks)} tasks")
 
         # delete and cleanup tasks
         for task in tasks:
@@ -88,19 +88,11 @@ while True:
                 else:
                     logging.warning(f'could not delete task with id {task.id}')
             except ValueError as e:
-                logging.warning(
-                    "Could not find Task ID={}, {}".format(
-                        task.id, e.message if hasattr(e, "message") else e
-                    )
-                )
+                logging.warning(f"Could not find Task ID={task.id}, {e.message if hasattr(e, 'message') else e}")
             except Exception as e:
-                logging.warning(
-                    "Error while deleting Task ID={}, {}".format(
-                        task.id, e.message if hasattr(e, "message") else e
-                    )
-                )
+                logging.warning(f"Error while deleting Task ID={task.id}, {e.message if hasattr(e, 'message') else e}")
                 continue
 
     # sleep until the next day
-    print("going to sleep for {} days".format(args["cleanup_period_in_days"]))
+    print(f"going to sleep for {args['cleanup_period_in_days']} days")
     sleep(60 * 60 * 24.0 * args["cleanup_period_in_days"])

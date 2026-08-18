@@ -3,12 +3,21 @@ import os
 import shutil
 from argparse import ArgumentParser, HelpFormatter
 from functools import partial
-from typing import Sequence, Optional, Dict, Any
+from typing import (
+    Any,
+    Dict,
+    Optional,
+    Sequence,
+)
 
 from pathlib2 import Path
 
 import clearml.backend_api.session
 from clearml.datasets import Dataset
+from clearml.utilities.cli_table import (
+    CliTable,
+    CliTableColumnOptions,
+)
 from clearml.version import __version__
 
 clearml.backend_api.session.Session.add_client("clearml-data", __version__)
@@ -25,7 +34,7 @@ def print_args(args: Any, exclude: Sequence[str] = ("command", "func", "verbose"
     for arg in args.__dict__:
         if arg in exclude or args.__dict__.get(arg) is None:
             continue
-        print("{}={}".format(arg, args.__dict__[arg]))
+        print(f"{arg}={args.__dict__[arg]}")
 
 
 def restore_state(args: Any) -> Any:
@@ -568,9 +577,9 @@ def cli() -> int:
 
 def ds_delete(args: Any) -> int:
     if args.id:
-        print("Deleting dataset id {}".format(args.id))
+        print(f"Deleting dataset id {args.id}")
     else:
-        print("Deleting dataset with project={}, name={}, version={}".format(args.project, args.name, args.version))
+        print(f"Deleting dataset with project={args.project}, name={args.name}, version={args.version}")
     print_args(args)
     Dataset.delete(
         dataset_id=args.id,
@@ -586,7 +595,7 @@ def ds_delete(args: Any) -> int:
 
 
 def ds_rename(args: Any) -> int:
-    print("Renaming dataset with project={}, name={} to {}".format(args.project, args.name, args.new_name))
+    print(f"Renaming dataset with project={args.project}, name={args.name} to {args.new_name}")
     print_args(args)
     Dataset.rename(
         args.new_name,
@@ -599,7 +608,7 @@ def ds_rename(args: Any) -> int:
 
 
 def ds_move(args: Any) -> int:
-    print("Moving dataset with project={}, name={} to {}".format(args.project, args.name, args.new_project))
+    print(f"Moving dataset with project={args.project}, name={args.name} to {args.new_project}")
     print_args(args)
     Dataset.move_to_project(
         args.new_project,
@@ -612,7 +621,7 @@ def ds_move(args: Any) -> int:
 
 
 def ds_verify(args: Any) -> None:
-    print("Verify dataset id {}".format(args.id))
+    print(f"Verify dataset id {args.id}")
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
@@ -622,13 +631,13 @@ def ds_verify(args: Any) -> None:
         verbose=args.verbose,
     )
     if files_error:
-        print("Dataset verification completed, {} errors found!".format(len(files_error)))
+        print(f"Dataset verification completed, {len(files_error)} errors found!")
     else:
         print("Dataset verification completed successfully, no errors found.")
 
 
 def ds_get(args: Any) -> int:
-    print("Download dataset id {}".format(args.id))
+    print(f"Download dataset id {args.id}")
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
@@ -664,17 +673,17 @@ def ds_get(args: Any) -> int:
                 try:
                     Path(args.link).unlink()
                 except Exception:
-                    raise ValueError("Target directory {} is not empty. Use --overwrite.".format(args.link))
+                    raise ValueError(f"Target directory {args.link} is not empty. Use --overwrite.")
         ds_folder = ds.get_local_copy(part=args.part, num_parts=args.num_parts, max_workers=args.max_workers)
         if args.link:
             os.symlink(ds_folder, args.link)
             ds_folder = args.link
-    print("Dataset local copy available for files at: {}".format(ds_folder))
+    print(f"Dataset local copy available for files at: {ds_folder}")
     return 0
 
 
 def ds_list(args: Any) -> int:
-    print("List dataset content: {}".format(args.id or (args.project, args.name)))
+    print(f"List dataset content: {args.id or (args.project, args.name)}")
     print_args(args)
     ds = Dataset.get(
         dataset_id=args.id or None,
@@ -685,41 +694,59 @@ def ds_list(args: Any) -> int:
     filters = args.filter if args.filter else [None]
     file_entries = ds.file_entries_dict
     link_entries = ds.link_entries_dict
-    file_name_max_len, size_max_len, hash_max_len = 64, 10, 64
-    files_cache = []
-    for mask in filters:
-        files = ds.list_files(dataset_path=mask, dataset_id=ds.id if args.modified else None)
-        files_cache.append(files)
-        for f in files:
-            e = link_entries.get(f)
-            if file_entries.get(f):
-                e = file_entries[f]
-            file_name_max_len = max(file_name_max_len, len(e.relative_path))
-            size_max_len = max(size_max_len, len(str(e.size)))
-            hash_max_len = max(hash_max_len, len(str(e.hash)))
+
+    files_cache = [
+        ds.list_files(
+            dataset_path=mask,
+            dataset_id=(
+                ds.id  # rfh
+                if args.modified
+                else None
+            )
+        )
+        for mask in filters
+    ]
+    entries = [
+        (
+            file_entries[f]
+            if file_entries.get(f)
+            else link_entries.get(f)
+        )
+        for files_list in files_cache
+        for f in files_list
+    ]
+
     print("Listing dataset content")
-    formatting = "{:" + str(file_name_max_len) + "} | {:" + str(size_max_len) + ",} | {:" + str(hash_max_len) + "}"
-    print(formatting.replace(",", "").format("file name", "size", "hash"))
-    print("-" * len(formatting.replace(",", "").format("-", "-", "-")))
-    num_files = 0
-    total_size = 0
-    for files in files_cache:
-        num_files += len(files)
-        for f in files:
-            e = link_entries.get(f)
-            if file_entries.get(f):
-                e = file_entries[f]
-            print(formatting.format(e.relative_path, e.size, str(e.hash)))
-            total_size += e.size
-    print("Total {} files, {} bytes".format(num_files, total_size))
+    table = CliTable.init(
+        column_headers=["file name", "size", "hash"],
+        rows=[
+            [
+                entry.relative_path,
+                f"{entry.size:,}",  # Comma here turns 1234567 into 1,234,567
+                f"{entry.hash}",
+            ]
+            for entry in entries
+        ],
+        column_options=[
+            CliTableColumnOptions(min_width=64),
+            CliTableColumnOptions(min_width=10, format_options=">"),
+            CliTableColumnOptions(min_width=64),
+        ],
+    )
+
+    print(table.render())
+
+    num_files = len(entries)
+    total_size = sum(entry.size for entry in entries)
+    print(f"Total {num_files} files, {total_size} bytes")
     return 0
 
 
 def ds_squash(args: Any) -> int:
-    print("Squashing datasets ids={} into target dataset named '{}'".format(args.ids, args.name))
+    print(f"Squashing datasets ids={args.ids} into target dataset named '{args.name}'")
     print_args(args)
     ds = Dataset.squash(dataset_name=args.name, dataset_ids=args.ids, output_url=args.storage or None)
-    print("Squashing completed, new dataset created id={}".format(ds.id))
+    print(f"Squashing completed, new dataset created id={ds.id}")
     return 0
 
 
@@ -734,50 +761,36 @@ def ds_search(args: Any) -> int:
         only_completed=not args.not_only_completed,
         recursive_project_search=not args.non_recursive_project_search,
     )
-    projects_col_len, name_col_len, tags_col_len, created_col_len, id_col_len = (
-        16,
-        32,
-        19,
-        19,
-        32,
+
+    table = CliTable.init(
+        column_options=[
+            CliTableColumnOptions(min_width=16),  # project
+            CliTableColumnOptions(min_width=32),  # name
+            CliTableColumnOptions(min_width=16),  # version
+            CliTableColumnOptions(min_width=19),  # tags
+            CliTableColumnOptions(min_width=19),  # created
+            CliTableColumnOptions(min_width=32),  # id
+        ],
+        column_headers=["project", "name", "version", "tags", "created", "id"],
+        rows=[
+            [
+                dataset["project"],
+                dataset["name"],
+                dataset["version"] or "",
+                str(dataset["tags"] or [])[1:-1],
+                str(dataset["created"]).split(".")[0],
+                dataset["id"],
+            ]
+            for dataset in datasets
+        ],
     )
-    for d in datasets:
-        projects_col_len = max(projects_col_len, len(d["project"]))
-        name_col_len = max(name_col_len, len(d["name"]))
-        tags_col_len = max(tags_col_len, len(str(d["tags"] or [])[1:-1]))
-        created_col_len = max(created_col_len, len(str(d["created"]).split(".")[0]))
-        id_col_len = max(id_col_len, len(d["id"]))
-    formatting = (
-        "{:"
-        + str(projects_col_len)
-        + "} | {:"
-        + str(name_col_len)
-        + "} | {:"
-        + str(tags_col_len)
-        + "} | {:"
-        + str(created_col_len)
-        + "} | {:"
-        + str(id_col_len)
-        + "}"
-    )
-    print(formatting.format("project", "name", "version", "tags", "created", "id"))
-    print("-" * len(formatting.format("-", "-", "-", "-", "-")))
-    for d in datasets:
-        print(
-            formatting.format(
-                d["project"],
-                d["name"],
-                d["version"] or "",
-                str(d["tags"] or [])[1:-1],
-                str(d["created"]).split(".")[0],
-                d["id"],
-            )
-        )
+
+    print(table.render())
     return 0
 
 
 def ds_compare(args: Any) -> int:
-    print("Comparing target dataset id {} with source dataset id {}".format(args.target, args.source))
+    print(f"Comparing target dataset id {args.target} with source dataset id {args.source}")
     print_args(args)
     ds = Dataset.get(dataset_id=args.target)
     removed_files = ds.list_removed_files(dataset_id=args.source)
@@ -792,15 +805,14 @@ def ds_compare(args: Any) -> int:
         print("\n".join(added_files))
         print("")
     print(
-        "Comparison summary: {} files removed, {} files modified, {} files added".format(
-            len(removed_files), len(modified_files), len(added_files)
-        )
+        f"Comparison summary: {len(removed_files)} files removed, "
+        f"{len(modified_files)} files modified, {len(added_files)} files added"
     )
     return 0
 
 
 def ds_close(args: Any) -> int:
-    print("Finalizing dataset id {}".format(args.id))
+    print(f"Finalizing dataset id {args.id}")
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
@@ -808,7 +820,7 @@ def ds_close(args: Any) -> int:
         if args.disable_upload:
             raise ValueError("Pending uploads, cannot finalize dataset. run `clearml-data upload`")
         # upload the files
-        print("Pending uploads, starting dataset upload to {}".format(args.storage or ds.get_default_storage()))
+        print(f"Pending uploads, starting dataset upload to {args.storage or ds.get_default_storage()}")
         ds.upload(
             show_progress=True,
             verbose=args.verbose,
@@ -824,7 +836,7 @@ def ds_close(args: Any) -> int:
 
 
 def ds_publish(args: Any) -> int:
-    print("Publishing dataset id {}".format(args.id))
+    print(f"Publishing dataset id {args.id}")
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
@@ -838,7 +850,7 @@ def ds_publish(args: Any) -> int:
 
 
 def ds_upload(args: Any) -> int:
-    print("uploading local files to dataset id {}".format(args.id))
+    print(f"uploading local files to dataset id {args.id}")
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
@@ -853,14 +865,14 @@ def ds_upload(args: Any) -> int:
 
 
 def ds_remove(args: Any) -> int:
-    print("Removing files/folder from dataset id {}".format(args.id))
+    print(f"Removing files/folder from dataset id {args.id}")
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
     num_files = 0
     for file in args.files or []:
         num_files += ds.remove_files(dataset_path=file, recursive=not args.non_recursive, verbose=args.verbose)
-    message = "{} file{} removed".format(num_files, "s" if num_files != 1 else "")
+    message = f"{num_files} file{'s' if num_files != 1 else ''} removed"
     print(message)
     return 0
 
@@ -871,7 +883,7 @@ def ds_sync(args: Any) -> int:
         args.id = ds_create(args)
         dataset_created = True
 
-    print("Syncing dataset id {} to local folder {}".format(args.id, args.folder))
+    print(f"Syncing dataset id {args.id} to local folder {args.folder}")
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
@@ -881,7 +893,7 @@ def ds_sync(args: Any) -> int:
         verbose=args.verbose,
     )
 
-    print("Sync completed: {} files removed, {} added, {} modified".format(removed, added, modified))
+    print(f"Sync completed: {removed} files removed, {added} added, {modified} modified")
 
     if not args.skip_close:
         if dataset_created and not removed and not added and not modified:
@@ -892,7 +904,7 @@ def ds_sync(args: Any) -> int:
         print("Finalizing dataset")
         if ds.is_dirty():
             # upload the files
-            print("Pending uploads, starting dataset upload to {}".format(args.storage or ds.get_default_storage()))
+            print(f"Pending uploads, starting dataset upload to {args.storage or ds.get_default_storage()}")
             ds.upload(
                 show_progress=True,
                 verbose=args.verbose,
@@ -908,7 +920,7 @@ def ds_sync(args: Any) -> int:
 
 
 def ds_add(args: Any) -> int:
-    print("Adding files/folder/links to dataset id {}".format(args.id))
+    print(f"Adding files/folder/links to dataset id {args.id}")
     check_null_id(args)
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
@@ -931,7 +943,7 @@ def ds_add(args: Any) -> int:
             wildcard=args.wildcard,
             max_workers=args.max_workers,
         )
-    message = "{} file{} added".format(num_files, "s" if num_files != 1 else "")
+    message = f"{num_files} file{'s' if num_files != 1 else ''} added"
     print(message)
     return 0
 
@@ -951,14 +963,14 @@ def ds_create(args: Any) -> str:
     )
     if args.tags:
         ds.tags = ds.tags + args.tags
-    print("New dataset created id={}".format(ds.id))
+    print(f"New dataset created id={ds.id}")
     clear_state({"id": ds.id})
     return ds.id
 
 
 def ds_set_description(args: Any) -> int:
     check_null_id(args)
-    print("Setting description '{}' to dataset {}".format(args.description, args.id))
+    print(f"Setting description '{args.description}' to dataset {args.id}")
     print_args(args)
     ds = Dataset.get(dataset_id=args.id)
     ds.set_description(args.description)
@@ -971,7 +983,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nUser aborted")
     except Exception as ex:
-        print("\nError: {}".format(ex))
+        print(f"\nError: {ex}")
         exit(1)
 
 

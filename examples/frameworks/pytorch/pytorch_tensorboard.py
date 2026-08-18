@@ -49,9 +49,8 @@ def train(model, epoch, train_loader, args, optimizer, writer):
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.data.item()))
+            print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} '
+                  f'({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.data.item():.6f}')
             niter = epoch*len(train_loader)+batch_idx
             writer.add_scalar('Train/Loss', loss.data.item(), niter)
 
@@ -74,9 +73,8 @@ def test(model, test_loader, args, optimizer, writer):
             writer.add_image('test', data[0, :, :, :], niter)
 
     test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+    print(f'\nTest set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} '
+          f'({100. * correct / len(test_loader.dataset):.0f}%)\n')
 
 
 def main():
@@ -132,8 +130,8 @@ def main():
     for epoch in range(1, args.epochs + 1):
         train(model, epoch, train_loader, args, optimizer, writer)
         m = torch.jit.script(model)
-        m.save(os.path.join(gettempdir(), 'model{}'.format(epoch)))
-        #torch.save(model, os.path.join(gettempdir(), 'model{}'.format(epoch)))
+        m.save(os.path.join(gettempdir(), f'model{epoch}'))
+        #torch.save(model, os.path.join(gettempdir(), f'model{epoch}'))
     test(model, test_loader, args, optimizer, writer)
 
 

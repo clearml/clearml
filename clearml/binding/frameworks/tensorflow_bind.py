@@ -464,7 +464,7 @@ class EventTrainsWriter:
                 fd, temp_file = mkstemp(
                     suffix=guess_extension(im.get_format_mimetype())
                     if hasattr(im, "get_format_mimetype")
-                    else ".{}".format(str(im.format).lower())
+                    else f".{str(im.format).lower()}"
                 )
                 with open(fd, "wb") as f:
                     f.write(imdata)
@@ -692,7 +692,7 @@ class EventTrainsWriter:
                         "data": np.vstack((plot_values[-1], plot_values[-2])).T,
                         "labels": [
                             "".join(data_points)
-                            + "<br> {:.3f}  ".format(thresholds[j])
+                            + f"<br> {thresholds[j]:.3f}  "
                             + "  ".join(["%-3.2f" % v for v in plot_values[:, j]])
                             for j in range(num_thresholds)
                         ],
@@ -743,9 +743,7 @@ class EventTrainsWriter:
 
         stream = BytesIO(audio_data)
         if values:
-            file_extension = guess_extension(values["contentType"]) or ".{}".format(
-                values["contentType"].split("/")[-1]
-            )
+            file_extension = guess_extension(values["contentType"]) or f".{values['contentType'].split('/')[-1]}"
         else:
             # assume wav as default
             file_extension = ".wav"
@@ -772,9 +770,7 @@ class EventTrainsWriter:
             session_start_info = parse_session_start_info_plugin_data(content)
             session_start_info = MessageToDict(session_start_info)
             hparams = session_start_info["hparams"]
-            EventTrainsWriter._current_task.update_parameters(
-                {"TB_hparams/{}".format(k): v for k, v in hparams.items()}
-            )
+            EventTrainsWriter._current_task.update_parameters({f"TB_hparams/{k}": v for k, v in hparams.items()})
         except Exception:
             pass
 
@@ -861,7 +857,7 @@ class EventTrainsWriter:
                 else:
                     step = 0
                     LoggerRoot.get_base_logger(TensorflowBinding).debug(
-                        "Received event without step, assuming step = {}".format(step)
+                        f"Received event without step, assuming step = {step}"
                     )
             else:
                 step = int(step)
@@ -1615,7 +1611,7 @@ class PatchTensorFlowEager:
                     audio_bytes_list = [a for a in tensor.numpy().flatten() if a]
                     for i, audio_bytes in enumerate(audio_bytes_list):
                         event_writer._add_audio(
-                            tag=str(tag) + ("/{}".format(i) if len(audio_bytes_list) > 1 else ""),
+                            tag=f"{tag}/{i}" if len(audio_bytes_list) > 1 else f"{tag}",
                             step=tweak_step(step),
                             values=None,
                             audio_data=audio_bytes,
@@ -1655,9 +1651,7 @@ class PatchTensorFlowEager:
                             scalar_data=a_value.numpy(),
                         )
                     except Exception as a_ex:
-                        LoggerRoot.get_base_logger(TensorflowBinding).warning(
-                            "_report_summary_op: {}".format(str(a_ex))
-                        )
+                        LoggerRoot.get_base_logger(TensorflowBinding).warning(f"_report_summary_op: {a_ex}")
 
             # this is a mix of eager and graph execution
             try:
@@ -1704,9 +1698,7 @@ class PatchTensorFlowEager:
                             hist_data=a_value.numpy(),
                         )
                     except Exception as a_ex:
-                        LoggerRoot.get_base_logger(TensorflowBinding).warning(
-                            "_report_summary_op: {}".format(str(a_ex))
-                        )
+                        LoggerRoot.get_base_logger(TensorflowBinding).warning(f"_report_summary_op: {a_ex}")
 
             # this is a mix of eager and graph execution
             try:
@@ -1772,9 +1764,7 @@ class PatchTensorFlowEager:
                         )
 
                     except Exception as a_ex:
-                        LoggerRoot.get_base_logger(TensorflowBinding).warning(
-                            "_report_summary_op: {}".format(str(a_ex))
-                        )
+                        LoggerRoot.get_base_logger(TensorflowBinding).warning(f"_report_summary_op: {a_ex}")
 
             # this is a mix of eager and graph execution
             try:
@@ -1813,7 +1803,7 @@ class PatchTensorFlowEager:
                     "colorspace": "RGB",
                     "encodedImageString": img_data_np[i],
                 }
-                image_tag = str(tag) + "/sample_{}".format(i - 2) if img_data_np.size > 3 else str(tag)
+                image_tag = f"{tag}/sample_{i - 2}" if img_data_np.size > 3 else f"{tag}"
                 event_writer._add_image(tag=image_tag, step=tweak_step(step), img_data=img_data)
         else:
             event_writer._add_image_numpy(

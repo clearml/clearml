@@ -86,7 +86,7 @@ class SlackMonitor(Monitor):
             object and return True/False if it should be filtered away
         """
         super(SlackMonitor, self).__init__()
-        self.channel = "{}".format(channel[1:] if channel[0] == "#" else channel)
+        self.channel = f"{channel[1:] if channel[0] == '#' else channel}"
         self.slack_client = WebClient(token=slack_api_token)
         self.min_num_iterations = 0
         self.filters = filters or list()
@@ -97,7 +97,7 @@ class SlackMonitor(Monitor):
         self.include_archived = False
         self.verbose = False
         self._channel_id = None
-        self._message_prefix = "{} ".format(message_prefix) if message_prefix else ""
+        self._message_prefix = f"{message_prefix} " if message_prefix else ""
         self.check_credentials()
 
     def check_credentials(self):
@@ -118,7 +118,7 @@ class SlackMonitor(Monitor):
                 break
         channel_id = [channel_info.get("id") for channel_info in channels if channel_info.get("name") == self.channel]
         if not channel_id:
-            raise ValueError("Error: Could not locate channel name '{}'".format(self.channel))
+            raise ValueError(f"Error: Could not locate channel name '{self.channel}'")
 
         # test bot permission (join channel)
         self._channel_id = channel_id[0]
@@ -144,7 +144,7 @@ class SlackMonitor(Monitor):
                 )
                 return
             except SlackApiError as e:
-                print('While trying to send message: "\n{}\n"\nGot an error: {}'.format(message, e.response["error"]))
+                print(f'While trying to send message: "\n{message}\n"\nGot an error: {e.response["error"]}')
 
     def get_query_parameters(self):
         # type: () -> dict
@@ -169,27 +169,23 @@ class SlackMonitor(Monitor):
         # skipping failed tasks with low number of iterations
         if self.min_num_iterations and task.get_last_iteration() < self.min_num_iterations:
             print(
-                "Skipping {} experiment id={}, number of iterations {} < {}".format(
-                    task.status, task.id, task.get_last_iteration(), self.min_num_iterations
-                )
+                f"Skipping {task.status} experiment id={task.id}, "
+                f"number of iterations {task.get_last_iteration()} < {self.min_num_iterations}"
             )
             return
         if any(f(task) for f in self.filters):
             if self.verbose:
-                print("Experiment id={} {} did not pass all filters".format(task.id, task.status))
+                print(f"Experiment id={task.id} {task.status} did not pass all filters")
             return
 
-        print('Experiment id={} {}, raising alert on channel "{}"'.format(task.id, task.status, self.channel))
+        print(f'Experiment id={task.id} {task.status}, raising alert on channel "{self.channel}"')
 
         console_output = task.get_reported_console_output(number_of_reports=3)
-        message = "{}Experiment ID <{}|{}> *{}*\nProject: *{}*  -  Name: *{}*\n" "```\n{}\n```".format(
-            self._message_prefix,
-            task.get_output_log_web_page(),
-            task.id,
-            task.status,
-            task.get_project_name(),
-            task.name,
-            ("\n".join(console_output))[-2048:],
+        console_output_text = ("\n".join(console_output))[-2048:]
+        message = (
+            f"{self._message_prefix}Experiment ID <{task.get_output_log_web_page()}|{task.id}> *{task.status}*\n"
+            f"Project: *{task.get_project_name()}*  -  Name: *{task.name}*\n"
+            f"```\n{console_output_text}\n```"
         )
         self.post_message(message, retries=5)
 
@@ -301,19 +297,21 @@ def main():
     # start the monitoring Task
     # Connecting ClearML with the current process,
     # from here on everything is logged automatically
-    task = Task.init(project_name='DevOps', task_name='Slack Alerts', task_type=Task.TaskTypes.monitor)
+    task = Task.init(
+        project_name="DevOps",
+        task_name="Slack Alerts",
+        task_type=Task.TaskTypes.monitor,
+    )
     if not args.local:
         task.execute_remotely(queue_name=args.service_queue)
         # we will not get here if we are running locally
 
-    print('\nStarting monitoring service\nProject: "{}"\nRefresh rate: {}s\n'.format(
-        args.project or 'all', args.refresh_rate))
+    project_name = args.project or "all"
+    print(f'\nStarting monitoring service\nProject: "{project_name}"\nRefresh rate: {args.refresh_rate}s\n')
 
     # Let everyone know we are up and running
-    start_message = \
-        '{}ClearML Slack monitoring service started\nMonitoring project \'{}\''.format(
-            (args.message_prefix + ' ') if args.message_prefix else '',
-            args.project or 'all')
+    message_prefix = f"{args.message_prefix} " if args.message_prefix else ''
+    start_message = f"{message_prefix}ClearML Slack monitoring service started\nMonitoring project '{project_name}'"
     slack_monitor.post_message(start_message)
 
     # Start the monitor service, this function will never end

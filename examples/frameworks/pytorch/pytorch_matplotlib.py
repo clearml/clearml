@@ -333,19 +333,19 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
     for layer in cnn.children():
         if isinstance(layer, nn.Conv2d):
             i += 1
-            name = 'conv_{}'.format(i)
+            name = f'conv_{i}'
         elif isinstance(layer, nn.ReLU):
-            name = 'relu_{}'.format(i)
+            name = f'relu_{i}'
             # The in-place version doesn't play very nicely with the ContentLoss
             # and StyleLoss we insert below. So we replace with out-of-place
             # ones here.
             layer = nn.ReLU(inplace=False)
         elif isinstance(layer, nn.MaxPool2d):
-            name = 'pool_{}'.format(i)
+            name = f'pool_{i}'
         elif isinstance(layer, nn.BatchNorm2d):
-            name = 'bn_{}'.format(i)
+            name = f'bn_{i}'
         else:
-            raise RuntimeError('Unrecognized layer: {}'.format(layer.__class__.__name__))
+            raise RuntimeError(f'Unrecognized layer: {layer.__class__.__name__}')
 
         model.add_module(name, layer)
 
@@ -353,14 +353,14 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
             # add content loss:
             target = model(content_img).detach()
             content_loss = ContentLoss(target)
-            model.add_module("content_loss_{}".format(i), content_loss)
+            model.add_module(f"content_loss_{i}", content_loss)
             content_losses.append(content_loss)
 
         if name in style_layers:
             # add style loss:
             target_feature = model(style_img).detach()
             style_loss = StyleLoss(target_feature)
-            model.add_module("style_loss_{}".format(i), style_loss)
+            model.add_module(f"style_loss_{i}", style_loss)
             style_losses.append(style_loss)
 
     # now we trim off the layers after the last content and style losses
@@ -453,9 +453,8 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
 
             run[0] += 1
             if run[0] % 50 == 0:
-                print("run {}:".format(run))
-                print('Style Loss : {:4f} Content Loss: {:4f}'.format(
-                    style_score.item(), content_score.item()))
+                print(f"run {run}:")
+                print(f'Style Loss : {style_score.item():4f} Content Loss: {content_score.item():4f}')
                 print()
 
             return style_score + content_score

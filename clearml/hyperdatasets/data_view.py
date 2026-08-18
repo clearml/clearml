@@ -397,9 +397,9 @@ class DataView:
         )
         if not backend_dataview:
             raise ValueError(
-                'DataView id "{}" was not found'.format(dataview_id)
+                f'DataView id "{dataview_id}" was not found'
                 if dataview_id
-                else 'DataView named "{}" was not found'.format(dataview_name)
+                else f'DataView named "{dataview_name}" was not found'
             )
         dataview = cls(auto_connect_with_task=False)
         dataview._init_from_backend_object(backend_dataview)

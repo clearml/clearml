@@ -12,9 +12,9 @@ def get_input(
     if new_line:
         print()
     while True:
-        value = input("{} {} {}: ".format(question, key, description))
+        value = input(f"{question} {key} {description}: ")
         if not value.strip() and required:
-            print("{} is required".format(key))
+            print(f"{key} is required")
         elif not (value.strip() or required):
             return default
         else:
@@ -41,7 +41,7 @@ def input_int(
             )
             return value
         except ValueError:
-            print("Invalid input: {} should be a number. Please enter an integer".format(key))
+            print(f"Invalid input: {key} should be a number. Please enter an integer")
 
 
 def input_bool(question: str, default: bool = False) -> bool:
@@ -52,7 +52,7 @@ def input_bool(question: str, default: bool = False) -> bool:
     """
     while True:
         try:
-            response = input("{}: ".format(question)).lower()
+            response = input(f"{question}: ").lower()
             if not response:
                 return default
             if response.startswith("y") or response.startswith("t"):
@@ -77,7 +77,7 @@ def input_list(
         return None
 
     res_list = [res]
-    while input_bool("\nDefine another {}? [y/N]".format(key)):
+    while input_bool(f"\nDefine another {key}? [y/N]"):
         response = get_input(
             key=key,
             description=description,
@@ -92,7 +92,7 @@ def input_list(
 
 
 def multiline_input(description: str = "") -> Tuple[str, int]:
-    print("{} \nNote: two consecutive empty lines would terminate the input : ".format(description))
+    print(f"{description} \nNote: two consecutive empty lines would terminate the input : ")
     lines = []
     empty_lines = 0
     while empty_lines < 2:

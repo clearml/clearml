@@ -169,7 +169,7 @@ class PatchJsonArgParse:
                     del params_namespace[PatchJsonArgParse._ignore_ui_overrides]
                 return params_namespace
             except Exception as e:
-                logging.getLogger(__file__).warning("Failed parsing jsonargparse arguments: {}".format(e))
+                logging.getLogger(__file__).warning(f"Failed parsing jsonargparse arguments: {e}")
                 return original_fn(obj, **kwargs)
         parsed_args = original_fn(obj, **kwargs)
         # noinspection PyBroadException
@@ -200,7 +200,7 @@ class PatchJsonArgParse:
             PatchJsonArgParse._args = {k: v for k, v in PatchJsonArgParse._args.items()}
             PatchJsonArgParse._update_task_args(parser=obj, subcommand=subcommand)
         except Exception as e:
-            logging.getLogger(__file__).warning("Failed parsing jsonargparse arguments: {}".format(e))
+            logging.getLogger(__file__).warning(f"Failed parsing jsonargparse arguments: {e}")
         return parsed_args
 
     @classmethod
@@ -215,11 +215,11 @@ class PatchJsonArgParse:
         params_dict = t.get_parameters(backwards_compatibility=False, cast=True)
         for key, section_param in cls.__remote_task_params[cls._section_name].items():
             if section_param.type == cls.namespace_type:
-                params_dict["{}/{}".format(cls._section_name, key)] = cls._get_namespace_from_json(section_param.value)
+                params_dict[f"{cls._section_name}/{key}"] = cls._get_namespace_from_json(section_param.value)
             elif section_param.type == cls.path_type:
-                params_dict["{}/{}".format(cls._section_name, key)] = cls._get_path_from_json(section_param.value)
+                params_dict[f"{cls._section_name}/{key}"] = cls._get_path_from_json(section_param.value)
             elif (not section_param.type or section_param.type == "NoneType") and not section_param.value:
-                params_dict["{}/{}".format(cls._section_name, key)] = None
+                params_dict[f"{cls._section_name}/{key}"] = None
         skip = len(cls._section_name) + 1
         cls.__remote_task_params_dict = {
             k[skip:]: v for k, v in params_dict.items() if k.startswith(cls._section_name + cls._args_sep)
@@ -278,7 +278,7 @@ class PatchJsonArgParse:
                 del result[argument]
             return result
         except Exception as e:
-            logging.getLogger(__file__).warning("Failed parsing jsonargparse config: {}".format(e))
+            logging.getLogger(__file__).warning(f"Failed parsing jsonargparse config: {e}")
             return Namespace()
 
     @staticmethod

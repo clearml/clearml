@@ -68,10 +68,8 @@ def predictions_gt_images_handler(engine, logger, *args, **kwargs):
         probs = torch.max(F.softmax(y_pred[idx],dim=0))
         ax = fig.add_subplot(num_x, num_y, idx + 1, xticks=[], yticks=[])
         ax.imshow(trans(x[idx]))
-        ax.set_title("{0} {1:.1f}% (label: {2})".format(
-            classes[preds],
-            probs * 100,
-            classes[y[idx]]),
+        ax.set_title(
+            f"{classes[preds]} {probs * 100:.1f}% (label: {classes[y[idx]]})",
             color=("green" if preds == y[idx] else "red")
         )
     logger.writer.add_figure('predictions vs actuals', figure=fig, global_step=engine.state.epoch)
@@ -135,14 +133,13 @@ def run(epochs, lr, momentum, log_interval):
         evaluator,
         log_handler=predictions_gt_images_handler,
         event_name=Events.EPOCH_COMPLETED(once=1),
-    );
+    )
 
-    desc = "ITERATION - loss: {:.2f}"
-    pbar = tqdm(initial=0, leave=False, total=len(trainloader), desc=desc.format(0))
+    pbar = tqdm(initial=0, leave=False, total=len(trainloader), desc=f"ITERATION - loss: {0:.2f}")
 
     @trainer.on(Events.ITERATION_COMPLETED(every=log_interval))
     def log_training_loss(engine):
-        pbar.desc = desc.format(engine.state.output)
+        pbar.desc = f"ITERATION - loss: {engine.state.output:.2f}"
         pbar.update(log_interval)
 
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -153,9 +150,8 @@ def run(epochs, lr, momentum, log_interval):
         avg_accuracy = metrics["accuracy"]
         avg_nll = metrics["loss"]
         tqdm.write(
-            "Training Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}".format(
-                engine.state.epoch, avg_accuracy, avg_nll
-            )
+            f"Training Results - Epoch: {engine.state.epoch}  "
+            f"Avg accuracy: {avg_accuracy:.2f} Avg loss: {avg_nll:.2f}"
         )
 
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -165,18 +161,15 @@ def run(epochs, lr, momentum, log_interval):
         avg_accuracy = metrics["accuracy"]
         avg_nll = metrics["loss"]
         tqdm.write(
-            "Validation Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}".format(
-                engine.state.epoch, avg_accuracy, avg_nll
-            )
+            f"Validation Results - Epoch: {engine.state.epoch}  "
+            f"Avg accuracy: {avg_accuracy:.2f} Avg loss: {avg_nll:.2f}"
         )
 
         pbar.n = pbar.last_print_n = 0
 
     @trainer.on(Events.EPOCH_COMPLETED | Events.COMPLETED)
     def log_time():
-        tqdm.write(
-            "{} took {} seconds".format(trainer.last_event_name.name, trainer.state.times[trainer.last_event_name.name])
-        )
+        tqdm.write(f"{trainer.last_event_name.name} took {trainer.state.times[trainer.last_event_name.name]} seconds")
 
     trainer.run(trainloader, max_epochs=epochs)
     pbar.close()
@@ -185,7 +178,7 @@ def run(epochs, lr, momentum, log_interval):
     torch.save(net.state_dict(), PATH)
 
     print('Finished Training')
-    print('Task ID number is: {}'.format(task.id))
+    print(f'Task ID number is: {task.id}')
 
 
 run(params.get('number_of_epochs'), params.get('base_lr'), params.get('momentum'), 10)

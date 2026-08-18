@@ -142,7 +142,7 @@ class EndpointTelemetry:
     def register_container(self) -> None:
         result = self.session.send_request("serving", "register_container", json=self.container_info)
         if result.status_code != 200:
-            print("Failed registering container: {}".format(result.json()))
+            print(f"Failed registering container: {result.json()}")
 
     def wait_for_endpoint_url(self) -> None:
         while not self.container_info.get("endpoint_url"):
@@ -156,7 +156,7 @@ class EndpointTelemetry:
 
     def get_machine_stats(self) -> Dict[str, Union[float, List[float]]]:
         def create_general_key(old_key: str) -> str:
-            return "{}_*".format(old_key)
+            return f"{old_key}_*"
 
         stats = self.resource_monitor._machine_stats()
         elapsed = time.time() - self._previous_readouts_ts
@@ -188,8 +188,8 @@ class EndpointTelemetry:
                     general_key = "_".join(["gpu"] + general_key.split("_")[2:])
                     if general_key == "gpu_mem_used_gb_*":
                         gpu_index = prev_general_key.split("_")[1]
-                        mem_usage = min(stats["gpu_{}_mem_usage".format(gpu_index)], 99.99)
-                        mem_free = stats["gpu_{}_mem_free_gb".format(gpu_index)]
+                        mem_usage = min(stats[f"gpu_{gpu_index}_mem_usage"], 99.99)
+                        mem_free = stats[f"gpu_{gpu_index}_mem_free_gb"]
                         v = (mem_usage * mem_free) / (100 - mem_usage)
                     if general_key in ["gpu_mem_used_gb_*", "gpu_mem_free_gb_*"]:
                         v *= 1024
@@ -222,7 +222,7 @@ class EndpointTelemetry:
         self.latency_num_window = 0
         result = self.session.send_request("serving", "container_status_report", json=status_report)
         if result.status_code != 200:
-            print("Failed sending status report: {}".format(result.json()))
+            print(f"Failed sending status report: {result.json()}")
 
     def update_last_request_time(self) -> None:
         self.last_request_time = time.time()

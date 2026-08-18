@@ -26,8 +26,7 @@ class Min:
         """Validate value."""
         if self.exclusive:
             if value <= self.minimum_value:
-                tpl = "'{value}' is lower or equal than minimum ('{min}')."
-                raise ValidationError(tpl.format(value=value, min=self.minimum_value))
+                raise ValidationError(f"'{value}' is lower or equal than minimum ('{self.minimum_value}').")
         else:
             if value < self.minimum_value:
                 raise ValidationError(f"'{value}' is lower than minimum ('{self.minimum_value}').")
@@ -57,8 +56,7 @@ class Max:
         """Validate value."""
         if self.exclusive:
             if value >= self.maximum_value:
-                tpl = "'{val}' is bigger or equal than maximum ('{max}')."
-                raise ValidationError(tpl.format(val=value, max=self.maximum_value))
+                raise ValidationError(f"'{value}' is bigger or equal than maximum ('{self.maximum_value}').")
         else:
             if value > self.maximum_value:
                 raise ValidationError(f"'{value}' is bigger than maximum ('{self.maximum_value}').")
@@ -144,8 +142,7 @@ class Length:
         len_ = len(value)
 
         if self.minimum_value is not None and len_ < self.minimum_value:
-            tpl = "Value '{val}' length is lower than allowed minimum '{min}'."
-            raise ValidationError(tpl.format(val=value, min=self.minimum_value))
+            raise ValidationError(f"Value '{value}' length is lower than allowed minimum '{self.minimum_value}'.")
 
         if self.maximum_value is not None and len_ > self.maximum_value:
             raise ValidationError(f"Value '{value}' length is bigger than allowed maximum '{self.maximum_value}'.")
@@ -172,8 +169,7 @@ class Enum:
 
     def validate(self, value: Any) -> None:
         if value not in self.choices:
-            tpl = "Value '{val}' is not a valid choice."
-            raise ValidationError(tpl.format(val=value))
+            raise ValidationError(f"Value '{value}' is not a valid choice.")
 
     def modify_schema(self, field_schema: dict) -> None:
         field_schema["enum"] = self.choices

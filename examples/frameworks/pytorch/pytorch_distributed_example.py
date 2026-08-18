@@ -105,10 +105,10 @@ def run(num_workers):
     num_batches = ceil(len(train_set.dataset) / float(bsz))
 
     from random import randint
-    param = {'worker_{}_stuff'.format(dist.get_rank()): 'some stuff ' + str(randint(0, 100))}
+    param = {f"worker_{dist.get_rank()}_stuff": f"some stuff {randint(0, 100)}"}
     Task.current_task().connect(param)
     Task.current_task().upload_artifact(
-        'temp {:02d}'.format(dist.get_rank()), artifact_object={'worker_rank': dist.get_rank()})
+        f"temp {dist.get_rank():02d}", artifact_object={"worker_rank": dist.get_rank()})
 
     for epoch in range(2):
         epoch_loss = 0.0
@@ -121,9 +121,9 @@ def run(num_workers):
             average_gradients(model)
             optimizer.step()
             if i % 10 == 0:
-                print('{}] Train Epoch {} - {} \tLoss  {:.6f}'.format(dist.get_rank(), epoch, i, loss))
+                print(f'{dist.get_rank()}] Train Epoch {epoch} - {i} \tLoss  {loss:.6f}')
                 Task.current_task().get_logger().report_scalar(
-                    'loss', 'worker {:02d}'.format(dist.get_rank()), value=loss.item(), iteration=i)
+                    'loss', f'worker {dist.get_rank():02d}', value=loss.item(), iteration=i)
             if i > 100:
                 break
         print('Rank ', dist.get_rank(), ', epoch ',

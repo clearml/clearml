@@ -3146,13 +3146,11 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
                 cls.__cached_app_server_host = Session.get_app_server_host()
             app_server_host = cls.__cached_app_server_host
 
-        template = "{}/projects/{}/tasks/{}/output/log" if Session.check_min_api_version("2.31") \
-            else "{}/projects/{}/experiments/{}/output/log"
-
-        return template.format(
-            app_server_host.rstrip("/"),
-            project_id if project_id is not None else "*",
-            task_id,
+        project = project_id if project_id is not None else "*"
+        return (
+            f"{app_server_host.rstrip('/')}/projects/{project}/tasks/{task_id}/output/log"
+            if Session.check_min_api_server_version("2.31")
+            else f"{app_server_host.rstrip('/')}/projects/{project}/experiments/{task_id}/output/log"
         )
 
     @classmethod

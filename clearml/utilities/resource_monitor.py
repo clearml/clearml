@@ -111,9 +111,7 @@ class ResourceMonitor(BackgroundMonitor):
                         try:
                             self._active_gpus = os.listdir(active_gpus)
                         except OSError as e:
-                            logging.getLogger("clearml.resource_monitor").warning(
-                                "Failed listing {}: {}".format(active_gpus, e)
-                            )
+                            logging.getLogger("clearml.resource_monitor").warning(f"Failed listing {active_gpus}: {e}")
                     else:
                         self._active_gpus = [g.strip() for g in active_gpus.split(",")]
                         # make sure we don't fix the active gpus in subprocess mode, as pynvml
@@ -200,9 +198,7 @@ class ResourceMonitor(BackgroundMonitor):
                     # noinspection PyProtectedMember
                     self._task._set_runtime_properties(runtime_properties=machine_spec)
             except Exception as ex:
-                logging.getLogger("clearml.resource_monitor").debug(
-                    "Failed logging machine specification: {}".format(ex)
-                )
+                logging.getLogger("clearml.resource_monitor").debug(f"Failed logging machine specification: {ex}")
 
         # last_iteration_interval = None
         # last_iteration_ts = 0
@@ -290,14 +286,10 @@ class ResourceMonitor(BackgroundMonitor):
                                     )
 
                                 # now let's create an additional report
-                                title = "{}:{}".format(":".join(title.split(":")[:-1]), series)
-                                series = "rank {:0{world_size_digits}d}".format(
-                                    rank, world_size_digits=world_size_digits
-                                )
+                                title = f"{':'.join(title.split(':')[:-1])}:{series}"
+                                series = f"rank {rank:0{world_size_digits}d}"
                             elif rank > 0:
-                                title = "{}:rank{:0{world_size_digits}d}".format(
-                                    title, rank, world_size_digits=world_size_digits
-                                )
+                                title = f"{title}:rank{rank:0{world_size_digits}d}"
                             else:
                                 # for rank 0 we keep the same original report so that external services
                                 # can always check the default cpu/gpu utilization
@@ -358,9 +350,7 @@ class ResourceMonitor(BackgroundMonitor):
             if skips_all and active_gpus != "none":
                 self._active_gpus = None
         except Exception as e:
-            logging.getLogger("clearml.resource_monitor").warning(
-                "Could not fetch GPU stats: {}".format(e)
-            )
+            logging.getLogger("clearml.resource_monitor").warning(f"Could not fetch GPU stats: {e}")
 
     def _machine_stats(self) -> Dict[str, float]:
         """
@@ -576,16 +566,13 @@ class ResourceMonitor(BackgroundMonitor):
                 if not self._gpu_utilization_warning_sent:
                     if g.mig_index is not None:
                         self._task.get_logger().report_text(
-                            "Running inside MIG, Nvidia driver cannot export utilization, pushing fixed value {}".format(
-                                # noqa
-                                self._default_gpu_utilization
-                            )
+                            "Running inside MIG, Nvidia driver cannot export utilization, "  # noqa
+                            f"pushing fixed value {self._default_gpu_utilization}"
                         )
                     else:
                         self._task.get_logger().report_text(
-                            "Nvidia driver cannot export utilization, pushing fixed value {}".format(
-                                self._default_gpu_utilization
-                            )
+                            "Nvidia driver cannot export utilization, "
+                            f"pushing fixed value {self._default_gpu_utilization}"
                         )
                     self._gpu_utilization_warning_sent = True
 
@@ -625,7 +612,7 @@ class ResourceMonitor(BackgroundMonitor):
                     specs.update(
                         gpu_count=int(len(gpus)),
                         gpu_type=", ".join(g.name for g in gpus),
-                        gpu_memory=", ".join("{}GB".format(round(g.memory_total / 1024.0)) for g in gpus),
+                        gpu_memory=", ".join(f"{round(g.memory_total / 1024.0)}GB" for g in gpus),
                         gpu_driver_version=gpu_stat.driver_version or "",
                         gpu_driver_cuda_version=gpu_stat.driver_cuda_version or "",
                     )
@@ -640,7 +627,7 @@ class ResourceMonitor(BackgroundMonitor):
             return type_(value)
         except (ValueError, TypeError) as e:
             if self._debug_mode:
-                print("Failed casting {} to {}: {}".format(value, type_, e))
+                print(f"Failed casting {value} to {type_}: {e}")
         return default
 
     @property

@@ -218,7 +218,7 @@ def eval_params_search(
     def eval_param(param_: str) -> dict:
         param_ = json.loads(param_)
         if "/" not in param_["name"]:
-            param_["name"] = "General/{}".format(param_["name"])
+            param_["name"] = f"General/{param_['name']}"
         return param_
 
     type_map = {
@@ -231,14 +231,14 @@ def eval_params_search(
     for param in params_search:
         param = eval_param(param)
         if param["type"] not in type_map:
-            print("Invalid parameter type '{}'".format(param["type"]))
+            print(f"Invalid parameter type '{param['type']}'")
             exit(1)
         type_str = param.pop("type")
         type_ = type_map[type_str]
         try:
             result.append(type_(**param))
         except Exception as e:
-            print("Failed instantiating object of type {} with arguments {}. Error is: {}".format(type_str, param, e))
+            print(f"Failed instantiating object of type {type_str} with arguments {param}. Error is: {e}")
             exit(1)
     for param in params_override:
         param = eval_param(param)
@@ -262,7 +262,7 @@ def eval_optimizer_class(
         "Install with: pip install hpbandster",
     }
     if optimizer_class not in type_map:
-        print("Invalid optimizer class '{}'".format(optimizer_class))
+        print(f"Invalid optimizer class '{optimizer_class}'")
         exit(1)
     if type_map[optimizer_class] is None:
         print(errors[optimizer_class])
@@ -344,7 +344,7 @@ def cli() -> None:
     top_experiments_cnt = 10
     if args.save_top_k_tasks_only != -1 and top_experiments_cnt > args.save_top_k_tasks_only:
         top_experiments_cnt = args.save_top_k_tasks_only
-    print("Top {} experiments are: ".format(top_experiments_cnt))
+    print(f"Top {top_experiments_cnt} experiments are: ")
     top_exp = optimizer.get_top_experiments(top_k=top_experiments_cnt)
     print([t.id for t in top_exp])
     optimizer.stop()
@@ -356,7 +356,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nUser aborted")
     except Exception as ex:
-        print("\nError: {}".format(ex))
+        print(f"\nError: {ex}")
         exit(1)
 
 

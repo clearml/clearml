@@ -343,9 +343,7 @@ class Artifact:
             force_download=force_download,
         )
         if raise_on_error and local_copy is None:
-            raise ValueError(
-                "Could not retrieve a local copy of artifact {}, failed downloading {}".format(self.name, self.url)
-            )
+            raise ValueError(f"Could not retrieve a local copy of artifact {self.name}, failed downloading {self.url}")
 
         return local_copy
 
@@ -483,7 +481,7 @@ class Artifacts:
         """
         # currently we support pandas.DataFrame (which we will upload as csv.gz)
         if name in self._artifacts_container:
-            LoggerRoot.get_base_logger().info('Register artifact, overwriting existing artifact "{}"'.format(name))
+            LoggerRoot.get_base_logger().info(f'Register artifact, overwriting existing artifact "{name}"')
         self._artifacts_container.add_hash_columns(
             name,
             list(artifact.columns if uniqueness_columns is True else uniqueness_columns),
@@ -517,7 +515,7 @@ class Artifacts:
             return False
 
         if name in self._artifacts_container:
-            raise ValueError("Artifact by the name of {} is already registered, use register_artifact".format(name))
+            raise ValueError(f"Artifact by the name of {name} is already registered, use register_artifact")
 
         if auto_pickle is None:
             auto_pickle = bool(config.get("development.artifacts.auto_pickle", False))
@@ -648,9 +646,7 @@ class Artifacts:
                     artifact_object.to_parquet(local_filename)
                 except Exception as e:
                     LoggerRoot.get_base_logger().warning(
-                        "Exception '{}' encountered when uploading artifact as .parquet. Defaulting to .csv.gz".format(
-                            e
-                        )
+                        f"Exception '{e}' encountered when uploading artifact as .parquet. Defaulting to .csv.gz"
                     )
                     artifact_type_data.content_type = "text/csv"
                     self._store_compressed_pd_csv(artifact_object, local_filename)
@@ -660,9 +656,7 @@ class Artifacts:
                     artifact_object.to_feather(local_filename)
                 except Exception as e:
                     LoggerRoot.get_base_logger().warning(
-                        "Exception '{}' encountered when uploading artifact as .feather. Defaulting to .csv.gz".format(
-                            e
-                        )
+                        f"Exception '{e}' encountered when uploading artifact as .feather. Defaulting to .csv.gz"
                     )
                     artifact_type_data.content_type = "text/csv"
                     self._store_compressed_pd_csv(artifact_object, local_filename)
@@ -689,9 +683,7 @@ class Artifacts:
                 override_filename_ext_in_uri = ".png"
                 if extension_name and extension_name != ".png":
                     LoggerRoot.get_base_logger().warning(
-                        "image artifact can not be uploaded with extension {}. Defaulting to .png.".format(
-                            extension_name
-                        )
+                        f"image artifact can not be uploaded with extension {extension_name}. Defaulting to .png."
                     )
 
             override_filename_in_uri = name + override_filename_ext_in_uri
@@ -717,7 +709,7 @@ class Artifacts:
                     if not auto_pickle:
                         raise
                     LoggerRoot.get_base_logger().warning(
-                        "JSON serialization of artifact '{}' failed, reverting to pickle".format(name)
+                        f"JSON serialization of artifact '{name}' failed, reverting to pickle"
                     )
                     store_as_pickle = True
                     serialized_text = None
@@ -730,7 +722,7 @@ class Artifacts:
                     if not auto_pickle:
                         raise
                     LoggerRoot.get_base_logger().warning(
-                        "YAML serialization of artifact '{}' failed, reverting to pickle".format(name)
+                        f"YAML serialization of artifact '{name}' failed, reverting to pickle"
                     )
                     store_as_pickle = True
                     serialized_text = None
@@ -748,10 +740,8 @@ class Artifacts:
                     artifact_type_data.preview = preview
                 else:
                     artifact_type_data.preview = (
-                        "# full serialized dict too large to store, storing first {}kb\n{}".format(
-                            self.max_preview_size_bytes // 1024,
-                            preview[: self.max_preview_size_bytes],
-                        )
+                        "# full serialized dict too large to store, storing first "
+                        f"{self.max_preview_size_bytes // 1024}kb\n{preview[: self.max_preview_size_bytes]}"
                     )
                 delete_after_upload = True
         elif isinstance(artifact_object, pathlib_types):
@@ -772,7 +762,7 @@ class Artifacts:
             if create_zip_file:
                 folder = Path("").joinpath(*artifact_object.parts[:-1])
                 if not folder.is_dir() or not folder.parts:
-                    raise ValueError("Artifact file/folder '{}' could not be found".format(artifact_object.as_posix()))
+                    raise ValueError(f"Artifact file/folder '{artifact_object.as_posix()}' could not be found")
 
                 wildcard = artifact_object.parts[-1]
                 files = list(Path(folder).rglob(wildcard))
@@ -784,7 +774,7 @@ class Artifacts:
                 )
                 try:
                     artifact_type_data.content_type = "application/zip"
-                    archive_preview = "Archive content {}:\n".format(artifact_object.as_posix())
+                    archive_preview = f"Archive content {artifact_object.as_posix()}:\n"
 
                     with ZipFile(zip_file, "w", allowZip64=True, compression=ZIP_DEFLATED) as zf:
                         for filename in sorted(files):
@@ -794,9 +784,7 @@ class Artifacts:
                                 zf.write(filename.as_posix(), arcname=relative_file_name)
                 except Exception as e:
                     # failed uploading folder:
-                    LoggerRoot.get_base_logger().warning(
-                        "Exception {}\nFailed zipping artifact folder {}".format(folder, e)
-                    )
+                    LoggerRoot.get_base_logger().warning(f"Exception {folder}\nFailed zipping artifact folder {e}")
                     return False
 
                 artifact_type_data.preview = preview or archive_preview
@@ -807,7 +795,7 @@ class Artifacts:
                 delete_after_upload = True
             else:
                 if not artifact_object.is_file():
-                    raise ValueError("Artifact file '{}' could not be found".format(artifact_object.as_posix()))
+                    raise ValueError(f"Artifact file '{artifact_object.as_posix()}' could not be found")
 
                 override_filename_in_uri = artifact_object.parts[-1]
                 artifact_type_data.preview = (
@@ -845,13 +833,11 @@ class Artifacts:
                             zf.write(filename.as_posix(), arcname=relative_file_name)
                         else:
                             LoggerRoot.get_base_logger().warning(
-                                "Failed zipping artifact file '{}', file not found!".format(filename.as_posix())
+                                f"Failed zipping artifact file '{filename.as_posix()}', file not found!"
                             )
             except Exception as e:
                 # failed uploading folder:
-                LoggerRoot.get_base_logger().warning(
-                    "Exception {}\nFailed zipping artifact files {}".format(artifact_object, e)
-                )
+                LoggerRoot.get_base_logger().warning(f"Exception {artifact_object}\nFailed zipping artifact files {e}")
                 return False
 
             artifact_type_data.preview = preview or archive_preview
@@ -881,9 +867,9 @@ class Artifacts:
             elif len(artifact_object) < self.max_preview_size_bytes:
                 artifact_type_data.preview = artifact_object
             else:
-                artifact_type_data.preview = "# full text too large to store, storing first {}kb\n{}".format(
-                    self.max_preview_size_bytes // 1024,
-                    artifact_object[: self.max_preview_size_bytes],
+                artifact_type_data.preview = (
+                    "# full text too large to store, storing first "
+                    f"{self.max_preview_size_bytes // 1024}kb\n{artifact_object[: self.max_preview_size_bytes]}"
                 )
             delete_after_upload = True
             override_filename_ext_in_uri = ".txt"
@@ -906,7 +892,7 @@ class Artifacts:
             # revert to pickling the object
             store_as_pickle = True
         else:
-            raise ValueError("Artifact type {} not supported".format(type(artifact_object)))
+            raise ValueError(f"Artifact type {type(artifact_object)} not supported")
 
         # revert to serializing the object with pickle
         if store_as_pickle:
@@ -935,18 +921,16 @@ class Artifacts:
 
         # verify preview not out of scope:
         if artifact_type_data.preview and len(artifact_type_data.preview) > (self.max_preview_size_bytes + 1024):
-            artifact_type_data.preview = "# full preview too large to store, storing first {}kb\n{}".format(
-                self.max_preview_size_bytes // 1024,
-                artifact_type_data.preview[: self.max_preview_size_bytes],
+            artifact_type_data.preview = (
+                "# full preview too large to store, storing first "
+                f"{self.max_preview_size_bytes // 1024}kb\n{artifact_type_data.preview[: self.max_preview_size_bytes]}"
             )
 
         # remove from existing list, if exists
         for artifact in self._task_artifact_list:
             if artifact.key == name:
                 if artifact.type == self._pd_artifact_type:
-                    raise ValueError(
-                        "Artifact of name {} already registered, use register_artifact instead".format(name)
-                    )
+                    raise ValueError(f"Artifact of name {name} already registered, use register_artifact instead")
 
                 self._task_artifact_list.remove(artifact)
                 break
@@ -959,7 +943,7 @@ class Artifacts:
             local_filename = Path(local_filename).absolute()
             if not local_filename.exists() or not local_filename.is_file():
                 LoggerRoot.get_base_logger().warning(
-                    "Artifact upload failed, cannot find file {}".format(local_filename.as_posix())
+                    f"Artifact upload failed, cannot find file {local_filename.as_posix()}"
                 )
                 return False
 
@@ -1172,7 +1156,7 @@ class Artifacts:
                 try:
                     self._delete_temp_file(local_file)
                 except OSError:
-                    LoggerRoot.get_base_logger().warning("Failed removing temporary {}".format(local_file))
+                    LoggerRoot.get_base_logger().warning(f"Failed removing temporary {local_file}")
         else:
             self._task._reporter._report(ev)
 
@@ -1200,17 +1184,16 @@ class Artifacts:
                     missing_cols = hash_cols.difference(a_df.columns)
                     if missing_cols == hash_cols:
                         LoggerRoot.get_base_logger().warning(
-                            "Uniqueness columns {} not found in artifact {}. "
-                            "Skipping uniqueness check for artifact.".format(list(missing_cols), a_name)
+                            f"Uniqueness columns {list(missing_cols)} not found in artifact {a_name}. "
+                            "Skipping uniqueness check for artifact."
                         )
                         continue
                     elif missing_cols:
                         # missing_cols must be a subset of hash_cols
                         hash_cols.difference_update(missing_cols)
                         LoggerRoot.get_base_logger().warning(
-                            "Uniqueness columns {} not found in artifact {}. Using {}.".format(
-                                list(missing_cols), a_name, list(hash_cols)
-                            )
+                            f"Uniqueness columns {list(missing_cols)} not found in artifact {a_name}. "
+                            f"Using {list(hash_cols)}."
                         )
 
                     hash_col_drop = [col for col in a_df.columns if col not in hash_cols]
@@ -1235,18 +1218,17 @@ class Artifacts:
 
             # build intersection summary
             for i, (name, shape, unique_hash) in enumerate(artifacts_summary):
-                summary += "[{name}]: shape={shape}, {unique} unique rows, {percentage:.1f}% uniqueness\n".format(
-                    name=name,
-                    shape=shape,
-                    unique=len(unique_hash),
-                    percentage=100 * len(unique_hash) / float(shape[0]),
+                percentage = 100 * len(unique_hash) / float(shape[0])
+                summary += (
+                    f"[{name}]: shape={shape}, {len(unique_hash)} unique rows, "
+                    f"{percentage:.1f}% uniqueness\n"
                 )
                 for name2, shape2, unique_hash2 in artifacts_summary[i + 1 :]:
                     intersection = len(unique_hash & unique_hash2)
-                    summary += "\tIntersection with [{name2}] {intersection} rows: {percentage:.1f}%\n".format(
-                        name2=name2,
-                        intersection=intersection,
-                        percentage=100 * intersection / float(len(unique_hash2)),
+                    percentage2 = 100 * intersection / float(len(unique_hash2))
+                    summary += (
+                        f"\tIntersection with [{name2}] {intersection} rows: "
+                        f"{percentage2:.1f}%\n"
                     )
         except Exception as e:
             LoggerRoot.get_base_logger().warning(str(e))
@@ -1351,11 +1333,8 @@ class Artifacts:
                     break
                 except PermissionError:
                     LoggerRoot.get_base_logger().warning(
-                        "Failed to replace {} with {}. Attemps left: {}".format(
-                            local_filename,
-                            temp_filename,
-                            self._max_tmp_file_replace_attemps - i,
-                        )
+                        f"Failed to replace {local_filename} with {temp_filename}. "
+                        f"Attemps left: {self._max_tmp_file_replace_attemps - i}"
                     )
             else:
                 # final attempt, and if it fails, throw an exception.
@@ -1364,7 +1343,7 @@ class Artifacts:
             local_filename = temp_filename
             os.rmdir(temp_folder)
         except Exception as ex:
-            raise ValueError("Failed storing temp artifact into {}: error: {}".format(local_filename, ex))
+            raise ValueError(f"Failed storing temp artifact into {local_filename}: error: {ex}")
 
         return temp_filename
 
