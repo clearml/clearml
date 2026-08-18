@@ -534,6 +534,82 @@ class HyperDatasetManagementBackend(IdObjectBase):
             return versions[0]
 
     @classmethod
+    def get_version_metadata(
+        cls,
+        dataset_id: str,
+        version_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Fetch the user-defined metadata stored on a dataset version.
+
+        :param dataset_id: Parent dataset collection identifier
+        :param version_id: Dataset version identifier
+
+        :return: Metadata dictionary; empty when none was set
+        :raises ValueError: When the version cannot be found
+        """
+        version = cls.get_version_by_id(
+            dataset_id=dataset_id,
+            version_id=version_id,
+            only_fields=["id", "metadata"],
+        )
+        if version is None:
+            raise ValueError(f"Version not found: {version_id} (dataset={dataset_id})")
+        metadata = getattr(version, "metadata", None)
+        return dict(metadata) if metadata else {}
+
+    @classmethod
+    def set_version_metadata(
+        cls,
+        dataset_id: str,
+        version_id: str,
+        metadata: Dict[str, Any],
+    ) -> bool:
+        """
+        Replace the user-defined metadata stored on a dataset version.
+
+        :param dataset_id: Parent dataset collection identifier
+        :param version_id: Dataset version identifier
+        :param metadata: Metadata dictionary to store (nested dictionaries are supported).
+            Keys must not include '$' and '.'
+
+        :return: True when the backend confirms the update (locked/published versions
+            cannot change their metadata)
+        :raises ValueError: When the version cannot be found
+        """
+        version = cls.get_version_by_id(
+            dataset_id=dataset_id,
+            version_id=version_id,
+            only_fields=["id", "status"],
+        )
+        if version is None:
+            raise ValueError(f"Version not found: {version_id} (dataset={dataset_id})")
+        # Only writable versions can change their metadata (matches the classic SDK,
+        # which considered draft and committed versions writable)
+        status = str(getattr(version, "status", None) or "")
+        if status not in (
+            str(datasets.VersionStatusEnum.draft),
+            str(datasets.VersionStatusEnum.committed),
+        ):
+            return False
+
+        response = cls._send(
+            session=cls._get_default_session(),
+            req=datasets.UpdateVersionRequest(
+                version=version_id,
+                metadata=metadata,
+            ),
+            raise_on_errors=False,
+        )
+        return bool(
+            getattr(
+                getattr(response, "response", None),
+                "updated",
+                0,
+            )
+        )
+
+    @classmethod
     def version_exists(
         cls,
         dataset_id: str,
