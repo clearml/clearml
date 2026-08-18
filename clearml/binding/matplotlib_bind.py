@@ -78,7 +78,7 @@ class PatchedMatplotlib:
             PatchedMatplotlib._update_matplotlib_version()
             if PatchedMatplotlib._matplot_major_version < 2:
                 LoggerRoot.get_base_logger().warning(
-                    "matplotlib binding supports version 2.0 and above, found version {}".format(matplotlib.__version__)
+                    f"matplotlib binding supports version 2.0 and above, found version {matplotlib.__version__}"
                 )
                 PatchedMatplotlib._patched_original_plot = False
                 return False
@@ -476,7 +476,7 @@ class PatchedMatplotlib:
                                             if len(numbers) != 2:
                                                 return text
                                             base, exp_ = numbers[0], numbers[1]
-                                            return "{}<sup>{}</sup>".format(base, exp_)
+                                            return f"{base}<sup>{exp_}</sup>"
                                         except Exception:
                                             return text
 
@@ -655,14 +655,16 @@ class PatchedMatplotlib:
                     title = PatchedMatplotlib._enforce_unique_title_per_iteration(plot_title, last_iteration)
                 elif report_as_debug_sample:
                     PatchedMatplotlib._global_image_counter += 1
-                    title = "untitled {:02d}".format(
+                    image_counter = (
                         PatchedMatplotlib._global_image_counter % PatchedMatplotlib._get_global_image_counter_limit()
                     )
+                    title = f"untitled {image_counter:02d}"
                 else:
                     PatchedMatplotlib._global_plot_counter += 1
-                    title = "untitled {:02d}".format(
+                    plot_counter = (
                         PatchedMatplotlib._global_plot_counter % PatchedMatplotlib._get_global_image_counter_limit()
                     )
+                    title = f"untitled {plot_counter:02d}"
 
             # by now we should have a title, if the iteration was known list us as globally reported.
             # we later use it to check if externally someone was actually reporting iterations

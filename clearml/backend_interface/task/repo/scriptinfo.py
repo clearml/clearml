@@ -248,7 +248,7 @@ class ScriptRequirements:
                 forced_version = forced_packages.pop(k, None)
                 if forced_version is not None:
                     version = forced_version
-            # requirements_txt += ''.join(['# {0}\n'.format(c) for c in v.comments.sorted_items()])
+            # requirements_txt += ''.join(['# {c}\n' for c in v.comments.sorted_items()])
             requirements_txt += ScriptRequirements._make_req_line(k, version or None)
 
         # add forced requirements that we could not find installed on the system
@@ -1242,9 +1242,7 @@ class ScriptInfo:
 
         # if repo_info.modified:
         #     messages.append(
-        #         "======> WARNING! UNCOMMITTED CHANGES IN REPOSITORY {} <======".format(
-        #             script_info.get("repository", "")
-        #         )
+        #         f"======> WARNING! UNCOMMITTED CHANGES IN REPOSITORY {script_info.get('repository', '')} <======"
         #     )
 
         if not any(script_info.values()):

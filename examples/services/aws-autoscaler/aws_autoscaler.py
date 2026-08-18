@@ -74,7 +74,7 @@ def main():
               "It means there is no need to worry about typos or mistakes :)\n")
 
         if args.config_file.exists() and input_bool(
-            "Load configurations from config file '{}' [Y/n]? ".format(args.config_file),
+            f"Load configurations from config file '{args.config_file}' [Y/n]? ",
             default=True,
         ):
             with args.config_file.open("r") as f:
@@ -90,11 +90,7 @@ def main():
                 with args.config_file.open("w+") as f:
                     yaml.safe_dump(conf, f)
             except Exception:
-                print(
-                    "Error! Could not write configuration file at: {}".format(
-                        args.config_file
-                    )
-                )
+                print(f"Error! Could not write configuration file at: {args.config_file}")
                 return
 
     # Connecting ClearML with the current process,
@@ -106,7 +102,7 @@ def main():
     task.set_configuration_object(name="General", config_text=json.dumps(configurations, indent=2))
 
     if args.remote or args.run:
-        print("Running AWS auto-scaler as a service\nExecution log {}".format(task.get_output_log_web_page()))
+        print(f"Running AWS auto-scaler as a service\nExecution log {task.get_output_log_web_page()}")
 
     if args.remote:
         # if we are running remotely enqueue this run, and leave the process
@@ -142,13 +138,9 @@ def run_wizard():
     )
     git_user = input()
     if git_user.strip():
-        print("Enter password for user '{}': ".format(git_user), end="")
+        print(f"Enter password for user '{git_user}': ", end="")
         git_pass = input()
-        print(
-            "Git repository cloning will be using user={} password={}".format(
-                git_user, git_pass
-            )
-        )
+        print(f"Git repository cloning will be using user={git_user} password={git_pass}")
     else:
         git_user = ''
         git_pass = ''
@@ -158,7 +150,7 @@ def run_wizard():
 
     hyper_params['default_docker_image'] = get_input(
         "default docker image/parameters",
-        "to use [{}]".format(DEFAULT_DOCKER_IMAGE),
+        f"to use [{DEFAULT_DOCKER_IMAGE}]",
         default=DEFAULT_DOCKER_IMAGE,
         new_line=True,
     )
@@ -219,7 +211,7 @@ def run_wizard():
                 required=True,
             )
             if resource_name in resource_configurations:
-                print("\tError: instance type '{}' already used!".format(resource_name))
+                print(f"\tError: instance type '{resource_name}' already used!")
                 continue
             break
         resource_configurations[resource_name] = a_resource
@@ -232,12 +224,12 @@ def run_wizard():
     configurations['extra_vm_bash_script'], num_lines_bash_script = multiline_input(
         "\nEnter any pre-execution bash script to be executed on the newly created instances []"
     )
-    print("Entered {} lines of pre-execution bash script".format(num_lines_bash_script))
+    print(f"Entered {num_lines_bash_script} lines of pre-execution bash script")
 
     configurations['extra_clearml_conf'], num_lines_clearml_conf = multiline_input(
         "\nEnter anything you'd like to include in your clearml.conf file []"
     )
-    print("Entered {} extra lines for clearml.conf file".format(num_lines_clearml_conf))
+    print(f"Entered {num_lines_clearml_conf} extra lines for clearml.conf file")
 
     print("\nDefine the machines budget:")
     print("-----------------------------")
@@ -247,7 +239,7 @@ def run_wizard():
         while True:
             queue_name = get_input("a queue name (for example: 'aws_4gpu_machines')", question='Select', required=True)
             if queue_name in queues:
-                print("\tError: queue name '{}' already used!".format(queue_name))
+                print(f"\tError: queue name '{queue_name}' already used!")
                 continue
             break
 
@@ -257,37 +249,36 @@ def run_wizard():
             while True:
                 queue_type = get_input(
                     "an instance type to attach to the queue",
-                    "{}".format(valid_instances),
+                    f"{valid_instances}",
                     question="Select",
                     required=True,
                 )
                 if queue_type not in configurations['resource_configurations']:
-                    print("\tError: instance type '{}' not in predefined instances {}!".format(
-                        queue_type, resource_configurations_names))
+                    print(
+                        f"\tError: instance type '{queue_type}' not in predefined instances "
+                        f"{resource_configurations_names}!"
+                    )
                     continue
 
                 if queue_type in (q[0] for q in queues[queue_name]):
-                    print("\tError: instance type '{}' already in {}!".format(
-                        queue_type, queue_name))
+                    print(f"\tError: instance type '{queue_type}' already in {queue_name}!")
                     continue
 
                 if queue_type in [q[0] for q in chain.from_iterable(queues.values())]:
-                    queue_type_new = '{}_{}'.format(queue_type, queue_name)
-                    print("\tInstance type '{}' already used, renaming instance to {}".format(
-                        queue_type, queue_type_new))
+                    queue_type_new = f'{queue_type}_{queue_name}'
+                    print(f"\tInstance type '{queue_type}' already used, renaming instance to {queue_type_new}")
                     configurations['resource_configurations'][queue_type_new] = \
                         dict(**configurations['resource_configurations'][queue_type])
                     queue_type = queue_type_new
 
                     # make sure the renamed name is not reused
                     if queue_type in (q[0] for q in queues[queue_name]):
-                        print("\tError: instance type '{}' already in {}!".format(
-                            queue_type, queue_name))
+                        print(f"\tError: instance type '{queue_type}' already in {queue_name}!")
                         continue
 
                 break
             max_instances = input_int(
-                "maximum number of '{}' instances to spin simultaneously (example: 3)".format(queue_type),
+                f"maximum number of '{queue_type}' instances to spin simultaneously (example: 3)",
                 required=True
             )
 

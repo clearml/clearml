@@ -3437,11 +3437,10 @@ class Dataset:
                 else "lightblue"
             )
             sankey_node["label"].append(f"{node}")
+            removed, modified, added, size, *_ = node_details[node]
             sankey_node["customdata"].append(
-                "name {}<br />removed {}<br />modified {}<br />added {}<br />size {}".format(
-                    node_names.get(node, ""),
-                    *node_details[node],
-                )
+                f"name {node_names.get(node, '')}<br />removed {removed}<br />modified {modified}"
+                f"<br />added {added}<br />size {size}"
             )
 
         # add edges

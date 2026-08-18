@@ -230,7 +230,7 @@ def cli() -> None:
         exit(0)
 
     if args.version:
-        print("Version {}".format(__version__))
+        print(f"Version {__version__}")
         exit(0)
 
     if not args.name and not args.import_offline_session:
@@ -246,7 +246,7 @@ def cli() -> None:
         bash_setup_script = args.docker_bash_setup_script or None
 
     if args.import_offline_session:
-        print("Importing offline session: {}".format(args.import_offline_session))
+        print(f"Importing offline session: {args.import_offline_session}")
         Task.import_offline_session(args.import_offline_session)
     else:
         docker_args = args.docker_args
@@ -261,7 +261,7 @@ def cli() -> None:
             for arg in (args.args or []):
                 arg_split = arg.split("=")
                 if len(arg_split) != 2:
-                    raise ValueError("Invalid argument: {}. Format should be key=value".format(arg))
+                    raise ValueError(f"Invalid argument: {arg}. Format should be key=value")
                 argparse_args.append(arg_split)
             pipeline = PipelineController.create(
                 project_name=args.project,
@@ -322,22 +322,18 @@ def cli() -> None:
         # noinspection PyProtectedMember
         created_task._set_runtime_properties({"_CLEARML_TASK": True})
 
-        print("New {} created id={}".format("pipeline" if args.pipeline else "task", created_task.id))
+        entity = "pipeline" if args.pipeline else "task"
+        print(f"New {entity} created id={created_task.id}")
         if not args.queue:
-            print(
-                "Warning: No queue was provided, leaving {} in draft-mode.".format(
-                    "pipeline" if args.pipeline else "task"
-                )
-            )
+            print(f"Warning: No queue was provided, leaving {entity} in draft-mode.")
             exit(0)
 
         Task.enqueue(created_task, queue_name=args.queue)
         print(
-            "{} id={} sent for execution on queue {}".format(
-                "Pipeline" if args.pipeline else "task", created_task.id, args.queue
-            )
+            f"{entity.capitalize()} id={created_task.id} "
+            f"sent for execution on queue {args.queue}"
         )
-        print("Execution log at: {}".format(created_task.get_output_log_web_page()))
+        print(f"Execution log at: {created_task.get_output_log_web_page()}")
 
 
 def main() -> None:
@@ -346,7 +342,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nUser aborted")
     except Exception as ex:
-        print("\nError: {}".format(ex))
+        print(f"\nError: {ex}")
         exit(1)
 
 

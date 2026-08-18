@@ -419,7 +419,11 @@ class Session(TokenManager):
             headers[h] = self.client
 
         token_refreshed_on_error = False
-        url = ("{host}/v{version}/{service}.{action}" if version else "{host}/{service}.{action}").format(**locals())
+        url = (
+            f"{host}/v{version}/{service}.{action}"  # rfh
+            if version
+            else f"{host}/{service}.{action}"
+        )
         retry_counter = 0
         while True:
             if data and len(data) > self._write_session_data_size:

@@ -93,7 +93,7 @@ class Version(_BaseVersion):
         # Validate the version and parse it into pieces
         match = self._regex.search(version)
         if not match:
-            raise InvalidVersion("Invalid version: '{0}'".format(version))
+            raise InvalidVersion(f"Invalid version: '{version}'")
 
         # Store the parsed out pieces of the version
         self._version = _Version(
@@ -121,35 +121,23 @@ class Version(_BaseVersion):
         super(Version, self).__init__(key)
 
     def __repr__(self) -> str:
-        return "<Version({0})>".format(repr(str(self)))
+        return f"<Version({repr(str(self))})>"
 
     def __str__(self) -> str:
-        parts = []
-
-        # Epoch
-        if self.epoch != 0:
-            parts.append("{0}!".format(self.epoch))
-
-        # Release segment
-        parts.append(".".join(str(x) for x in self.release))
-
-        # Pre-release
-        if self.pre is not None:
-            parts.append("".join(str(x) for x in self.pre))
-
-        # Post-release
-        if self.post is not None:
-            parts.append(".post{0}".format(self.post))
-
-        # Development release
-        if self.dev is not None:
-            parts.append(".dev{0}".format(self.dev))
-
-        # Local version segment
-        if self.local is not None:
-            parts.append("+{0}".format(self.local))
-
-        return "".join(parts)
+        return "".join([
+            # Epoch
+            *([f"{self.epoch}!"] if self.epoch != 0 else []),
+            # Release segment
+            ".".join(str(x) for x in self.release),
+            # Pre-release
+            *(["".join(str(x) for x in self.pre)] if self.pre is not None else []),
+            # Post-release
+            *([f".post{self.post}"] if self.post is not None else []),
+            # Development release
+            *([f".dev{self.dev}"] if self.dev is not None else []),
+            # Local version segment
+            *([f"+{self.local}"] if self.local is not None else [])
+        ])
 
     def get_next_version(self) -> "Version":
         def increment(part: Union[int, List[Union[int, str]]]) -> Union[int, List[Union[int, str]]]:
@@ -211,7 +199,7 @@ class Version(_BaseVersion):
 
         # Epoch
         if self.epoch != 0:
-            parts.append("{0}!".format(self.epoch))
+            parts.append(f"{self.epoch}!")
 
         # Release segment
         parts.append(".".join(str(x) for x in self.release))

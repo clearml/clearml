@@ -74,7 +74,7 @@ class BackgroundLogService(BackgroundMonitor):
                 return
 
             # if self._thread is None:
-            #     self._log_stderr('Task.close() flushing remaining logs ({})'.format(self.pending))
+            #     self._log_stderr(f"Task.close() flushing remaining logs ({self.pending})")
             res = self.session.send(a_request)
             if res and not res.ok():
                 # noinspection PyProtectedMember
@@ -289,7 +289,7 @@ class TaskHandler(BufferingHandler):
             self._background_log_size = 0
 
     def close(self, wait: bool = False) -> None:
-        # self._log_stderr('Closing {} wait={}'.format(os.getpid(), wait))
+        # self._log_stderr(f"Closing {os.getpid()} wait={wait}")
         # flush pending logs
         if not self._task_id:
             return
@@ -314,7 +314,7 @@ class TaskHandler(BufferingHandler):
                             self._log_stderr(
                                 f"Flush timeout {timeout}s exceeded, dropping last {self._background_log_size} lines"
                             )
-                        # self._log_stderr('Closing {} wait done'.format(os.getpid()))
+                        # self._log_stderr(f"Closing {os.getpid()} wait done")
                     except Exception:
                         pass
             else:

@@ -73,7 +73,7 @@ def main() -> None:
 
     conf_file = Path(os.path.expanduser(args.file)).absolute()
     if conf_file.exists() and conf_file.is_file() and conf_file.stat().st_size > 0:
-        print("Configuration file already exists: {}".format(str(conf_file)))
+        print(f"Configuration file already exists: {conf_file}")
         print("Leaving setup, feel free to edit the configuration file.")
         return
     print(description, end="")
@@ -117,11 +117,9 @@ def main() -> None:
         print("Could not parse credentials, please try entering them manually.")
         credentials = read_manual_credentials()
 
-    print(
-        'Detected credentials key="{}" secret="{}"'.format(
-            credentials["access_key"], credentials["secret_key"][0:4] + "***"
-        )
-    )
+    access_key = credentials["access_key"]
+    masked_secret_key = credentials["secret_key"][0:4] + "***"
+    print(f'Detected credentials key="{access_key}" secret="{masked_secret_key}"')
     web_input = True
     if web_server:
         host = web_server
@@ -165,9 +163,7 @@ def main() -> None:
         if web_input is True and not web_host:
             web_host = host
 
-    print(
-        "\nClearML Hosts configuration:\nWeb App: {}\nAPI: {}\nFile Store: {}\n".format(web_host, api_host, files_host)
-    )
+    print(f"\nClearML Hosts configuration:\nWeb App: {web_host}\nAPI: {api_host}\nFile Store: {files_host}\n")
 
     if len({web_host, api_host, files_host}) != 3:
         raise ValueError("All three server URLs should be distinct")
@@ -219,10 +215,10 @@ def main() -> None:
             f.write(header)
             f.write(default_sdk)
     except Exception:
-        print("Error! Could not write configuration file at: {}".format(str(conf_file)))
+        print(f"Error! Could not write configuration file at: {conf_file}")
         return
 
-    print("\nNew configuration stored in {}".format(str(conf_file)))
+    print(f"\nNew configuration stored in {conf_file}")
     print("ClearML setup completed successfully.")
 
 
@@ -240,18 +236,14 @@ def parse_known_host(parsed_host: Any) -> Tuple[str, str, str]:
         web_host = parsed_host.scheme + "://" + parsed_host.netloc + parsed_host.path
         files_host = parsed_host.scheme + "://" + parsed_host.netloc.replace("app.", "files.", 1) + parsed_host.path
     elif parsed_host.netloc.startswith("demoapi."):
-        print(
-            "{} is the api server, we need the web server. Replacing 'demoapi.' with 'demoapp.'".format(
-                parsed_host.netloc
-            )
-        )
+        print(f"{parsed_host.netloc} is the api server, we need the web server. Replacing 'demoapi.' with 'demoapp.'")
         api_host = parsed_host.scheme + "://" + parsed_host.netloc + parsed_host.path
         web_host = parsed_host.scheme + "://" + parsed_host.netloc.replace("demoapi.", "demoapp.", 1) + parsed_host.path
         files_host = (
             parsed_host.scheme + "://" + parsed_host.netloc.replace("demoapi.", "demofiles.", 1) + parsed_host.path
         )
     elif parsed_host.netloc.startswith("api."):
-        print("{} is the api server, we need the web server. Replacing 'api.' with 'app.'".format(parsed_host.netloc))
+        print(f"{parsed_host.netloc} is the api server, we need the web server. Replacing 'api.' with 'app.'")
         api_host = parsed_host.scheme + "://" + parsed_host.netloc + parsed_host.path
         web_host = parsed_host.scheme + "://" + parsed_host.netloc.replace("api.", "app.", 1) + parsed_host.path
         files_host = parsed_host.scheme + "://" + parsed_host.netloc.replace("api.", "files.", 1) + parsed_host.path
@@ -299,9 +291,8 @@ def verify_credentials(api_host: str, credentials: dict) -> bool:
             return False
     except Exception:
         print(
-            "Error: could not verify credentials: key={} secret={}".format(
-                credentials.get("access_key"), credentials.get("secret_key")
-            )
+            f"Error: could not verify credentials: key={credentials.get('access_key')} "
+            f"secret={credentials.get('secret_key')}"
         )
         return False
 
@@ -336,30 +327,23 @@ def read_manual_credentials() -> Dict[str, str]:
 
 def input_url(host_type: str, host: str = None) -> str:
     while True:
-        print(
-            "{} configured to: {}".format(host_type, "[{}] ".format(host) if host else ""),
-            end="",
-        )
+        host_str = f"[{host}] " if host else ""
+        print(f"{host_type} configured to: {host_str}", end="")
         parse_input = input()
         if host and (not parse_input or parse_input.lower() == "yes" or parse_input.lower() == "y"):
             break
         parsed_host = verify_url(parse_input) if parse_input else None
         if parse_input and parsed_host:
-            host = parsed_host.scheme + "://" + parsed_host.netloc + parsed_host.path
+            host = f"{parsed_host.scheme}://{parsed_host.netloc}{parsed_host.path}"
             break
     return host
 
 
 def input_host_port(host_type: str, parsed_host: urllib.parse.ParseResult) -> str:
-    print("Enter port for {} host ".format(host_type), end="")
+    print(f"Enter port for {host_type} host ", end="")
     replace_port = input().lower()
-    return (
-        parsed_host.scheme
-        + "://"
-        + parsed_host.netloc
-        + (":{}".format(replace_port) if replace_port else "")
-        + parsed_host.path
-    )
+    port_if_present = f":{replace_port}" if replace_port else ""
+    return f"{parsed_host.scheme}://{parsed_host.netloc}{port_if_present}{parsed_host.path}"
 
 
 def verify_url(parse_input: str) -> Optional[ParseResult]:
@@ -376,10 +360,7 @@ def verify_url(parse_input: str) -> Optional[ParseResult]:
             parsed_host = None
     except Exception:
         parsed_host = None
-        print(
-            "Could not parse url {}\nEnter your clearml-server host: ".format(parse_input),
-            end="",
-        )
+        print(f"Could not parse url {parse_input}\nEnter your clearml-server host: ", end="")
     return parsed_host
 
 

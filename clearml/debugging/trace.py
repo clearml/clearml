@@ -34,25 +34,19 @@ def _log_stderr(name: str, fnc: callable, args: tuple, kwargs: dict, is_return: 
         if __trace_level not in (1, 2, -1, -2):
             return
         fnc_address = str(fnc).split(" at ")
-        fnc_address = "{}".format(fnc_address[-1].replace(">", "")) if len(fnc_address) > 1 else ""
+        fnc_address = f"{fnc_address[-1].replace('>', '')}" if len(fnc_address) > 1 else ""
         if __trace_level == 1 or __trace_level == -1:
-            t = "{:14} {}".format(fnc_address, name)
+            t = f"{fnc_address:14} {name}"
         elif __trace_level == 2 or __trace_level == -2:
-            a_args = str(args)[1:-1] if args else ""
-            a_kwargs = " {}".format(kwargs) if kwargs else ""
-            t = "{:14} {} ({}{})".format(fnc_address, name, a_args, a_kwargs)
+            a_args = f"{args}"[1:-1] if args else ""
+            a_kwargs = f" {kwargs}" if kwargs else ""
+            t = f"{fnc_address:14} {name} ({a_args}{a_kwargs})"
         # get a nicer thread id
         h = int(__thread_id())
         ts = time.time() - __trace_start
+        prefix = "-" if is_return else ""
         __stream_write(
-            "{}{:<9.3f}:{:5}:{:8x}: [{}] {}\n".format(
-                "-" if is_return else "",
-                ts,
-                os.getpid(),
-                h,
-                threading.current_thread().name,
-                t,
-            )
+            f"{prefix}{ts:<9.3f}:{os.getpid():5}:{h:8x}: [{threading.current_thread().name}] {t}\n"
         )
         if __stream_flush:
             __stream_flush()
@@ -154,7 +148,7 @@ def _patch_module(
             # this is one of ours
             pass
         else:
-            # print('Skipping: {}'.format(module))
+            # print(f'Skipping: {module}')
             return
 
     # Do not patch ourselves
@@ -166,7 +160,7 @@ def _patch_module(
     # Do not patch low level network layer
     if prefix.startswith("clearml.backend_api.session.") and prefix != "clearml.backend_api.session.":
         if not prefix.endswith(".Session.") and ".token_manager." not in prefix:
-            # print('SKIPPING: {}'.format(prefix))
+            # print(f'SKIPPING: {prefix}')
             return
     if prefix.startswith("clearml.backend_api.services."):
         return
@@ -209,12 +203,12 @@ def _patch_module(
                 if (prefix + str(fn)).startswith(skip):
                     continue
 
-            # _log_stderr('Patching: {}'.format(prefix+fn))
+            # _log_stderr(f'Patching: {prefix+fn}')
 
             if inspect.isclass(module):
                 # check if this is even in our module
                 if hasattr(fnc, "__module__") and fnc.__module__ != module.__module__:
-                    pass  # print('not ours {} {}'.format(module, fnc))
+                    pass  # print(f'not ours {module} {fnc}')
                 elif hasattr(fnc, "__qualname__") and fnc.__qualname__.startswith(module.__name__ + "."):
                     if isinstance(module.__dict__[fn], classmethod):
                         setattr(module, fn, _traced_call_cls(prefix + fn, fnc))
@@ -225,7 +219,7 @@ def _patch_module(
                 else:
                     # probably not ours hopefully static function
                     if hasattr(fnc, "__qualname__") and not fnc.__qualname__.startswith(module.__name__ + "."):
-                        pass  # print('not ours {} {}'.format(module, fnc))
+                        pass  # print(f'not ours {module} {fnc}')
                     else:
                         # we should not get here
                         setattr(module, fn, _traced_call_static(prefix + fn, fnc))
@@ -281,13 +275,13 @@ def trace_trains(
 
     from ..version import __version__
 
-    msg = "ClearML v{} - Starting Trace\n\n".format(__version__)
+    msg = f"ClearML v{__version__} - Starting Trace\n\n"
     # print to actual stderr
     stderr_write(msg)
     # store to stream
     __stream_write(msg)
-    __stream_write("{:9}:{:5}:{:8}: {:14}\n".format("seconds", "pid", "tid", "self"))
-    __stream_write("{:9}:{:5}:{:8}:{:15}\n".format("-" * 9, "-" * 5, "-" * 8, "-" * 15))
+    __stream_write(f"{'seconds':9}:{'pid':5}:{'tid':8}: {'self':14}\n")
+    __stream_write(f"{'-' * 9:9}:{'-' * 5:5}:{'-' * 8:8}:{'-' * 15:15}\n")
     __trace_start = time.time()
     _patch_module(
         "clearml",
@@ -373,7 +367,7 @@ def print_traced_files(
             if print_orphans:
                 for i, line in enumerate(lines):
                     if i > 0 and hash_line(line) in orphan_calls:
-                        lines[i] = " ### Orphan ### {}".format(line)
+                        lines[i] = f" ### Orphan ### {line}"
             by_time[ts] = "".join(lines) + "\n"
 
     out_stream = open(stream, "w") if isinstance(stream, str) else stream
@@ -394,7 +388,7 @@ def stdout_print(*args: Any, **kwargs: Any) -> None:
         if not line.endswith("\n"):
             line += "\n"
     else:
-        line = "{} {}\n".format(args or "", kwargs or "")
+        line = f"{args or ''} {kwargs or ''}\n"
     if hasattr(sys.stdout, "_original_write"):
         sys.stdout._original_write(line)
     else:
@@ -409,7 +403,7 @@ def debug_print(*args: Any, **kwargs: Any) -> None:
     global tic
     tic = globals().get("tic", time.time())
     stdout_print(
-        "\033[1;33m[pid={}, t={:.04f}] ".format(os.getpid(), time.time() - tic)
+        f"\033[1;33m[pid={os.getpid()}, t={time.time() - tic:.04f}] "
         + str(args[0] if len(args) == 1 else ("" if not args else args))
         + "\033[0m",
         **kwargs
