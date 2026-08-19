@@ -53,9 +53,12 @@ class InterfaceBase(SessionInterface):
 
     def _create_log(self) -> logging.Logger:
         log = get_logger(str(self.__class__.__name__))
+        level = LOG_LEVEL_ENV_VAR.get(default=log.level)
+        if isinstance(level, str):
+            level = level.upper()
         try:
-            log.setLevel(LOG_LEVEL_ENV_VAR.get(default=log.level))
-        except TypeError as ex:
+            log.setLevel(level)
+        except (TypeError, ValueError) as ex:
             raise ValueError("Invalid log level defined in environment variable `%s`: %s" % (LOG_LEVEL_ENV_VAR, ex))
         return log
 
