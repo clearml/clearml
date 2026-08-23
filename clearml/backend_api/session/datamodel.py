@@ -123,7 +123,7 @@ class DataModel:
         if not all(isinstance(x, expected) for x in value):
             raise TypeError(
                 f"Expected {field_name} of type list[{expected}], "
-                f"got {', '.join(set(type(x).__name__ for x in value))}"
+                f"got {', '.join(sorted(set(type(x).__name__ for x in value)))}"
             )
 
     @staticmethod
