@@ -8,7 +8,7 @@ import six
 from PIL import Image
 from pathlib2 import Path
 
-from .debugging.log import LoggerRoot
+from .debugging.log import LoggerRoot, resolve_logging_level
 
 try:
     import pandas as pd
@@ -17,6 +17,7 @@ except ImportError:
 
 from .backend_interface.logger import StdStreamPatch
 from .backend_interface.task import Task as _Task
+from .backend_interface.task.development.worker import DevWorker
 from .backend_interface.task.log import TaskHandler
 from .backend_interface.util import mutually_exclusive
 from .backend_interface.metrics.events import UploadEvent, MetricsEventAdapter
@@ -27,6 +28,7 @@ from .config import (
     DEBUG_SIMULATE_REMOTE_TASK,
     deferred_config,
 )
+from .config.defs import LOG_LEVEL_ENV_VAR
 from .errors import UsageError
 from .storage.helper import StorageHelper
 from .utilities.plotly_reporter import SeriesInfo
@@ -98,7 +100,11 @@ class Logger:
 
         if self._connect_logging:
             StdStreamPatch.patch_logging_formatter(self)
-        elif not self._connect_std_streams and self._task.is_main_task():
+        elif (
+            not self._connect_std_streams
+            and self._task.is_main_task()
+            and (DevWorker.report_stdout or DevWorker.report_stderr)
+        ):
             # make sure that at least the main clearml logger is connect
             base_logger = LoggerRoot.get_base_logger()
             if base_logger and base_logger.handlers:
@@ -145,13 +151,19 @@ class Logger:
 
         :param str msg: The text to log.
         :param int level: The log level from the Python ``logging`` package. The default value is ``logging.INFO``.
+            If the ``CLEARML_LOG_LEVEL`` environment variable is set, messages with a level below it
+            are dropped entirely (not sent to the backend and not printed to the console).
         :param bool print_console: In addition to the log, print to the console.
             The values are:
 
           - ``True`` - Print to the console (default)
           - ``False`` - Do not print to the console.
         """
-        force_send = not print_console and self._parse_level(level) >= logging.WARNING
+        level = self._parse_level(level)
+        default_log_level = self._get_default_log_level()
+        if default_log_level is not None and level < default_log_level:
+            return
+        force_send = not print_console and level >= logging.WARNING
         return self._console(msg, level, not print_console, force_send=force_send, *args, **_)
 
     def report_scalar(self, title: str, series: str, value: float, iteration: int) -> None:
@@ -1438,6 +1450,18 @@ class Logger:
                 msg='Logger failed casting log level "%s" to integer' % str(level),
             )
             return logging.INFO
+
+    @staticmethod
+    def _get_default_log_level() -> Optional[int]:
+        """Return the minimum log level for report_text messages, or None when no filtering applies.
+
+        Resolved from the CLEARML_LOG_LEVEL / TRAINS_LOG_LEVEL environment variable
+        (an int or a python logging level name). Unset or unresolvable values disable filtering.
+        """
+        value = LOG_LEVEL_ENV_VAR.get()
+        if value in (None, ""):
+            return None
+        return resolve_logging_level(value)
 
     def _console(
         self,

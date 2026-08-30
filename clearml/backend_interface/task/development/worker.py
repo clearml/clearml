@@ -20,6 +20,7 @@ class DevWorker:
     prefix = attr.ib(type=str, default="MANUAL:")
 
     report_stdout = deferred_config("development.worker.log_stdout", True)
+    report_stderr = deferred_config("development.worker.log_stderr", True)
     report_period = deferred_config(
         "development.worker.report_period_sec",
         30.0,

@@ -820,7 +820,11 @@ class Task(_Task):
                 )
                 return task  # noqa
 
-            if auto_resource_monitoring and not is_sub_process_task_id:
+            if (
+                auto_resource_monitoring
+                and not is_sub_process_task_id
+                and config.get("development.worker.resource_monitoring", True)
+            ):
                 resource_monitor_cls = (
                     auto_resource_monitoring
                     if isinstance(auto_resource_monitoring, type)
@@ -4620,13 +4624,27 @@ class Task(_Task):
                 get_current_thread_id(),
             ):
                 raise ValueError("Cannot use Task Logger after task was closed")
+            # sdk.development.worker.log_stdout / log_stderr are per-stream kill switches:
+            # when false, that stream is never captured and sent to the backend, overriding
+            # the auto_connect_streams argument. Explicit Logger.report_text() is unaffected.
+            # When both are false, python logging capture is disabled as well.
+            report_stdout = bool(DevWorker.report_stdout)
+            report_stderr = bool(DevWorker.report_stderr)
+            if not report_stdout and not report_stderr:
+                auto_connect_streams = False
             # Get a logger object
             self._logger = Logger(
                 private_task=self,
-                connect_stdout=(auto_connect_streams is True)
-                or (isinstance(auto_connect_streams, dict) and auto_connect_streams.get("stdout", False)),
-                connect_stderr=(auto_connect_streams is True)
-                or (isinstance(auto_connect_streams, dict) and auto_connect_streams.get("stderr", False)),
+                connect_stdout=report_stdout
+                and (
+                    (auto_connect_streams is True)
+                    or (isinstance(auto_connect_streams, dict) and auto_connect_streams.get("stdout", False))
+                ),
+                connect_stderr=report_stderr
+                and (
+                    (auto_connect_streams is True)
+                    or (isinstance(auto_connect_streams, dict) and auto_connect_streams.get("stderr", False))
+                ),
                 connect_logging=isinstance(auto_connect_streams, dict) and auto_connect_streams.get("logging", False),
             )
             # make sure we set our reported to async mode
