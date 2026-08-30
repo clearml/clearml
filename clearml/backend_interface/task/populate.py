@@ -7,9 +7,9 @@ from functools import reduce
 from logging import getLogger
 from sys import platform
 from typing import Optional, Sequence, Union, Tuple, List, Callable, Dict, Any
+from urllib.parse import urlparse
 
 from pathlib2 import Path
-from six.moves.urllib.parse import urlparse
 
 from .args import _Arguments
 from .repo import ScriptInfo
