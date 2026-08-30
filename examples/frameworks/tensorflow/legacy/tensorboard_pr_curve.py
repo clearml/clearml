@@ -34,7 +34,6 @@ from tempfile import gettempdir
 
 from absl import app
 from absl import flags
-from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 from tensorboard.plugins.pr_curve import summary
 from clearml import Task
@@ -189,7 +188,7 @@ def start_runs(
     sess = tf.compat.v1.Session()
     writer = tf.compat.v1.summary.FileWriter(events_directory, sess.graph)
 
-    for step in xrange(steps):
+    for step in range(steps):
         feed_dict = {
             iteration: step,
         }
