@@ -1,5 +1,6 @@
 import atexit
 import datetime
+import io
 import json
 import logging
 import math
@@ -17,7 +18,6 @@ import numpy as np
 
 if TYPE_CHECKING:
     import pandas
-import six
 
 from .events import (
     ScalarEvent,
@@ -685,7 +685,7 @@ class Reporter(InterfaceBase, AbstractContextManager, SetupUploadMixin, AsyncMan
         if len([x for x in (path, stream) if x is not None]) != 1:
             raise ValueError("Expected only one of [filename, stream]")
         if isinstance(stream, str):
-            stream = six.StringIO(stream)
+            stream = io.StringIO(stream)
 
         kwargs = dict(
             metric=self._normalize_name(title),
