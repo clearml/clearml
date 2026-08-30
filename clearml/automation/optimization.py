@@ -1613,6 +1613,11 @@ class HyperParameterOptimizer:
         if not isinstance(optimizer_class, type):
             self.optimizer = optimizer_class
         else:
+            # extract optuna-specific params explicitly so they are not lost if
+            # _connect_args strips complex objects from optimizer_kwargs
+            optimizer_kw = dict(opts.get("optimizer_kwargs", {}))
+            optuna_pruner = optimizer_kw.pop("optuna_pruner", None)
+            optuna_sampler = optimizer_kw.pop("optuna_sampler", None)
             self.optimizer = optimizer_class(
                 base_task_id=opts["base_task_id"],
                 hyper_parameters=hyper_parameters,
@@ -1620,7 +1625,9 @@ class HyperParameterOptimizer:
                 execution_queue=opts["execution_queue"],
                 num_concurrent_workers=opts["max_number_of_concurrent_tasks"],
                 compute_time_limit=opts["compute_time_limit"],
-                **opts.get("optimizer_kwargs", {}),
+                optuna_pruner=optuna_pruner,
+                optuna_sampler=optuna_sampler,
+                **optimizer_kw,
             )
         self.optimizer.set_optimizer_task(self._task)
         self.optimization_timeout = None
