@@ -1,32 +1,4 @@
 """ Convenience classes supporting python3-like concepts """
-from abc import ABC, abstractmethod
-from types import TracebackType
-from typing import Optional, Type
-
-
-class AbstractContextManager(ABC):
-    """An abstract base class for context managers. Supported in contextlib from python 3.6 and up"""
-
-    def __enter__(self) -> "AbstractContextManager":
-        """Return `self` upon entering the runtime context."""
-        return self
-
-    @abstractmethod
-    def __exit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> Optional[bool]:
-        """Raise any exception triggered within the runtime context."""
-        return None
-
-    @classmethod
-    def __subclasshook__(cls, C: type) -> Optional[bool]:
-        if cls is AbstractContextManager:
-            if any("__enter__" in B.__dict__ for B in C.__mro__) and any("__exit__" in B.__dict__ for B in C.__mro__):
-                return True
-        return NotImplemented
 
 
 try:
