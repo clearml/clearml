@@ -9,7 +9,6 @@ from urllib.parse import ParseResult, urlparse
 
 import six
 from pathlib2 import Path
-from six.moves import input
 
 from clearml.backend_api.session import Session
 from clearml.backend_api.session.defs import ENV_HOST
