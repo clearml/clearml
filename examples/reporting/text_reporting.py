@@ -2,10 +2,9 @@
 #
 from __future__ import print_function
 
+import io
 import logging
 import sys
-
-import six
 
 from clearml import Logger, Task
 
@@ -52,7 +51,7 @@ Vestibulum dictum ipsum at viverra ultrices. Aliquam sed ante massa. Quisque con
         title="text title",
         series="text series",
         iteration=1,
-        stream=six.StringIO(text_to_send),
+        stream=io.StringIO(text_to_send),
         file_extension=".txt",
     )
 
