@@ -41,19 +41,22 @@ class HyperDataset(HyperDatasetManagement):
         raise_if_exists: bool = False,
         **kwargs,
     ):
-        """Create a new HyperDataset version within the requested project.
+        """
+        Create a new HyperDataset version within the requested project.
 
-        :param project_name: ClearML project name that will own the dataset
-        :param dataset_name: HyperDataset collection name (top-level dataset)
-        :param version_name: Version name to create (or reuse if it already exists)
-        :param description: Optional dataset description string
-        :param parent_id: Optional parent dataset version IDs to link
-        :param parent_ids: (Deprecated) Optional list of parent dataset version IDs to link.
-            Only one parent ID by hyperdataset is supported. Use `parent_id` instead.
-        :param field_mappings: Optional mapping that defines vector-capable metadata fields.
+        :param project_name: ClearML project name that will own the dataset.
+        :param dataset_name: HyperDataset collection name (top-level dataset).
+        :param version_name: Version name to create (or reuse if it already exists).
+        :param description: Description for the dataset.
+        :param parent_id: Parent dataset version ID to link.
+        :param parent_ids: (Deprecated) List of parent dataset version IDs to link.
+            Only one parent ID per hyperdataset is supported. Use ``parent_id`` instead.
+        :param field_mappings: Mapping that defines vector-capable metadata fields.
             Provide the fully-qualified frame metadata path (e.g. ``meta.my_vector``) and
             the corresponding field settings accepted by the ClearML backend / Elasticsearch
-            dense vector type. For example::
+            dense vector type. For example:
+
+            .. code-block:: py
 
                 field_mappings = {
                     "meta.qa_vector": {
@@ -65,7 +68,7 @@ class HyperDataset(HyperDatasetManagement):
 
             When supplied, ClearML Server >= 3.25 is required and vector dimensions are
             validated on every frame ingest or update.
-        :param raise_if_exists: Reserved flag for compatibility (currently unused)
+        :param raise_if_exists: Reserved flag for compatibility (currently unused).
         """
         Session.verify_feature_set("advanced")
         self._project_name = project_name
@@ -113,21 +116,25 @@ class HyperDataset(HyperDatasetManagement):
         Upload and register a collection of data entries into the HyperDataset version.
         Successful registrations automatically trigger a commit to refresh the version statistics.
 
-        :param data_entries: Sequence of `DataEntry` instances to register
-        :param upload_local_files_destination: Optional storage URI for uploading local sources
-        :param batch_size: Number of entries per backend registration batch
-        :param max_workers: Maximum number of threads for upload work
-        :param show_progress: Reserved for API compatibility (no progress emitted currently)
-        :param upload_retries: Number of upload retry attempts per file
-        :param force_upload: Upload even when hashes indicate the source already exists
+        :param data_entries: Sequence of ``DataEntry`` instances to register.
+        :param upload_local_files_destination: Storage URI for uploading local sources.
+        :param batch_size: Number of entries per backend registration batch.
+        :param max_workers: Maximum number of threads for upload work.
+        :param show_progress: Reserved for API compatibility (no progress emitted currently).
+        :param upload_retries: Number of upload retry attempts per file.
+        :param force_upload: If ``True``, upload sources even when their hash indicates they already exist
+            on the backend. If ``False`` (default), sources already present on the backend are not
+            re-uploaded.
         :param max_request_size_mb: Upper bound for registration request payload size, in MB
             (default 100). Registration batches whose payload exceeds this size are split into
             multiple requests. A single entry larger than this limit is sent in its own request.
-            Pass `None` (or 0) to disable splitting and send each batch as a single request
-            regardless of its payload size
-        :param hash_sources: Whether to hash sources for deduplication prior to upload
+            Pass ``None`` (or 0) to disable splitting and send each batch as a single request
+            regardless of its payload size.
+        :param hash_sources: If ``True``, compute hashes of local sources before upload so they can be
+            deduplicated. If ``False`` (default), sources are not hashed.
 
-        :return: Dictionary containing upload and registration error mappings
+        :return: A dictionary with ``upload`` and ``register`` keys, each mapping entry IDs to the error
+            raised for that entry (empty on success).
         """
         HyperDataset._verify_upload_destination(upload_local_files_destination)
         errors = {"upload": {}, "register": {}}
@@ -168,27 +175,28 @@ class HyperDataset(HyperDatasetManagement):
         """
         Delete data entries (frames) from this HyperDataset version.
 
-        Entries may be passed as `DataEntry` objects (for example, objects yielded by
-        `get_iterator()`) or as entry id strings. Entries are deleted by their ids;
+        Entries may be passed as ``DataEntry`` objects (for example, objects yielded by
+        ``get_iterator()``) or as entry ID strings. Entries are deleted by their IDs;
         all other attributes are ignored.
 
         .. note:: Only writable (non-published) versions can delete their entries.
 
-        :param data_entries: Sequence of `DataEntry` instances and/or entry id strings
-        :param batch_size: Number of entry ids sent per delete request (default 1000).
-            It does not limit the number of entries per call
-        :param refresh_version_stats: Commit the version after deleting to refresh its
-            statistics (default True)
-        :param force: Ignore ongoing annotation tasks using this version as input
+        :param data_entries: Sequence of ``DataEntry`` instances and/or entry ID strings.
+        :param batch_size: Number of entry IDs sent per delete request (default 1000).
+            It does not limit the number of entries per call.
+        :param refresh_version_stats: If ``True`` (default), commit the version after deleting to refresh
+            its statistics. If ``False``, skip the commit.
+        :param force: If ``True``, delete the entries even if there are ongoing annotation tasks using this
+            version as input. If ``False`` (default), such tasks may prevent the deletion.
 
-        :return: Total number of entries the backend reports as deleted
+        :return: The total number of entries the backend reports as deleted.
         """
         entry_ids = []
         for data_entry in data_entries:
             entry_id = data_entry if isinstance(data_entry, str) else getattr(data_entry, "id", None)
             if not entry_id or not isinstance(entry_id, str):
                 raise ValueError(
-                    f"delete_data_entries expects DataEntry objects or entry id strings, got {data_entry!r}"
+                    f"delete_data_entries expects DataEntry objects or entry ID strings, got {data_entry!r}"
                 )
             entry_ids.append(entry_id)
 
@@ -216,9 +224,9 @@ class HyperDataset(HyperDatasetManagement):
         The supplied dictionary replaces any previously stored metadata.
 
         :param metadata: Key/value dictionary (with support for nested dictionaries).
-            Keys must not include '$' and '.'
+            Keys must not include ``$`` or ``.``.
 
-        :return: True if successful (locked/published versions cannot change version metadata)
+        :return: ``True`` if successful. Locked or published versions cannot change their version metadata.
         """
         if not isinstance(metadata, dict):
             raise ValueError("set_metadata expects a key/value dictionary")
@@ -237,7 +245,7 @@ class HyperDataset(HyperDatasetManagement):
 
         The metadata is fetched from the backend on every call.
 
-        :return: Metadata dictionary; empty when none was set
+        :return: Metadata dictionary; empty when none was set.
         """
         if not getattr(self, "_version_id", None) or not getattr(self, "_dataset_id", None):
             raise ValueError("HyperDataset instance is not bound to a dataset version")
@@ -255,20 +263,20 @@ class HyperDataset(HyperDatasetManagement):
         """
         Return an iterator over all the data entries (frames) of this HyperDataset version.
 
-        This is a convenience wrapper around a single-query `DataView` pinned to this
-        version: entries stream through the same iteration pipeline as DataView
-        iteration (background prefetching, entry-class conversion), but no DataView
+        This is a convenience wrapper around a single-query ``DataView`` pinned to this
+        version: entries stream through the same iteration pipeline as ``DataView``
+        iteration (background prefetching, entry-class conversion), but no ``DataView``
         object is persisted on the server and no Task is attached.
 
-        For filtered, weighted, or multi-version iteration, build a `DataView` instead.
+        For filtered, weighted, or multi-version iteration, build a ``DataView`` instead.
 
-        :param projection: Optional list of frame fields to return, using dot-separated
+        :param projection: List of frame fields to return, using dot-separated
             notation (for example ``["id", "sources"]``). When set, entries are
             reconstructed from the projected fields only — non-projected fields are
-            missing from the returned objects
-        :param batch_size: Optional number of entries fetched per backend request
+            missing from the returned objects.
+        :param batch_size: Number of entries fetched per backend request.
 
-        :return: Iterator yielding `DataEntry`-derived objects
+        :return: Iterator yielding ``DataEntry``-derived objects.
         """
         if not getattr(self, "_version_id", None) or not getattr(self, "_dataset_id", None):
             raise ValueError("HyperDataset instance is not bound to a dataset version")
@@ -325,7 +333,7 @@ class HyperDataset(HyperDatasetManagement):
         :param data_entries: Sequence of data entries to register
         :param max_request_size_mb: Maximum request size (MB); `None` disables batching
 
-        :return: Mapping of entry ids to registration errors
+        :return: Mapping of entry IDs to registration errors
         """
         if max_request_size_mb is not None:
             request_fixed_size = len(
@@ -411,7 +419,7 @@ class HyperDataset(HyperDatasetManagement):
 
         :param data_entries: Iterable of data entries to register
 
-        :return: Mapping of entry ids to registration errors
+        :return: Mapping of entry IDs to registration errors
         """
         if not data_entries:
             return {}
@@ -451,7 +459,7 @@ class HyperDataset(HyperDatasetManagement):
         :param hash_sources: Whether to compute hashes before upload for deduplication
         :param thread_pool: Thread pool used for concurrent uploads
 
-        :return: Mapping of entry ids to upload errors
+        :return: Mapping of entry IDs to upload errors
         """
         hash_batch_size = min(hash_batch_size, HyperDataset.MAX_HASH_FETCH_BATCH_SIZE)
 
@@ -792,16 +800,18 @@ class HyperDataset(HyperDatasetManagement):
         """
         Pythonic alternative to ``dataset.set_tags(tags=[...])``.
 
-        :param tags: The list of tags to set on the dataset (before normalization; see _normalize_tags method).
+        :param tags: Tags to set on the dataset. Accepts a single space-separated string, or a sequence
+            of tag strings.
         """
         self.set_tags(tags=(tags or []))
 
     def get_tags(self, reload: bool = False) -> List[str]:
         """
-        Returns tags attached to the dataset. Allows invalidating tags cache via ``dataset.get_tags(reload=True)``.
+        Return the tags attached to the dataset. Allows invalidating the tags cache via
+        ``dataset.get_tags(reload=True)``.
 
-        :param reload: If set to ``True``, tags will be fetched from the backend
-            and the local runtime cache will be updated.
+        :param reload: If ``True``, fetch tags from the backend and update the local runtime cache
+            (default ``False``).
 
         :return: The list of tags attached to this dataset.
         """
@@ -820,9 +830,10 @@ class HyperDataset(HyperDatasetManagement):
 
     def add_tags(self, tags: TagsInputValue) -> None:
         """
-        Adds the provided tags to the list of tags attached to the dataset.
+        Add the provided tags to the dataset.
 
-        :param tags: The list of tags to add to the dataset (before normalization; see _normalize_tags method).
+        :param tags: Tags to add to the dataset. Accepts a single space-separated string, or a sequence
+            of tag strings.
         """
         tags_to_add = self._normalize_tags(tags=tags)
         new_tags = list(set((
@@ -837,9 +848,10 @@ class HyperDataset(HyperDatasetManagement):
 
     def remove_tags(self, tags: TagsInputValue) -> None:
         """
-        Removes the provided tags from the list of tags attached to the dataset.
+        Remove the provided tags from the dataset.
 
-        :param tags: The list of tags to remove from the dataset (before normalization; see _normalize_tags method).
+        :param tags: Tags to remove from the dataset. Accepts a single space-separated string, or a sequence
+            of tag strings.
         """
         tags_to_remove = self._normalize_tags(tags=tags)
         new_tags = [
@@ -855,9 +867,10 @@ class HyperDataset(HyperDatasetManagement):
 
     def set_tags(self, tags: TagsInputValue) -> None:
         """
-        Overrides the existing tags on the dataset with the provided list of tags.
+        Override the dataset's existing tags with the provided tags.
 
-        :param tags: The list of tags that will be on the dataset (before normalization; see _normalize_tags method).
+        :param tags: Tags to set on the dataset. Accepts a single space-separated string, or a sequence
+            of tag strings.
         """
         new_tags = self._normalize_tags(tags=tags)
         HyperDatasetManagementBackend.update_dataset_tags(
@@ -885,10 +898,11 @@ class HyperDataset(HyperDatasetManagement):
 
     def create_snapshot(self) -> "HyperDataset":
         """
-        Publish a snapshot hyperdataset with parent equal to this hyperdataset.
-        Leaves this hyperdataset unchanged.
+        Publish the current version of this ``HyperDataset`` as an immutable snapshot, then continue
+        working on a new child version. This instance is updated in place to point to the new child
+        version.
 
-        :return: A new HyperDataset bound to the newly created (current) child version
+        :return: A new ``HyperDataset`` instance bound to the published snapshot version.
         """
         new_version_id = HyperDatasetManagementBackend.publish_and_create_child_version(
             dataset_id=self.dataset_id,
