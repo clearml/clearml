@@ -39,17 +39,17 @@ class DataSubEntryImage(DataSubEntry):
         metadata: Optional[dict] = None,
     ) -> None:
         """
-        Initialise an image sub-entry with optional dimension, context and mask metadata.
+        Initialize an image sub-entry with optional dimension, context, and mask metadata.
 
-        :param name: Identifier of the sub-entry (defaults to image_entry_0)
-        :param source: Primary image URI
-        :param preview_source: Optional preview image URI
-        :param width: Image width in pixels
-        :param height: Image height in pixels
-        :param timestamp: Optional timestamp associated with the frame
-        :param context_id: Optional context identifier to correlate sources
-        :param masks_source: Sequence or mapping of mask URIs
-        :param metadata: Optional metadata dictionary stored alongside the sub-entry
+        :param name: Identifier of the sub-entry (defaults to ``"image_entry_0"``).
+        :param source: Primary image URI.
+        :param preview_source: Preview image URI.
+        :param width: Image width in pixels.
+        :param height: Image height in pixels.
+        :param timestamp: Timestamp associated with the frame.
+        :param context_id: Context identifier to correlate sources.
+        :param masks_source: Sequence or mapping of mask URIs.
+        :param metadata: Metadata dictionary stored alongside the sub-entry.
         """
         super(DataSubEntryImage, self).__init__(
             name=name,
@@ -72,9 +72,9 @@ class DataSubEntryImage(DataSubEntry):
     @property
     def width(self) -> Optional[int]:
         """
-        Return cached image width if known.
+        Return the cached image width, if known.
 
-        :return: Width in pixels or None when unknown
+        :return: Width in pixels, or ``None`` when unknown.
         """
         return self._width
 
@@ -83,16 +83,16 @@ class DataSubEntryImage(DataSubEntry):
         """
         Update the cached image width.
 
-        :param value: Width in pixels or None to clear the stored value
+        :param value: Width in pixels, or ``None`` to clear the stored value.
         """
         self._width = value
 
     @property
     def height(self) -> Optional[int]:
         """
-        Return cached image height if known.
+        Return the cached image height, if known.
 
-        :return: Height in pixels or None when unknown
+        :return: Height in pixels, or ``None`` when unknown.
         """
         return self._height
 
@@ -101,7 +101,7 @@ class DataSubEntryImage(DataSubEntry):
         """
         Update the cached image height.
 
-        :param value: Height in pixels or None to clear the stored value
+        :param value: Height in pixels, or ``None`` to clear the stored value.
         """
         self._height = value
 
@@ -110,7 +110,7 @@ class DataSubEntryImage(DataSubEntry):
         """
         Return the timestamp associated with this frame, if any.
 
-        :return: Timestamp value or None
+        :return: The timestamp value, or ``None`` if none is set.
         """
         return self._timestamp
 
@@ -119,7 +119,7 @@ class DataSubEntryImage(DataSubEntry):
         """
         Update the timestamp associated with the sub-entry.
 
-        :param value: Timestamp value or None to clear the stored timestamp
+        :param value: The timestamp value, or ``None`` to clear the stored timestamp.
         """
         self._timestamp = value
 
@@ -128,7 +128,7 @@ class DataSubEntryImage(DataSubEntry):
         """
         Return the context identifier used to correlate sub-entries.
 
-        :return: Context identifier string or None
+        :return: The context identifier string, or ``None``.
         """
         return self._context_id
 
@@ -137,7 +137,7 @@ class DataSubEntryImage(DataSubEntry):
         """
         Update the context identifier associated with the sub-entry.
 
-        :param value: Context identifier string or None to clear the stored value
+        :param value: The context identifier string, or ``None`` to clear the stored value.
         """
         self._context_id = value
 
@@ -145,7 +145,8 @@ class DataSubEntryImage(DataSubEntry):
         """
         Add a single mask URI and auto-number it (00, 01, 02, ...).
 
-        Returns the assigned mask id, or None if uri is falsy.
+        :param uri: The mask URI to add.
+        :return: The assigned mask ID, or ``None`` if ``uri`` is falsy.
         """
         if not uri:
             return None
@@ -163,8 +164,9 @@ class DataSubEntryImage(DataSubEntry):
         """
         Set multiple mask URIs and auto-number them (00, 01, 02, ...).
 
-        For dict input, the values' iteration order is used and keys are ignored.
-        For list/sequence input, order is preserved.
+        :param masks_source: A sequence of mask URIs, or a mapping of mask ID to URI. For a mapping, the values'
+            iteration order is used and the keys are ignored; for a sequence, order is preserved. If ``None``,
+            the mask sources are cleared.
         """
         if masks_source is None:
             self._masks_source = {}
@@ -181,16 +183,16 @@ class DataSubEntryImage(DataSubEntry):
         """
         Return a copy of the mask-id to URI mapping.
 
-        :return: Dictionary mapping mask ids to URIs
+        :return: A dictionary mapping mask IDs to URIs.
         """
         return dict(self._masks_source)
 
     def get_mask_source(self, mask_id: Optional[str] = None) -> Optional[str]:
         """
-        Return the URI for the requested mask id (or the first mask if omitted).
+        Return the URI for the requested mask ID (or the first mask if omitted).
 
-        :param mask_id: Mask identifier (e.g. "00")
-        :return: Mask URI string or None when unavailable
+        :param mask_id: Mask identifier (e.g. ``"00"``).
+        :return: The mask URI string, or ``None`` when unavailable.
         """
         if not self._masks_source:
             return None
@@ -208,10 +210,11 @@ class DataSubEntryImage(DataSubEntry):
         """
         Retrieve a cached local copy of a specific mask source.
 
-        :param raise_on_error: Raise ValueError when the download fails
-        :param mask_id: Mask identifier to fetch; defaults to the first mask
-        :param force_download: Refresh an existing cached entry when True
-        :return: Absolute path to the local copy or None when unavailable
+        :param raise_on_error: If ``True``, raise ``ValueError`` when the download fails (default ``False``).
+        :param mask_id: Mask identifier to fetch; defaults to the first mask.
+        :param force_download: If ``True``, refresh an existing cached entry instead of reusing it
+            (default ``False``).
+        :return: The absolute path to the local copy, or ``None`` when unavailable.
         """
         uri = self.get_mask_source(mask_id)
         if not uri:
@@ -237,9 +240,11 @@ class DataSubEntryImage(DataSubEntry):
         """
         Retrieve cached local copies for all mask sources on this sub-entry.
 
-        :param raise_on_error: Raise ValueError when any download fails
-        :param force_download: Refresh existing cached entries when True
-        :return: Mapping of mask id to the local copy path (or None on failure if raise_on_error is False)
+        :param raise_on_error: If ``True``, raise ``ValueError`` when any download fails (default ``False``).
+        :param force_download: If ``True``, refresh existing cached entries instead of reusing them
+            (default ``False``).
+        :return: A mapping of mask ID to local copy path (``None`` for a given mask if its download fails and
+            ``raise_on_error`` is ``False``).
         """
         masks: Dict[str, Optional[str]] = {}
         for mid, uri in sorted((self._masks_source or {}).items()):
@@ -291,20 +296,20 @@ class DataSubEntryImage(DataSubEntry):
         """
         Create ROI records for this sub-entry and return their indices.
 
-        :param poly2d_xy: 2D polygon coordinates
-        :param poly3d_xyz: 3D polygon coordinates
-        :param points2d_xy: 2D keypoint coordinates
-        :param points3d_xyz: 3D keypoint coordinates
-        :param box2d_xywh: 2D bounding box definition
-        :param box3d_xyzwhxyzwh: 3D bounding box definition
-        :param ellipse2d_xyrrt: 2D ellipse definition
-        :param mask_rgb: RGB mask values
-        :param frame_class: Optional frame-level class labels
-        :param id: Annotation identifier
-        :param labels: Sequence of label names
-        :param confidence: Optional confidence value
-        :param metadata: Extra metadata mapping to attach to the annotation
-        :return: List of annotation indices that were appended
+        :param poly2d_xy: 2D polygon coordinates.
+        :param poly3d_xyz: 3D polygon coordinates.
+        :param points2d_xy: 2D keypoint coordinates.
+        :param points3d_xyz: 3D keypoint coordinates.
+        :param box2d_xywh: 2D bounding box definition.
+        :param box3d_xyzwhxyzwh: 3D bounding box definition.
+        :param ellipse2d_xyrrt: 2D ellipse definition.
+        :param mask_rgb: RGB mask values.
+        :param frame_class: Frame-level class labels.
+        :param id: Annotation identifier.
+        :param labels: Sequence of label names.
+        :param confidence: Confidence value.
+        :param metadata: Extra metadata mapping to attach to the annotation.
+        :return: A list of the indices of the annotations that were appended.
         """
         # Minimal in-memory ROI creation compatible with SaveFramesRequest schema
         anns: List[Dict[str, Any]] = []
@@ -412,9 +417,9 @@ class DataSubEntryImage(DataSubEntry):
         """
         Remove a single annotation by numeric index or identifier.
 
-        :param index: Annotation index to remove
-        :param kwargs: Alternative filters such as id=...
-        :return: Removed annotation payload or None when nothing matched
+        :param index: Annotation index to remove.
+        :param kwargs: Alternative filters, such as ``id=...``.
+        :return: The removed annotation payload, or ``None`` if nothing matched.
         """
         if not hasattr(self, "_annotations") or not self._annotations:
             return None
@@ -434,12 +439,12 @@ class DataSubEntryImage(DataSubEntry):
         self, id: Optional[str] = None, label: Optional[str] = None, labels: Optional[Sequence[str]] = None
     ) -> Sequence[Any]:
         """
-        Remove annotations that match the provided id or label filters.
+        Remove annotations that match the provided ID or label filters.
 
-        :param id: Annotation identifier to match
-        :param label: Single label to match
-        :param labels: Sequence of labels to match
-        :return: Sequence of removed annotation payloads
+        :param id: Annotation identifier to match.
+        :param label: Single label to match.
+        :param labels: Sequence of labels to match.
+        :return: A sequence of the removed annotation payloads.
         """
         if not hasattr(self, "_annotations") or not self._annotations:
             return []
@@ -464,7 +469,7 @@ class DataSubEntryImage(DataSubEntry):
         """
         Return all annotations attached to this sub-entry.
 
-        :return: Sequence of annotation payloads
+        :return: A sequence of the annotation payloads attached to this sub-entry.
         """
         return list(getattr(self, "_annotations", []) or [])
 
@@ -472,9 +477,9 @@ class DataSubEntryImage(DataSubEntry):
         """
         Return annotations matching the supplied identifier/index filters.
 
-        :param id: Annotation identifier to filter by
-        :param index: Annotation index to fetch
-        :return: Sequence of matching annotation payloads
+        :param id: Annotation identifier to filter by.
+        :param index: Annotation index to fetch.
+        :return: A sequence of the matching annotation payloads.
         """
         anns = list(getattr(self, "_annotations", []) or [])
         if index is not None:
@@ -560,20 +565,20 @@ class DataEntryImage(DataEntry):
         """
         Broadcast an annotation request to all sub-entries and aggregate their indices.
 
-        :param poly2d_xy: 2D polygon coordinates
-        :param poly3d_xyz: 3D polygon coordinates
-        :param points2d_xy: 2D keypoint coordinates
-        :param points3d_xyz: 3D keypoint coordinates
-        :param box2d_xywh: 2D bounding box definition
-        :param box3d_xyzwhxyzwh: 3D bounding box definition
-        :param ellipse2d_xyrrt: 2D ellipse definition
-        :param mask_rgb: RGB mask values
-        :param frame_class: Optional frame-level class labels
-        :param id: Annotation identifier
-        :param labels: Sequence of label names
-        :param confidence: Optional confidence value
-        :param metadata: Extra metadata mapping to attach to the annotation
-        :return: List of annotation indices returned by the sub-entries
+        :param poly2d_xy: 2D polygon coordinates.
+        :param poly3d_xyz: 3D polygon coordinates.
+        :param points2d_xy: 2D keypoint coordinates.
+        :param points3d_xyz: 3D keypoint coordinates.
+        :param box2d_xywh: 2D bounding box definition.
+        :param box3d_xyzwhxyzwh: 3D bounding box definition.
+        :param ellipse2d_xyrrt: 2D ellipse definition.
+        :param mask_rgb: RGB mask values.
+        :param frame_class: Frame-level class labels.
+        :param id: Annotation identifier.
+        :param labels: Sequence of label names.
+        :param confidence: Confidence value.
+        :param metadata: Extra metadata mapping to attach to the annotation.
+        :return: A list of the annotation indices returned by the sub-entries.
         """
         idxs: List[int] = []
         for sub in (self.sub_data_entries or []):
@@ -601,9 +606,9 @@ class DataEntryImage(DataEntry):
         """
         Remove the first matching annotation across sub-entries.
 
-        :param index: Annotation index to remove
-        :param kwargs: Alternative filters such as id=...
-        :return: Removed annotation payload or None when nothing matched
+        :param index: Annotation index to remove.
+        :param kwargs: Alternative filters, such as ``id=...``.
+        :return: The removed annotation payload, or ``None`` if nothing matched.
         """
         removed = None
         for sub in (self.sub_data_entries or []):
@@ -617,10 +622,10 @@ class DataEntryImage(DataEntry):
         """
         Remove annotations across sub-entries using the provided filters.
 
-        :param id: Annotation identifier to match
-        :param label: Single label to match
-        :param labels: Sequence of labels to match
-        :return: Sequence of removed annotation payloads
+        :param id: Annotation identifier to match.
+        :param label: Single label to match.
+        :param labels: Sequence of labels to match.
+        :return: A sequence of the removed annotation payloads.
         """
         removed: List[Any] = []
         for sub in (self.sub_data_entries or []):
@@ -632,7 +637,7 @@ class DataEntryImage(DataEntry):
         """
         Return every annotation collected from all sub-entries.
 
-        :return: Sequence of annotation payloads across all sub-entries
+        :return: A sequence of the annotation payloads collected from all sub-entries.
         """
         anns: List[Any] = []
         for sub in (self.sub_data_entries or []):
@@ -647,9 +652,9 @@ class DataEntryImage(DataEntry):
         """
         Return global annotations filtered by identifier or index.
 
-        :param id: Annotation identifier to filter by
-        :param index: Annotation index to fetch
-        :return: Sequence of matching annotation payloads
+        :param id: Annotation identifier to filter by.
+        :param index: Annotation index to fetch.
+        :return: A sequence of the matching annotation payloads.
         """
         if id is None and index is None:
             return self.get_all_global_annotations()
@@ -720,7 +725,7 @@ class DataEntryImage(DataEntry):
     @classmethod
     def from_api_object(cls, frame: Any) -> "DataEntryImage":
         """
-        Convert backend frame (dict/object) to DataEntryImage + DataSubEntryImage tree.
+        Convert a backend frame (dict or object) into a ``DataEntryImage`` and its ``DataSubEntryImage`` tree.
         """
         log = logging.getLogger("DataView")
 

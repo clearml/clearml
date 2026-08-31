@@ -6,8 +6,7 @@ from attr.validators import instance_of
 
 from .. import Task
 from ..utilities.pyhocon import ConfigFactory, ConfigTree
-from .auto_scaler import CloudDriver
-from .cloud_driver import parse_tags
+from .cloud_driver import CloudDriver, parse_tags
 
 try:
     # noinspection PyPackageRequirements
