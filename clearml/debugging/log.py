@@ -5,12 +5,12 @@ import logging
 import logging.handlers
 import os
 import sys
+from io import BytesIO
 from os import getenv
 from platform import system
 from typing import Optional, Union, TextIO, Any
 
 from pathlib2 import Path
-from six import BytesIO
 
 default_level = logging.INFO
 

@@ -3,14 +3,13 @@ import time
 from functools import reduce
 from logging import getLevelName
 from typing import Optional, List, Dict, Union, Tuple, Any
+from urllib.parse import urlparse, urlunparse
 
 import io
 import attr
 import numpy as np
 import pathlib2
-import six
 from PIL import Image
-from six.moves.urllib.parse import urlparse, urlunparse
 
 from clearml.utilities.hashing import md5_safe_hash
 
@@ -252,7 +251,7 @@ class UploadEvent(MetricsEventAdapter):
         self,
         metric: str,
         variant: str,
-        image_data: Union[np.ndarray, six.StringIO, six.BytesIO, None],
+        image_data: Union[np.ndarray, io.StringIO, io.BytesIO, None],
         local_image_path: Optional[str] = None,
         iter: int = 0,
         upload_uri: Optional[str] = None,
@@ -263,7 +262,7 @@ class UploadEvent(MetricsEventAdapter):
         # param override_filename: override uploaded file name (notice extension will be added from local path
         # param override_filename_ext: override uploaded file extension
         if image_data is not None and (
-            not hasattr(image_data, "shape") and not isinstance(image_data, (six.StringIO, six.BytesIO))
+            not hasattr(image_data, "shape") and not isinstance(image_data, (io.StringIO, io.BytesIO))
         ):
             raise ValueError("Image must have a shape attribute")
         self._image_data = image_data
@@ -355,7 +354,7 @@ class UploadEvent(MetricsEventAdapter):
         # we should move the _count & _filename selection into the subprocess, not the main process.
         # For the time being, this will remain a limitation of the Image reporting mechanism.
 
-        if isinstance(self._image_data, (six.StringIO, six.BytesIO)):
+        if isinstance(self._image_data, (io.StringIO, io.BytesIO)):
             output = self._image_data
         elif self._image_data is not None:
             image_data = self._image_data
@@ -375,7 +374,7 @@ class UploadEvent(MetricsEventAdapter):
 
             # serialize image
             image = Image.fromarray(image_data)
-            output = six.BytesIO()
+            output = io.BytesIO()
             image_format = Image.registered_extensions().get(str(self._format).lower(), "JPEG")
             image.save(output, format=image_format, quality=int(self._quality))
             output.seek(0)
@@ -457,7 +456,7 @@ class ImageEvent(UploadEvent):
         self,
         metric: str,
         variant: str,
-        image_data: Union[np.ndarray, six.StringIO, six.BytesIO],
+        image_data: Union[np.ndarray, io.StringIO, io.BytesIO],
         local_image_path: Optional[str] = None,
         iter: int = 0,
         upload_uri: Optional[str] = None,

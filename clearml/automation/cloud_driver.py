@@ -1,4 +1,5 @@
 import logging
+import shlex
 from abc import ABC, abstractmethod
 import os
 from typing import List, Tuple, Any
@@ -7,50 +8,10 @@ import attr
 
 from ..backend_api import Session
 from ..backend_api.session.defs import ENV_AUTH_TOKEN
+from .bash_script_template import render_bash_script_template
 
 env_git_user = "CLEARML_AUTOSCALER_GIT_USER"
 env_git_pass = "CLEARML_AUTOSCALER_GIT_PASSWORD"
-
-bash_script_template = """\
-#!/bin/bash
-
-set -x
-
-apt-get update
-apt-get install -y \
-        build-essential \
-        gcc \
-        git \
-        python3-dev \
-        python3-pip
-python3 -m pip install -U pip
-python3 -m pip install virtualenv
-python3 -m virtualenv clearml_agent_venv
-source clearml_agent_venv/bin/activate
-python -m pip install clearml-agent
-cat << EOF >> ~/clearml.conf
-{clearml_conf}
-EOF
-export CLEARML_API_HOST={api_server}
-export CLEARML_WEB_HOST={web_server}
-export CLEARML_FILES_HOST={files_server}
-export DYNAMIC_INSTANCE_ID=$({instance_id_command})
-export CLEARML_WORKER_ID={worker_prefix}:$DYNAMIC_INSTANCE_ID
-export CLEARML_API_ACCESS_KEY='{access_key}'
-export CLEARML_API_SECRET_KEY='{secret_key}'
-export CLEARML_AUTH_TOKEN='{auth_token}'
-source ~/.bashrc
-{bash_script}
-{driver_extra}
-python -m clearml_agent --config-file ~/clearml.conf daemon --queue '{queue}' {docker}
-
-if [[ $? -ne 0 ]]
-then
-  exit 1
-fi
-
-shutdown
-"""
 
 clearml_conf_template = """\
 agent.git_user="{git_user}"
@@ -135,27 +96,20 @@ class CloudDriver(ABC):
         task_id: str,
         cpu_only: bool = False,
     ) -> str:
-        return bash_script_template.format(
-            queue=queue_name,
+        return render_bash_script_template(
+            queue_name=queue_name,
             worker_prefix=worker_prefix,
-            auth_token=self.auth_token or "",
-            access_key=self.access_key or "",
+            auth_token=self.auth_token,
+            access_key=self.access_key,
             api_server=self.api_server,
             clearml_conf=self.clearml_conf(),
             files_server=self.files_server,
-            secret_key=self.secret_key or "",
+            secret_key=self.secret_key,
             web_server=self.web_server,
-            bash_script=(
-                f"export NVIDIA_VISIBLE_DEVICES=none; {self.extra_vm_bash_script}"  # ruff-format-hint
-                if cpu_only
-                else self.extra_vm_bash_script
-            ),
+            extra_vm_bash_script=self.extra_vm_bash_script,
+            cpu_only=cpu_only,
             driver_extra=self.driver_bash_extra(task_id),
-            docker=(
-                f"--docker '{self.docker_image}'"  # ruff-format-hint
-                if self.docker_image
-                else ""
-            ),
+            docker_image=self.docker_image,
             instance_id_command=self.instance_id_command(),
         )
 
@@ -179,7 +133,7 @@ class CloudDriver(ABC):
 
     def driver_bash_extra(self, task_id: str) -> str:
         return (
-            f"python -m clearml_agent --config-file ~/clearml.conf execute --id {task_id}"
+            f"python -m clearml_agent --config-file ~/clearml.conf execute --id {shlex.quote(task_id)}"
             if task_id  # ruff-format-hint
             else ""
         )
