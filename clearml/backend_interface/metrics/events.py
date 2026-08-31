@@ -3,6 +3,7 @@ import time
 from functools import reduce
 from logging import getLevelName
 from typing import Optional, List, Dict, Union, Tuple, Any
+from urllib.parse import urlparse, urlunparse
 
 import io
 import attr
@@ -10,7 +11,6 @@ import numpy as np
 import pathlib2
 import six
 from PIL import Image
-from six.moves.urllib.parse import urlparse, urlunparse
 
 from clearml.utilities.hashing import md5_safe_hash
 
