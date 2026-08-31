@@ -99,8 +99,8 @@ class DataEntry:
         """
         Container for a logical frame composed of one or more sub-entries.
 
-        :param data_entry_id: Explicit entry identifier to reuse
-        :param metadata: Optional metadata dictionary stored on the frame
+        :param data_entry_id: Explicit entry identifier to reuse.
+        :param metadata: Metadata dictionary stored on the frame.
         """
         self._id = data_entry_id or uuid.uuid4().hex
         self._sub_entries: Dict[str, "DataSubEntry"] = {}
@@ -111,7 +111,7 @@ class DataEntry:
         """
         Attach the provided sub-entry objects, indexed by their name.
 
-        :param sub_entries: Iterable of sub-entry instances to register
+        :param sub_entries: Iterable of sub-entry instances to register.
         """
         self._sub_entries.update({sub_entry.name: sub_entry for sub_entry in sub_entries})
 
@@ -138,11 +138,11 @@ class DataEntry:
         """
         Attach a metadata-only annotation to this entry.
 
-        :param id: Identifier associated with this annotation
-        :param labels: Sequence of labels to associate with the annotation
-        :param confidence: Optional confidence value
-        :param metadata: Additional metadata to store alongside the annotation
-        :return: Numeric index of the appended annotation
+        :param id: Identifier associated with this annotation.
+        :param labels: Sequence of labels to associate with the annotation.
+        :param confidence: Optional confidence value.
+        :param metadata: Additional metadata to store alongside the annotation.
+        :return: Numeric index of the appended annotation.
         """
         roi: Dict[str, Any] = {}
         if labels:
@@ -161,9 +161,9 @@ class DataEntry:
         """
         Remove a single annotation by numeric index or identifier.
 
-        :param index: Annotation index to remove
-        :param kwargs: Alternative filters such as id=...
-        :return: Removed annotation payload or None when nothing matched
+        :param index: Annotation index to remove.
+        :param kwargs: Alternative filters such as ``id=...``.
+        :return: Removed annotation payload, or ``None`` when nothing matched.
         """
         if not self._annotations:
             return None
@@ -185,12 +185,12 @@ class DataEntry:
         labels: Optional[Sequence[str]] = None,
     ) -> Sequence[Any]:
         """
-        Remove annotations that match the provided id or label filters.
+        Remove annotations that match the provided ID or label filters.
 
-        :param id: Annotation identifier to match
-        :param label: Single label to match
-        :param labels: Sequence of labels to match
-        :return: Sequence of removed annotation payloads
+        :param id: Annotation identifier to match.
+        :param label: Single label to match.
+        :param labels: Sequence of labels to match.
+        :return: Sequence of removed annotation payloads.
         """
         if not self._annotations:
             return []
@@ -215,7 +215,7 @@ class DataEntry:
         """
         Return all annotations attached to this entry.
 
-        :return: Sequence of annotation payloads
+        :return: Sequence of annotation payloads.
         """
         return list(self._annotations)
 
@@ -223,9 +223,9 @@ class DataEntry:
         """
         Return annotations matching the supplied identifier/index filters.
 
-        :param id: Annotation identifier to filter by
-        :param index: Annotation index to fetch
-        :return: Sequence of matching annotation payloads
+        :param id: Annotation identifier to filter by.
+        :param index: Annotation index to fetch.
+        :return: Sequence of matching annotation payloads.
         """
         anns = list(self._annotations)
         if index is not None:
@@ -241,7 +241,7 @@ class DataEntry:
         """
         Serialize this entry to the SaveFramesRequest frame schema.
 
-        :return: Frame dictionary ready for backend submission
+        :return: Frame dictionary ready for backend submission.
         """
         meta: Dict[str, Any] = _copy_without_keys(self._metadata, ENTRY_CLASS_KEY)
         meta[ENTRY_CLASS_KEY] = _get_class_identifier(self)
@@ -291,7 +291,7 @@ class DataEntry:
         """
         Return the entry identifier used by the backend.
 
-        :return: Entry identifier string
+        :return: Entry identifier string.
         """
         return self._id
 
@@ -300,7 +300,7 @@ class DataEntry:
         """
         Return the list of attached sub-entries.
 
-        :return: List of sub-entry objects
+        :return: A list of ``DataSubEntry`` objects.
         """
         return list(self._sub_entries.values())
 
@@ -393,13 +393,12 @@ class DataSubEntry:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
-        Initialise a base sub-entry that stores source URIs and optional metadata.
+        Create a base sub-entry that stores source URIs and optional metadata.
 
-        :param name: Identifier of the sub-entry (unique per entry)
-        :param source: Primary source URI
-        :param preview_source: Optional preview URI
-        :param local_sources_upload_destination: Upload target used when auto-uploading
-        :param metadata: Optional metadata dictionary stored alongside the sub-entry
+        :param name: Identifier of the sub-entry (unique per entry).
+        :param source: Primary source URI.
+        :param preview_source: Preview URI.
+        :param metadata: Metadata dictionary stored alongside the sub-entry.
         """
         self._name = name
         self._source = source
@@ -413,8 +412,8 @@ class DataSubEntry:
         """
         Return the cached SHA256 hash for the requested source field.
 
-        :param source_field: Either "source" or "preview_source"
-        :return: Hex digest string when available, otherwise None
+        :param source_field: Either ``"source"`` or ``"preview_source"``.
+        :return: Hex digest string when available, otherwise ``None``.
         """
         if source_field == "source":
             return self._source_hash
@@ -426,8 +425,8 @@ class DataSubEntry:
         """
         Return the URI associated with the requested source field.
 
-        :param source_field: Either "source" or "preview_source"
-        :return: URI string when set, otherwise None
+        :param source_field: Either ``"source"`` or ``"preview_source"``.
+        :return: URI string when set, otherwise ``None``.
         """
         if source_field == "source":
             return self._source
@@ -439,8 +438,8 @@ class DataSubEntry:
         """
         Update the URI linked to the requested source field.
 
-        :param source_field: Either "source" or "preview_source"
-        :param uri: New URI to associate with the field
+        :param source_field: Either ``"source"`` or ``"preview_source"``.
+        :param uri: New URI to associate with the field.
         """
         if source_field == "source":
             self._source = uri
@@ -449,9 +448,9 @@ class DataSubEntry:
 
     def set_local_sources_upload_destination(self, local_sources_upload_destination):
         """
-        Set an upload destination for the local sources. This will be used when uploading the data entry
+        Set an upload destination for the local sources. This will be used when uploading the data entry.
 
-        :param local_sources_upload_destination: URL to the upload path
+        :param local_sources_upload_destination: URL to the upload path.
         """
         self._local_sources_upload_destination = local_sources_upload_destination
 
@@ -463,9 +462,9 @@ class DataSubEntry:
         """
         Retrieve a cached local copy of the primary source URI.
 
-        :param raise_on_error: Raise ValueError when the download fails
-        :param force_download: Refresh the cached copy even if it already exists
-        :return: Absolute path to the local copy or None on failure/when source missing
+        :param raise_on_error: Raise ``ValueError`` when the download fails.
+        :param force_download: Refresh the cached copy even if it already exists.
+        :return: Absolute path to the local copy, or ``None`` on failure/when source missing.
         """
         return self._get_local_source_for_field(
             "source",
@@ -481,9 +480,9 @@ class DataSubEntry:
         """
         Retrieve a cached local copy of the preview source URI.
 
-        :param raise_on_error: Raise ValueError when the download fails
-        :param force_download: Refresh the cached copy even if it already exists
-        :return: Absolute path to the local copy or None on failure/when preview missing
+        :param raise_on_error: Raise ``ValueError`` when the download fails.
+        :param force_download: Refresh the cached copy even if it already exists.
+        :return: Absolute path to the local copy, or ``None`` on failure/when preview missing.
         """
         return self._get_local_source_for_field(
             "preview_source",
@@ -516,9 +515,9 @@ class DataSubEntry:
     @property
     def name(self) -> str:
         """
-        Return the sub-entry identifier (per entry unique).
+        Return the sub-entry identifier (unique per entry).
 
-        :return: Sub-entry name
+        :return: Sub-entry name.
         """
         return self._name
 
@@ -527,7 +526,7 @@ class DataSubEntry:
         """
         Expose the main source URI.
 
-        :return: Source URI string or None
+        :return: Source URI string, or ``None``.
         """
         return self._source
 
@@ -536,7 +535,7 @@ class DataSubEntry:
         """
         Expose the preview URI when available.
 
-        :return: Preview URI string or None
+        :return: Preview URI string, or ``None``.
         """
         return self._preview_source
 

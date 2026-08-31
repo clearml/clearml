@@ -1,7 +1,7 @@
 import fnmatch
 import sys
 from typing import Optional, Callable, Any
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 
 # Imports backwards compatibility
 from .filepaths import get_common_path  # noqa: F401
