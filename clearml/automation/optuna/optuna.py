@@ -145,32 +145,39 @@ class OptimizerOptuna(SearchStrategy):
         **optuna_kwargs: Any
     ) -> None:
         """
-        Initialize an Optuna search strategy optimizer
-        Optuna performs robust and efficient hyperparameter optimization at scale by combining.
-        Specific hyperparameter pruning strategy can be selected via `sampler` and `pruner` arguments
+        Initialize an Optuna search strategy optimizer.
+        Optuna performs robust and efficient hyperparameter optimization at scale.
+        A specific hyperparameter pruning strategy can be selected via the ``optuna_sampler`` and
+        ``optuna_pruner`` arguments.
 
-        :param str base_task_id: Task ID (str)
-        :param list hyper_parameters: list of Parameter objects to optimize over
-        :param Objective objective_metric: Objective metric to maximize / minimize
-        :param str execution_queue: execution queue to use for launching Tasks (experiments).
-        :param int num_concurrent_workers: Limit number of concurrent running Tasks (machines)
-        :param int max_iteration_per_job: number of iteration per job
-            'iterations' are the reported iterations for the specified objective,
+        :param base_task_id: Task ID to be used as template experiment to optimize.
+        :param hyper_parameters: List of parameter objects to optimize over.
+        :param objective_metric: Objective metric to maximize / minimize.
+        :param execution_queue: Execution queue to use for launching Tasks (experiments).
+        :param num_concurrent_workers: Maximum number of concurrent running Tasks (machines).
+        :param max_iteration_per_job: Number of iterations per job.
+            ``iterations`` are the reported iterations for the specified objective,
             not the maximum reported iteration of the Task.
-        :param int total_max_jobs: total maximum job for the optimization process.
+        :param total_max_jobs: Total maximum jobs for the optimization process.
             Must be provided in order to calculate the total budget for the optimization process.
-            The total budget is measured by "iterations" (see above)
-            and will be set to `max_iteration_per_job * total_max_jobs`
-            This means more than total_max_jobs could be created, as long as the cumulative iterations
-            (summed over all created jobs) will not exceed `max_iteration_per_job * total_max_jobs`
-        :param float pool_period_min: time in minutes between two consecutive pools
-        :param int min_iteration_per_job: The minimum number of iterations (of the Objective metric) per single job,
-            before early stopping the Job. (Optional)
-        :param float time_limit_per_job: Optional, maximum execution time per single job in minutes,
-            when time limit is exceeded job is aborted
-        :param float compute_time_limit: The maximum compute time in minutes. When time limit is exceeded,
-            all jobs aborted. (Optional)
-        :param optuna_kwargs: arguments passed directly to the Optuna object
+            The total budget is measured in ``iterations`` (see above)
+            and will be set to ``max_iteration_per_job * total_max_jobs``.
+            This means more than ``total_max_jobs`` could be created, as long as the cumulative iterations
+            (summed over all created jobs) do not exceed ``max_iteration_per_job * total_max_jobs``.
+        :param pool_period_min: Time between two consecutive pools (minutes).
+        :param min_iteration_per_job: Minimum number of iterations (of the Objective metric) per single job,
+            before early stopping the job.
+        :param time_limit_per_job: Maximum execution time per single job in minutes.
+            When the time limit is exceeded, the job is aborted.
+        :param compute_time_limit: Maximum compute time in minutes.
+            When the time limit is exceeded, all jobs are aborted.
+        :param optuna_sampler: Optuna sampler instance (for example, an instance of
+            ``optuna.samplers.TPESampler``) used to control how new configurations are proposed.
+            If ``None`` (default), Optuna's own default sampler is used.
+        :param optuna_pruner: Optuna pruner instance (for example, an instance of
+            ``optuna.pruners.MedianPruner``) used to decide whether to prune (early-stop) an unpromising trial.
+            If ``None`` (default), Optuna's own default pruner is used.
+        :param optuna_kwargs: Arguments passed directly to the Optuna object.
         """
         super(OptimizerOptuna, self).__init__(
             base_task_id=base_task_id,
@@ -196,12 +203,11 @@ class OptimizerOptuna(SearchStrategy):
 
     def start(self) -> None:
         """
-        Start the Optimizer controller function loop()
-        If the calling process is stopped, the controller will stop as well.
+        Start the optimizer controller's function loop. If the calling process is stopped, the controller will
+        stop as well.
 
         .. important::
-            This function returns only after optimization is completed or :meth:`stop` was called.
-
+            This function returns only after the optimization is completed or ```stop``` is called.
         """
         if self._objective_metric.len != 1:
             self._study = optuna.create_study(
@@ -239,8 +245,8 @@ class OptimizerOptuna(SearchStrategy):
 
     def stop(self) -> None:
         """
-        Stop the current running optimization loop,
-        Called from a different thread than the :meth:`start`.
+        Stop the current running optimization loop. Should be called from a different thread than the one
+        running :meth:`start`.
         """
         if self._study:
             try:

@@ -29,15 +29,15 @@ class HyperDatasetManagement:
         version_id: Optional[str] = None,
     ) -> HD:
         """
-        Return a `HyperDataset` handle bound to an existing dataset/version.
+        Return a ``HyperDataset`` handle bound to an existing dataset/version.
 
-        :param dataset_name: Dataset collection name. Mutually exclusive with `dataset_id`
-        :param version_name: Version name. Mutually exclusive with `version_id`
-        :param project_name: Optional ClearML project filter when using `dataset_name`
-        :param dataset_id: Dataset identifier. Mutually exclusive with `dataset_name`
-        :param version_id: Version identifier. Mutually exclusive with `version_name`
+        :param dataset_name: Dataset collection name. Mutually exclusive with ``dataset_id``.
+        :param version_name: Version name. Mutually exclusive with ``version_id``.
+        :param project_name: ClearML project filter used when resolving by ``dataset_name``.
+        :param dataset_id: Dataset identifier. Mutually exclusive with ``dataset_name``.
+        :param version_id: Version identifier. Mutually exclusive with ``version_name``.
 
-        :return: `HyperDataset` instance pointing at the requested dataset/version
+        :return: A ``HyperDataset`` instance pointing at the requested dataset/version.
         """
 
         if dataset_name and dataset_id:
@@ -99,13 +99,13 @@ class HyperDatasetManagement:
         """
         Check whether a dataset (and optionally a specific version) exists.
 
-        :param dataset_name: Dataset collection name. Mutually exclusive with `dataset_id`
-        :param version_name: Dataset version name. Mutually exclusive with `version_id`
-        :param project_name: Optional project filter when searching by name
-        :param dataset_id: Dataset identifier to query. Mutually exclusive with `dataset_name`
-        :param version_id: Version identifier to query. Mutually exclusive with `version_name`
+        :param dataset_name: Dataset collection name. Mutually exclusive with ``dataset_id``.
+        :param version_name: Dataset version name. Mutually exclusive with ``version_id``.
+        :param project_name: Project filter used when resolving by ``dataset_name``.
+        :param dataset_id: Dataset identifier to query. Mutually exclusive with ``dataset_name``.
+        :param version_id: Version identifier to query. Mutually exclusive with ``version_name``.
 
-        :return: True when the dataset (and requested version) can be found
+        :return: ``True`` if the dataset (and requested version) can be found.
         """
         if dataset_name and dataset_id:
             raise ValueError("Provide either dataset_name or dataset_id, not both")
@@ -157,15 +157,15 @@ class HyperDatasetManagement:
         - ``dataset_id``/``dataset_name`` are mutually exclusive, as are
           ``version_id``/``version_name``
         - ``version_name`` requires a dataset selector (names are only unique per dataset)
-        - names are resolved through ``get()``; explicit ids are verified with ``exists()``
+        - names are resolved through ``get()``; explicit IDs are verified with ``exists()``
         - no selectors at all is valid and resolves to ``('*', '*')``
 
         :param dataset_id: Dataset identifier, or '*' / None for any dataset
-        :param dataset_name: Dataset name to resolve into an id
+        :param dataset_name: Dataset name to resolve into an ID
         :param version_id: Version identifier, or '*' / None for any version
-        :param version_name: Version name to resolve into an id
+        :param version_name: Version name to resolve into an ID
         :param project_name: Optional project filter used when resolving ``dataset_name``
-        :return: Tuple of (dataset id or '*', version id or '*')
+        :return: Tuple of (dataset ID or '*', version ID or '*')
         :raises ValueError: On conflicting selectors or when the referenced
             dataset/version does not exist
         """
@@ -214,13 +214,16 @@ class HyperDatasetManagement:
         """
         List HyperDataset collections matching the provided filters.
 
-        :param project_name: Optional project filter (matches project hierarchy when recursive)
-        :param partial_name: Optional regex / partial dataset name filter
-        :param tags: Optional list of tags to filter by
-        :param ids: Optional list of dataset identifiers
-        :param recursive_project_search: Include subprojects when filtering by project_name
-        :param include_archived: Include archived datasets when True
-        :return: List of dictionaries describing the matching datasets
+        :param project_name: Project filter (matches the project hierarchy when
+            ``recursive_project_search`` is ``True``).
+        :param partial_name: Regex / partial dataset name filter.
+        :param tags: List of tags to filter by.
+        :param ids: List of dataset identifiers to filter by.
+        :param recursive_project_search: If ``True``, include subprojects when filtering by
+            ``project_name`` (default ``True``).
+        :param include_archived: If ``True``, include archived datasets (default ``True``).
+
+        :return: A list of dictionaries, each describing a matching dataset.
         """
         return HyperDatasetManagementBackend.list(
             dataset_project=project_name,
@@ -243,12 +246,12 @@ class HyperDatasetManagement:
         """
         Delete a dataset or a specific dataset version.
 
-        :param dataset_name: Dataset name to delete (required)
-        :param version_name: Version name to delete. When omitted, the entire dataset is removed
-        :param project_name: Optional project context when resolving by name
-        :param force: Force deletion even when there are protections
+        :param dataset_name: Dataset name to delete (required).
+        :param version_name: Version name to delete. When omitted, the entire dataset is removed.
+        :param project_name: Project filter used when resolving by ``dataset_name``.
+        :param force: If ``True``, force deletion even when there are protections (default ``False``).
 
-        :return: True when deletion completes successfully
+        :return: ``True`` if deletion completes successfully.
         """
         session = Session()
         project_id = get_existing_project(session, project_name) if project_name else None
@@ -285,12 +288,14 @@ class HyperDatasetManagement:
         """
         Commit the bound HyperDataset version to refresh backend statistics.
 
-        :param publish: Publish the version after committing (optional)
-        :param force: Force publish even when annotation tasks reference the version
-        :param calculate_stats: Control statistics calculation during commit
-        :param override_stats: Optional statistics payload to persist as-is
-        :param publishing_task: Annotation task identifier issuing the commit
-        :return: Backend response payload
+        :param publish: If ``True``, publish the version after committing (default ``False``).
+        :param force: If ``True``, force publish even when annotation tasks reference the version
+            (default ``False``).
+        :param calculate_stats: Whether to calculate statistics during the commit (default ``True``).
+        :param override_stats: Statistics payload to persist instead of recalculating them.
+        :param publishing_task: Annotation task identifier issuing the commit.
+
+        :return: The backend's response payload.
         """
         if not getattr(self, "_version_id", None):
             raise ValueError("HyperDataset instance is not bound to a dataset version")
@@ -313,10 +318,10 @@ class HyperDatasetManagement:
         """
         Publish the bound HyperDataset version.
 
-        :param force: Force publish even with active annotation tasks
-        :param publishing_task: Annotation task identifier issuing the commit
+        :param force: If ``True``, force publish even with active annotation tasks (default ``False``).
+        :param publishing_task: Annotation task identifier issuing the commit.
 
-        :return: Backend response payload
+        :return: The backend's response payload.
         """
         if not getattr(self, "_version_id", None):
             raise ValueError("HyperDataset instance is not bound to a dataset version")

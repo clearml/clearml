@@ -1620,7 +1620,7 @@ class PipelineController:
         :param project_name: Set the project name for the pipeline.
         :param task_name: Set the name of the remote pipeline.
         :param repo: Remote URL for the repository to use, or path to local copy of the git repository.
-            Example: ``'https://github.com/allegroai/clearml.git'`` or ``'~/project/repo'``. If ``repo`` is specified, then
+            Example: ``'https://github.com/clearml/clearml.git'`` or ``'~/project/repo'``. If ``repo`` is specified, then
             the ``script`` parameter must also be specified.
         :param branch: Select specific repository branch/tag (implies the latest commit from the branch).
         :param commit: Select specific commit ID to use (default: latest commit,

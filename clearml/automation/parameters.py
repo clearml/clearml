@@ -109,7 +109,7 @@ class Parameter(RandomSeed):
 
 class UniformParameterRange(Parameter):
     """
-    Uniform randomly sampled hyperparameter object.
+    Uniformly randomly sampled hyperparameter object.
     """
 
     def __init__(
@@ -121,18 +121,14 @@ class UniformParameterRange(Parameter):
         include_max_value: bool = True,
     ):
         """
-        Create a parameter to be sampled by the SearchStrategy
+        Create a parameter to be sampled by the SearchStrategy.
 
-        :param str name: The parameter name. Match the Task hyperparameter name.
-        :param float min_value: The minimum sample to use for uniform random sampling.
-        :param float max_value: The maximum sample to use for uniform random sampling.
-        :param float step_size: If not ``None``, set step size (quantization) for value sampling.
-        :param bool include_max_value: Range includes the ``max_value``.
-            The values are:
-
-          - ``True`` - The range includes the ``max_value`` (Default)
-          - ``False`` -  Does not include.
-
+        :param name: The parameter name. Match the Task hyperparameter name.
+        :param min_value: The minimum sample to use for uniform random sampling.
+        :param max_value: The maximum sample to use for uniform random sampling.
+        :param step_size: If not ``None``, quantize the sampled value to this step size.
+            If ``None`` (default), sample continuously.
+        :param include_max_value: If ``True`` (default), the range includes ``max_value``. If ``False``, it does not.
         """
         super(UniformParameterRange, self).__init__(name=name)
         self.min_value = float(min_value)
@@ -153,10 +149,10 @@ class UniformParameterRange(Parameter):
 
     def to_list(self) -> Sequence[Mapping[str, float]]:
         """
-        Return a list of all the valid values of the Parameter. If ``self.step_size`` is not defined, return 100 points
+        Return a list of all the valid values of the Parameter. If ``step_size`` is not defined, return 100 points
         between min/max values.
 
-        :return: list of dicts ``{name: float}``
+        :return: A list of dicts ``{name: float}``, each mapping the parameter name to a ``float`` value.
         """
         step_size = self.step_size or (self.max_value - self.min_value) / 100.0
         steps = (self.max_value - self.min_value) / step_size
@@ -221,7 +217,7 @@ class LogUniformParameterRange(UniformParameterRange):
 
 class UniformIntegerParameterRange(Parameter):
     """
-    Uniform randomly sampled integer Hyperparameter object.
+    Uniformly randomly sampled integer hyperparameter object.
     """
 
     def __init__(
@@ -235,16 +231,11 @@ class UniformIntegerParameterRange(Parameter):
         """
         Create a parameter to be sampled by the SearchStrategy.
 
-        :param str name: The parameter name. Match the task hyperparameter name.
-        :param int min_value: The minimum sample to use for uniform random sampling.
-        :param int max_value: The maximum sample to use for uniform random sampling.
-        :param int step_size: The default step size is ``1``.
-        :param bool include_max_value: Range includes the ``max_value``.
-            The values are:
-
-          - ``True`` - Includes the ``max_value`` (Default)
-          - ``False`` - Does not include.
-
+        :param name: The parameter name. Match the task hyperparameter name.
+        :param min_value: The minimum sample to use for uniform random sampling.
+        :param max_value: The maximum sample to use for uniform random sampling.
+        :param step_size: Step size between sampled values. Default: ``1``.
+        :param include_max_value: If ``True`` (default), the range includes ``max_value``. If ``False``, it does not.
         """
         super(UniformIntegerParameterRange, self).__init__(name=name)
         self.min_value = int(min_value)
@@ -268,10 +259,10 @@ class UniformIntegerParameterRange(Parameter):
 
     def to_list(self) -> Sequence[Mapping[str, int]]:
         """
-        Return a list of all the valid values of the Parameter. If ``self.step_size`` is not defined, return 100 points
-        between minmax values.
+        Return a list of all the valid values of the Parameter, stepping from ``min_value`` to ``max_value``
+        by ``step_size``.
 
-        :return: list of dicts ``{name: int}``
+        :return: A list of dicts ``{name: int}``, each mapping the parameter name to an ``int`` value.
         """
         values = list(range(self.min_value, self.max_value, self.step_size))
         if self.include_max and (not values or values[-1] < self.max_value):
@@ -281,15 +272,15 @@ class UniformIntegerParameterRange(Parameter):
 
 class DiscreteParameterRange(Parameter):
     """
-    Discrete randomly sampled hyperparameter object.
+    Discretely randomly sampled hyperparameter object.
     """
 
     def __init__(self, name: str, values: Sequence[Any] = ()):
         """
-        Uniformly sample values form a list of discrete options.
+        Uniformly sample values from a list of discrete options.
 
-        :param str name: The parameter name. Match the task hyperparameter name.
-        :param list values: The list/tuple of valid parameter values to sample from.
+        :param name: The parameter name. Match the task hyperparameter name.
+        :param values: The list/tuple of valid parameter values to sample from.
         """
         super(DiscreteParameterRange, self).__init__(name=name)
         self.values = values
@@ -306,14 +297,14 @@ class DiscreteParameterRange(Parameter):
         """
         Return a list of all the valid values of the Parameter.
 
-        :return: list of dicts ``{name: value}``
+        :return: A list of dicts ``{name: value}``, each mapping the parameter name to one of its valid values.
         """
         return [{self.name: v} for v in self.values]
 
 
 class ParameterSet(Parameter):
     """
-    Discrete randomly sampled Hyper-Parameter object.
+    A set of hyperparameter combinations, one of which is sampled uniformly at random.
     """
 
     def __init__(
@@ -321,20 +312,20 @@ class ParameterSet(Parameter):
         parameter_combinations: Sequence[Mapping[str, Union[float, int, str, Parameter]]] = (),
     ):
         """
-        Uniformly sample values form a list of discrete options (combinations) of parameters.
+        Uniformly sample values from a list of discrete combinations of parameters.
 
-        :param list parameter_combinations: The list/tuple of valid parameter combinations.
+        :param parameter_combinations: List/tuple of valid parameter combinations.
 
             For example, two combinations with three specific parameters per combination:
 
             .. code-block:: javascript
 
                [
-                 {"opt1": 10, "arg2": 20, "arg2": 30},
-                 {"opt2": 11, "arg2": 22, "arg2": 33}
+                 {"opt1": 10, "arg2": 20, "arg3": 30},
+                 {"opt1": 11, "arg2": 22, "arg3": 33}
                ]
 
-            Two complex combination each one sampled from a different range:
+            Two complex combinations, each one sampled from a different range:
 
             .. code-block:: javascript
 
@@ -348,7 +339,7 @@ class ParameterSet(Parameter):
 
     def get_value(self) -> Mapping[str, Any]:
         """
-        Return uniformly sampled value from the valid list of values.
+        Return a uniformly sampled combination from the valid list of combinations.
 
         :return: ``{self.name: random entry from self.value}``
         """
@@ -356,9 +347,9 @@ class ParameterSet(Parameter):
 
     def to_list(self) -> Sequence[Mapping[str, Any]]:
         """
-        Return a list of all the valid values of the Parameter.
+        Return a list of all the valid parameter combinations.
 
-        :return: list of dicts ``{name: value}``
+        :return: A list of dicts ``{name: value}``, each mapping every parameter name in a combination to its value.
         """
         combinations = []
         for combination in self.values:
