@@ -37,12 +37,12 @@ def set_dataview(task: "Task", dataview) -> None:
     (i.e. under `input.*`), so the DataView appears in the UI, without using
     runtime properties.
 
-    - If `dataview` is a string id, the backend is queried to fetch its full
+    - If `dataview` is a string ID, the backend is queried to fetch its full
       definition and it is serialized into the task's `input` section.
     - If `dataview` is a `DataView`, its current state is serialized
       into the task's `input` section.
 
-    :param dataview: DataView instance or dataview id string
+    :param dataview: DataView instance or dataview ID string
     """
     # Avoid top-level import to prevent cycles
     try:
@@ -242,7 +242,7 @@ def set_dataview(task: "Task", dataview) -> None:
                 "artifacts": getattr(getattr(task.data, "execution", {}), "artifacts", []) or [],
             }
         except Exception as e:
-            get_logger("task").exception(f"Failed fetching dataview by id {dv_id}: {e}")
+            get_logger("task").exception(f"Failed fetching dataview by ID {dv_id}: {e}")
             return
     # Case 2: SDK DataView object
     elif DataView and isinstance(dataview, DataView):
