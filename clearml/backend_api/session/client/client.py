@@ -23,7 +23,6 @@ from typing import (
     Any,
 )
 
-import six
 from pathlib import Path
 
 from ... import services as api_services
@@ -44,7 +43,6 @@ def api_entity_name(service: ModuleType) -> str:
     return module_name(service).rstrip("s")
 
 
-@six.python_2_unicode_compatible
 class APIError(Exception):
     """
     Class for representing an API error.
@@ -188,7 +186,6 @@ class Response:
         return list(set(chain(super(Response, self).__dir__(), fields)) - {"response"})
 
 
-@six.python_2_unicode_compatible
 class TableResponse(Response):
     """
     Representation of result containing an array of entities
