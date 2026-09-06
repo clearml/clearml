@@ -179,7 +179,7 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
         **bohb_kwargs: Any,
     ) -> None:
         """
-        Initialize a BOHB search strategy optimizer
+        Initialize a BOHB search strategy optimizer.
         BOHB performs robust and efficient hyperparameter optimization at scale by combining
         the speed of Hyperband searches with the guidance and guarantees of convergence of Bayesian
         Optimization. Instead of sampling new configurations at random,
@@ -197,30 +197,31 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
             }
 
 
-        :param str base_task_id: Task ID (str)
-        :param list hyper_parameters: list of Parameter objects to optimize over
-        :param Objective objective_metric: Objective metric to maximize / minimize
-        :param str execution_queue: execution queue to use for launching Tasks (experiments).
-        :param int num_concurrent_workers: Limit number of concurrent running Tasks (machines)
-        :param int min_iteration_per_job: minimum number of iterations for a job to run.
-            'iterations' are the reported iterations for the specified objective,
+        :param base_task_id: Task ID to be used as a template task to optimize.
+        :param hyper_parameters: List of Parameter objects to optimize over.
+        :param objective_metric: Objective metric to maximize / minimize.
+        :param execution_queue: Execution queue to use for launching Tasks (experiments).
+        :param num_concurrent_workers: Maximum number of concurrent running Tasks (machines).
+        :param min_iteration_per_job: Minimum number of iterations for a job to run.
+            ``iterations`` are the reported iterations for the specified objective,
             not the maximum reported iteration of the Task.
-        :param int max_iteration_per_job: number of iteration per job
-            'iterations' are the reported iterations for the specified objective,
+        :param max_iteration_per_job: Maximum number of iterations per job.
+            ``iterations`` are the reported iterations for the specified objective,
             not the maximum reported iteration of the Task.
-        :param int total_max_jobs: total maximum job for the optimization process.
-            Must be provided in order to calculate the total budget for the optimization process.
-            The total budget is measured by "iterations" (see above)
-            and will be set to `max_iteration_per_job * total_max_jobs`
-            This means more than total_max_jobs could be created, as long as the cumulative iterations
-            (summed over all created jobs) will not exceed `max_iteration_per_job * total_max_jobs`
-        :param float pool_period_min: time in minutes between two consecutive pools
-        :param float time_limit_per_job: Optional, maximum execution time per single job in minutes,
-            when time limit is exceeded job is aborted
-        :param float compute_time_limit: The maximum compute time in minutes. When time limit is exceeded,
-            all jobs aborted. (Optional)
-        :param int local_port: default port 9090 tcp, this is a must for the BOHB workers to communicate, even locally.
-        :param bohb_kwargs: arguments passed directly to the BOHB object
+        :param total_max_jobs: Total maximum jobs for the optimization process.
+            Must be provided in order to calculate the total budget for the optimization process
+            The total budget is measured in ``iterations`` (see above)
+            and will be set to ``max_iteration_per_job * total_max_jobs``.
+            This means more than ``total_max_jobs`` could be created, as long as the cumulative iterations
+            (summed over all created jobs) do not exceed ``max_iteration_per_job * total_max_jobs``.
+        :param pool_period_min: Time in minutes between two consecutive pools.
+        :param time_limit_per_job: Maximum execution time per single job in minutes.
+            When the time limit is exceeded, the job is aborted.
+        :param compute_time_limit: Maximum compute time in minutes.
+            When the time limit is exceeded, all jobs are aborted.
+        :param local_port: Default port is ``9090`` (tcp). Required for the BOHB workers to communicate,
+            even locally.
+        :param bohb_kwargs: Arguments passed directly to the BOHB object.
         """
         if sys.version_info >= (3, 12):
             logger.warning(
@@ -283,7 +284,7 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
         min_bandwidth: Optional[float] = 1e-3,
     ) -> None:
         """
-        Defaults copied from BOHB constructor, see details in BOHB.__init__
+        The defaults are copied from the BOHB constructor; see ``BOHB.__init__`` for details.
 
         BOHB performs robust and efficient hyperparameter optimization
         at scale by combining the speed of Hyperband searches with the
@@ -302,34 +303,26 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
                  year =         {2018},
             }
 
-        :param eta: float (3)
-            In each iteration, a complete run of sequential halving is executed. In it,
+        :param eta: In each iteration, a complete run of sequential halving is executed. In it,
             after evaluating each configuration on the same subset size, only a fraction of
-            1/eta of them 'advances' to the next round.
-            Must be greater or equal to 2.
-        :param min_budget: float (0.01)
-            The smallest budget to consider. Needs to be positive!
-        :param max_budget: float (1)
-            The largest budget to consider. Needs to be larger than min_budget!
-            The budgets will be geometrically distributed
-            :math:`a^2 + b^2 = c^2 /sim /eta^k` for :math:`k/in [0, 1, ... , num/_subsets - 1]`.
-        :param min_points_in_model: int (None)
-            number of observations to start building a KDE. Default 'None' means
-            dim+1, the bare minimum.
-        :param top_n_percent: int (15)
-            percentage ( between 1 and 99, default 15) of the observations that are considered good.
-        :param num_samples: int (64)
-            number of samples to optimize EI (default 64)
-        :param random_fraction: float (1/3.)
-            fraction of purely random configurations that are sampled from the
-            prior without the model.
-        :param bandwidth_factor: float (3.)
-            to encourage diversity, the points proposed to optimize EI, are sampled
-            from a 'widened' KDE where the bandwidth is multiplied by this factor (default: 3)
-        :param min_bandwidth: float (1e-3)
-            to keep diversity, even when all (good) samples have the same value for one of the parameters,
-            a minimum bandwidth (Default: 1e-3) is used instead of zero.
-
+            ``1/eta`` of them advances to the next round.
+            Must be greater than or equal to ``2``. Default: ``3``.
+        :param min_budget: Smallest budget to consider. Needs to be positive.
+            If not specified, BOHB's own default (``0.01``) is used.
+        :param max_budget: Largest budget to consider. Needs to be larger than ``min_budget``.
+            If not specified, BOHB's own default (``1``) is used.
+            The budgets are geometrically distributed across the brackets, spaced by a factor of ``eta``.
+        :param min_points_in_model: Number of observations needed to start building a KDE.
+            If ``None`` (default), use ``dim + 1``, the bare minimum.
+        :param top_n_percent: Percentage (between ``1`` and ``99``) of the observations that are considered
+            good. Default: ``15``.
+        :param num_samples: Number of samples used to optimize EI. Default: ``64``.
+        :param random_fraction: Fraction of purely random configurations sampled from the prior, without
+            the model. Default: ``1/3``.
+        :param bandwidth_factor: To encourage diversity, the points proposed to optimize EI are sampled from a
+            widened KDE, where the bandwidth is multiplied by this factor. Default: ``3``.
+        :param min_bandwidth: To keep diversity, even when all (good) samples have the same value for one of
+            the parameters, a minimum bandwidth is used instead of zero. Default: ``1e-3``.
         """
         if min_budget:
             self._bohb_kwargs["min_budget"] = min_budget
@@ -346,12 +339,11 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
 
     def start(self) -> None:
         """
-        Start the Optimizer controller function loop()
-        If the calling process is stopped, the controller will stop as well.
+        Start the optimizer controller's function loop. If the calling process is stopped, the controller will
+        stop as well.
 
         .. important::
-            This function returns only after optimization is completed or :meth:`stop` was called.
-
+            This function returns only after the optimization is completed or ```stop``` is called.
         """
         # Step 1: Start a NameServer
         fake_run_id = f"OptimizerBOHB_{time()}"
@@ -401,8 +393,8 @@ class OptimizerBOHB(SearchStrategy, RandomSeed):
 
     def stop(self) -> None:
         """
-        Stop the current running optimization loop,
-        Called from a different thread than the :meth:`start`.
+        Stop the current running optimization loop. Should be called from a different thread than the one
+        running :meth:`start`.
         """
         # After the optimizer run, we must shutdown the master and the nameserver.
         self._bohb.shutdown(shutdown_workers=True)
