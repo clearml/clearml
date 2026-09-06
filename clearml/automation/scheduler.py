@@ -576,8 +576,9 @@ class BaseScheduler:
 
 class TaskScheduler(BaseScheduler):
     """
-    Task Scheduling controller.
-    Notice time-zone is ALWAYS UTC
+    A TaskScheduler launches Tasks (or calls functions) according to a set of cron-like scheduled jobs.
+
+    Notice: time-zone is always UTC.
     """
 
     _configuration_section = "schedule"
@@ -589,14 +590,14 @@ class TaskScheduler(BaseScheduler):
         force_create_task_project: Optional[str] = None,
     ) -> None:
         """
-        Create a Task scheduler service
+        Create a Task scheduler service.
 
-        :param sync_frequency_minutes: Sync task scheduler configuration every X minutes.
-            Allow to change scheduler in runtime by editing the Task configuration object
-        :param force_create_task_name: Optional, force creation of Task Scheduler service,
-            even if main Task.init already exists.
-        :param force_create_task_project: Optional, force creation of Task Scheduler service,
-            even if main Task.init already exists.
+        :param sync_frequency_minutes: Sync the scheduler configuration every X minutes. Allows changing the
+            schedule at runtime by editing the Task's configuration object.
+        :param force_create_task_name: Name to force-create the Task Scheduler service under, even if a main
+            ``Task.init()`` already exists.
+        :param force_create_task_project: Project to force-create the Task Scheduler service under, even if a main
+            ``Task.init()`` already exists.
         """
         super(TaskScheduler, self).__init__(
             sync_frequency_minutes=sync_frequency_minutes,
@@ -630,13 +631,13 @@ class TaskScheduler(BaseScheduler):
     ) -> bool:
         """
         Create a cron job-like scheduling for a pre-existing Task.
-        Notice, it is recommended to give the schedule entry a descriptive unique name,
-        if not provided, a name is randomly generated.
+        It is recommended to give the schedule entry a descriptive, unique name; if not provided,
+        one is randomly generated.
 
         When timespec parameters are specified exclusively, they define the time between task launches (see
-        `year` and `weekdays` exceptions). When multiple timespec parameters are specified, the parameter representing
-        the longest duration defines the time between task launches, and the shorter timespec parameters define specific
-        times.
+        the ``year`` and ``weekdays`` exceptions). When multiple timespec parameters are specified, the parameter
+        representing the longest duration defines the time between task launches, and the shorter timespec
+        parameters define specific times.
 
         Examples:
 
@@ -670,13 +671,13 @@ class TaskScheduler(BaseScheduler):
 
             add_task(schedule_task_id='1235', queue='default', minute=30, hour=7, day=2)
 
-        Launch every Saturday at 8:30am (notice `day=0`):
+        Launch every Saturday at 8:30am (notice ``day=0``):
 
         .. code-block:: py
 
             add_task(schedule_task_id='1235', queue='default', minute=30, hour=8, day=0, weekdays=['saturday'])
 
-        Launch every 2 hours on the weekends Saturday/Sunday (notice `day` is not passed):
+        Launch every 2 hours on the weekends Saturday/Sunday (notice ``day`` is not passed):
 
         .. code-block:: py
 
@@ -694,37 +695,40 @@ class TaskScheduler(BaseScheduler):
 
             add_task(schedule_task_id='1235', queue='default', year=1, month=3, day=4)
 
-        :param schedule_task_id: ID of Task to be cloned and scheduled for execution
-        :param schedule_function: Optional, instead of providing Task ID to be scheduled,
-            provide a function to be called. Notice the function is called from the scheduler context
-            (i.e. running on the same machine as the scheduler)
-        :param queue: Name or ID of queue to put the Task into (i.e. schedule)
-        :param name: Name or description for the cron Task (should be unique if provided, otherwise randomly generated)
-        :param target_project: Specify target project to put the cloned scheduled Task in.
-        :param minute: Time (in minutes) between task launches. If specified together with `hour`, `day`, `month`,
-            and / or  `year`, it defines the minute of the hour
-        :param hour: Time (in hours) between task launches. If specified together with `day`, `month`, and / or
-            `year`, it defines the hour of day.
-        :param day: Time (in days) between task executions. If specified together with  `month` and / or `year`,
-            it defines the day of month
+        :param schedule_task_id: ID of Task to be cloned and scheduled for execution.
+        :param schedule_function: A function to call instead of providing a Task ID to schedule. The function is
+            called from the scheduler context (i.e. runs on the same machine as the scheduler). Mutually
+            exclusive with ``schedule_task_id``.
+        :param queue: Name or ID of the queue to put the Task into (i.e. schedule it on).
+        :param name: Name or description for the cron Task (should be unique if provided, otherwise randomly
+            generated).
+        :param target_project: The project to put the cloned scheduled Task in.
+        :param minute: Time (in minutes) between task launches. If specified together with ``hour``, ``day``,
+            ``month``, and / or ``year``, it defines the minute of the hour.
+        :param hour: Time (in hours) between task launches. If specified together with ``day``, ``month``,
+            and / or ``year``, it defines the hour of day.
+        :param day: Time (in days) between task executions. If specified together with ``month`` and / or
+            ``year``, it defines the day of month.
         :param weekdays: Days of week to launch task (accepted inputs: 'monday', 'tuesday', 'wednesday',
-            'thursday', 'friday', 'saturday', 'sunday')
-        :param month: Time (in months) between task launches. If specified with `year`, it defines a specific month
+            'thursday', 'friday', 'saturday', 'sunday').
+        :param month: Time (in months) between task launches. If specified with ``year``, it defines a specific
+            month.
         :param year: Specific year if value >= current year. Time (in years) between task launches if
-            value <= 100
+            value <= 100.
         :param limit_execution_time: Limit the execution time (in hours) of the specific job.
-        :param single_instance: If True, do not launch the Task job if the previous instance is still running
-            (skip until the next scheduled time period). Default False.
-        :param recurring: If False, only launch the Task once (default: True, repeat)
-        :param execute_immediately: If True, schedule the Task to be executed immediately
-            then recurring based on the timing schedule arguments. Default False.
-        :param reuse_task: If True, re-enqueue the same Task (i.e. do not clone it) every time, default False.
-        :param task_parameters: Configuration parameters to the executed Task.
-            for example: ``{'Args/batch': '12'}`` Notice: not available when reuse_task=True
-        :param task_overrides: Change task definition.
-            for example ``{'script.version_num': None, 'script.branch': 'main'}`` Notice: not available when reuse_task=True
+        :param single_instance: If ``True``, do not launch the Task job if the previous instance is still running
+            (skip until the next scheduled time period) (default ``False``).
+        :param recurring: If ``False``, launch the Task only once instead of repeating (default ``True``).
+        :param execute_immediately: If ``True``, schedule the Task for immediate execution, then continue
+            recurring based on the timing schedule arguments (default ``False``).
+        :param reuse_task: If ``True``, re-enqueue the same Task (i.e. do not clone it) every time
+            (default ``False``).
+        :param task_parameters: Configuration parameters for the executed Task, for example:
+            ``{'Args/batch': '12'}``. Not available when ``reuse_task`` is ``True``.
+        :param task_overrides: Change the Task's definition, for example:
+            ``{'script.version_num': None, 'script.branch': 'main'}``. Not available when ``reuse_task`` is ``True``.
 
-        :return: True if job is successfully added to the scheduling list
+        :return: ``True`` if the job was successfully added to the scheduling list.
         """
         mutually_exclusive(schedule_function=schedule_function, schedule_task_id=schedule_task_id)
         task_id = schedule_task_id.id if isinstance(schedule_task_id, Task) else str(schedule_task_id or "")
@@ -758,9 +762,9 @@ class TaskScheduler(BaseScheduler):
 
     def get_scheduled_tasks(self) -> List[ScheduleJob]:
         """
-        Return the current set of scheduled jobs
+        Return the current set of scheduled jobs.
 
-        :return: List of ScheduleJob instances
+        :return: A list of ``ScheduleJob`` instances.
         """
         return self._schedule_jobs
 
@@ -768,15 +772,16 @@ class TaskScheduler(BaseScheduler):
         """
         Remove a Task ID from the scheduled task list.
 
-        :param task_id: Task or Task ID to be removed
-        :return: return True of the Task ID was found in the scheduled jobs list and was removed.
+        :param task_id: Task or Task ID to be removed.
+        :return: ``True`` if the Task ID was found in the scheduled jobs list and removed.
         """
         def get_schedule_job_task_id(schedule_job: ScheduleJob) -> Any:
             """
-            Compares the provided task_id with the scheduled job's task ID by means of equality.
-            - isinstance(task_id, Task) -> `schedule_job.base_task_id == task_id.id
-            - isinstance(task_id, str) -> `schedule_job.base_task_id == str(task_id)
-            - isinstance(task_id, Callable) (fallback case) -> `schedule_job.base_function == task_id`
+            Compare the provided ``task_id`` with the scheduled job's task ID by equality.
+
+            - ``isinstance(task_id, Task)`` -> ``schedule_job.base_task_id == task_id.id``
+            - ``isinstance(task_id, str)`` -> ``schedule_job.base_task_id == str(task_id)``
+            - ``isinstance(task_id, Callable)`` (fallback case) -> ``schedule_job.base_function == task_id``
             """
             return (
                 getattr(
@@ -811,7 +816,9 @@ class TaskScheduler(BaseScheduler):
 
     def start(self) -> None:
         """
-        Start the Task TaskScheduler loop (notice this function does not return)
+        Start the TaskScheduler loop.
+
+        Notice: this method does not return.
         """
         super(TaskScheduler, self).start()
 
@@ -874,9 +881,12 @@ class TaskScheduler(BaseScheduler):
 
     def start_remotely(self, queue: str = "services") -> None:
         """
-        Start the Task TaskScheduler loop (notice this function does not return)
+        Serialize the current scheduler state and re-launch this scheduler as a Task, enqueued on the given
+        remote queue.
 
-        :param queue: Remote queue to run the scheduler on, default 'services' queue.
+        Notice: this method does not return.
+
+        :param queue: The queue to enqueue the scheduler service on (default ``'services'``).
         """
         super(TaskScheduler, self).start_remotely(queue=queue)
 
