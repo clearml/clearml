@@ -8,6 +8,7 @@ import warnings
 from fnmatch import fnmatch
 from os.path import expanduser
 from typing import Any, Optional, List, Union
+from urllib.parse import urlparse
 
 from pathlib2 import Path
 from pyparsing import (
@@ -16,7 +17,6 @@ from pyparsing import (
     RecursiveGrammarException,
     ParseSyntaxException,
 )
-from six.moves.urllib.parse import urlparse
 
 from .bucket_config import S3BucketConfig
 from .defs import (

@@ -1,6 +1,9 @@
 from typing import Sequence
-
-from six.moves.urllib.parse import quote, urlparse, urlunparse
+from urllib.parse import (
+    quote,
+    urlparse,
+    urlunparse,
+)
 
 
 def quote_url(
