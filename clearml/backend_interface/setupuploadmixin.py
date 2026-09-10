@@ -1,4 +1,4 @@
-from abc import abstractproperty
+from abc import ABC, abstractmethod
 from typing import Optional
 import warnings
 
@@ -10,9 +10,16 @@ from ..backend_config.bucket_config import (
 from ..storage.helper import StorageHelper
 
 
-class SetupUploadMixin:
-    log = abstractproperty()
-    storage_uri = abstractproperty()
+class SetupUploadMixin(ABC):
+    @property
+    @abstractmethod
+    def log(self):
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def storage_uri(self):
+        pass
 
     def setup_upload(
         self,

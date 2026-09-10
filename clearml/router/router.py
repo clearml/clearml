@@ -7,9 +7,8 @@ from .proxy import HttpProxy
 
 class HttpRouter:
     """
-    A router class to manage HTTP routing for an application.
-    Allows the creation, deployment, and management of local and external endpoints,
-    as well as the configuration of a local proxy for traffic routing.
+    An HttpRouter manages HTTP routing for an application: it creates, deploys, and manages local and
+    external endpoints, and configures a local proxy for traffic routing.
 
     Example usage:
 
@@ -43,7 +42,7 @@ class HttpRouter:
 
     def __init__(self, task: Any) -> None:
         """
-        Do not use directly. Use `Task.get_router` instead
+        Do not use directly. Use ``Task.get_http_router()`` instead.
         """
         self._task = task
         self._external_endpoint_port = None
@@ -59,16 +58,16 @@ class HttpRouter:
         enable_streaming: bool = True,
     ) -> None:
         """
-        Set the parameters with which the local proxy is initialized
+        Set the parameters with which the local proxy is initialized.
 
-        :param incoming_port: The incoming port of the proxy
-        :param default_target: If None, no default target is set. Otherwise, route all traffic
-            that doesn't match a local route created via `create_local_route` to this target
+        :param incoming_port: The incoming port of the proxy.
+        :param default_target: If ``None``, no default target is set. Otherwise, route all traffic
+            that doesn't match a local route created via ``create_local_route()`` to this target.
         :param log_level: Python log level for the proxy, one of:
-            'critical', 'error', 'warning', 'info', 'debug', 'trace'
-        :param access_log: Enable/Disable access log
-        :param enable_streaming: If True, enable streaming of responses with the `transfer-encoding` header set.
-            If False, no response will be streamed
+            'critical', 'error', 'warning', 'info', 'debug', 'trace'.
+        :param access_log: If ``True``, enable the access log. If ``False``, disable it.
+        :param enable_streaming: If ``True``, enable streaming of responses with the ``transfer-encoding``
+            header set. If ``False``, no response will be streamed.
         """
         self._proxy_params["port"] = incoming_port or HttpProxy.DEFAULT_PORT
         self._proxy_params["default_target"] = default_target
@@ -78,7 +77,7 @@ class HttpRouter:
 
     def start_local_proxy(self) -> None:
         """
-        Start the local proxy without deploying the router, i.e. requesting an external endpoint
+        Start the local proxy without deploying the router, i.e. requesting an external endpoint.
         """
         self._proxy = self._proxy or HttpProxy(**self._proxy_params)
 
@@ -97,55 +96,56 @@ class HttpRouter:
         This function enables routing traffic between the source and target endpoints, optionally
         allowing custom callbacks to handle requests and responses or to gather telemetry data
         at the endpoint.
-        To customize proxy parameters, use the `Router.set_local_proxy_parameters` method.
+        To customize proxy parameters, use the ``HttpRouter.set_local_proxy_parameters()`` method.
         By default, the proxy binds to port 9000 for incoming requests.
 
-        :param source: The source path for routing the traffic. For example, `/` will intercept
-            all the traffic sent to the proxy, while `/example` will only intercept the calls
-            that have `/example` as the path prefix.
+        :param source: The source path for routing the traffic. For example, ``/`` will intercept
+            all the traffic sent to the proxy, while ``/example`` will only intercept the calls
+            that have ``/example`` as the path prefix.
         :param target: The target URL where the intercepted traffic is routed.
         :param request_callback: A function used to process each request before it is forwarded to the target.
             The callback must have the following parameters:
 
-            - request - The intercepted FastAPI request
-            - persistent_state - A dictionary meant to be used as a caching utility object.
+            - ``request`` - The intercepted FastAPI request.
+            - ``persistent_state`` - A dictionary meant to be used as a caching utility object.
 
-            Shared with `response_callback` and `error_callback`.
-            The callback can return a FastAPI Request, in which case this request will be forwarded to the target
+            Shared with ``response_callback`` and ``error_callback``.
+            The callback can return a FastAPI Request, in which case this request will be forwarded to the target.
         :param response_callback: A function used to process each response before it is returned by the proxy.
             The callback must have the following parameters:
 
-            - response - The FastAPI response
-            - request - The FastAPI request (after being preprocessed by the proxy)
-            - persistent_state - A dictionary meant to be used as a caching utility object.
-            Shared with `request_callback` and `error_callback`
-            The callback can return a FastAPI Response, in which case this response will be forwarded
-        :param endpoint_telemetry: If True, enable endpoint telemetry. If False, disable it.
+            - ``response`` - The FastAPI response.
+            - ``request`` - The FastAPI request (after being preprocessed by the proxy).
+            - ``persistent_state`` - A dictionary meant to be used as a caching utility object.
+            Shared with ``request_callback`` and ``error_callback``.
+            The callback can return a FastAPI Response, in which case this response will be forwarded.
+        :param endpoint_telemetry: If ``True``, enable endpoint telemetry. If ``False``, disable it.
             If a dictionary is passed, enable endpoint telemetry with custom parameters.
             The parameters are:
 
-            - endpoint_url - URL to the endpoint, mandatory if no external URL has been requested
-            - endpoint_name - name of the endpoint
-            - model_name - name of the model served by the endpoint
-            - model - referenced model
-            - model_url - URL to the model
-            - model_source - Source of the model
-            - model_version - Model version
-            - app_id - App ID, if used inside a ClearML app
-            - app_instance - The ID of the instance the ClearML app is running
-            - tags - ClearML tags
-            - system_tags - ClearML system tags
-            - container_id - Container ID, should be unique
-            - input_size - input size of the model
-            - input_type - input type expected by the model/endpoint
-            - report_statistics - whether to report statistics
+            - ``endpoint_url`` - URL to the endpoint, mandatory if no external URL has been requested.
+            - ``endpoint_name`` - Name of the endpoint.
+            - ``model_name`` - Name of the model served by the endpoint.
+            - ``model`` - Referenced model.
+            - ``model_url`` - URL to the model.
+            - ``model_source`` - Source of the model.
+            - ``model_version`` - The model's version.
+            - ``app_id`` - App ID, if used inside a ClearML app.
+            - ``app_instance`` - The ID of the instance the ClearML app is running.
+            - ``tags`` - ClearML tags.
+            - ``system_tags`` - ClearML system tags.
+            - ``container_id`` - Container ID, should be unique.
+            - ``input_size`` - The input size expected by the model.
+            - ``input_type`` - The input type expected by the model/endpoint.
+            - ``report_statistics`` - Whether to report endpoint statistics.
         :param error_callback: Callback to be called on request error.
             The callback must have the following parameters:
 
-            - request - the FastAPI request which caused the error
-            - error - an exception which indicates which error occurred
-            - persistent_state - A dictionary meant to be used as a caching utility object.
-            Shared with `request_callback` and `response_callback`
+            - ``request`` - The FastAPI request which caused the error.
+            - ``error`` - An exception which indicates which error occurred.
+            - ``persistent_state`` - A dictionary meant to be used as a caching utility object.
+
+            Shared with ``request_callback`` and ``response_callback``.
         """
         self.start_local_proxy()
         self._proxy.add_route(
@@ -159,9 +159,9 @@ class HttpRouter:
 
     def remove_local_route(self, source: str) -> None:
         """
-        Remove a local route. If endpoint telemetry is enabled for that route, disable it
+        Remove a local route. If endpoint telemetry is enabled for that route, disable it.
 
-        :param source: Remove route based on the source path used to route the traffic
+        :param source: The source path used to route the traffic; the route matching this path is removed.
         """
         if self._proxy:
             self._proxy.remove_route(source)
@@ -174,23 +174,24 @@ class HttpRouter:
         static_route: Optional[str] = None
     ) -> Optional[Dict]:
         """
-        Start the local HTTP proxy and request an external endpoint for an application
+        Start the local HTTP proxy and request an external endpoint for an application.
 
-        :param port: Port the application is listening to. If no port is supplied, a local proxy
-            will be created. To control the proxy parameters, use `Router.set_local_proxy_parameters`.
-            To control create local routes through the proxy, use `Router.create_local_route`.
-            By default, the incoming port bound by the proxy is 9000
-        :param protocol: As of now, only `http` is supported
-        :param wait: If True, wait for the endpoint to be assigned
-        :param wait_interval_seconds: The poll frequency when waiting for the endpoint
+        By default, the incoming port bound by the proxy is 9000. To customize the proxy parameters, use
+        ``HttpRouter.set_local_proxy_parameters()``. To create local routes through the proxy, use
+        ``HttpRouter.create_local_route()``.
+
+        :param wait: If ``True``, wait for the endpoint to be assigned (default ``False``).
+        :param wait_interval_seconds: The poll frequency when waiting for the endpoint.
         :param wait_timeout_seconds: If this timeout is exceeded while waiting for the endpoint,
-            the method will no longer wait and None will be returned
+            the method will no longer wait and ``None`` will be returned.
         :param static_route: The static route name (not the route path).
             When set, the external endpoint requested will use this route
             instead of generating it based on the task ID. Useful for creating
             persistent, load balanced routes.
 
-        :return: If wait is False, this method will return None. If no endpoint could be found while waiting, this method returns None. Otherwise, it returns a dictionary containing the following values:
+        :return: If ``wait`` is ``False``, this method returns ``None``. If ``wait`` is ``True`` but no endpoint
+            could be found before timing out, this method also returns ``None``. Otherwise, it returns a
+            dictionary containing the following values:
 
             - ``endpoint`` - raw endpoint. One might need to authenticate in order to use this endpoint
             - ``browser_endpoint`` - endpoint to be used in browser. Authentication will be handled via the browser
@@ -213,13 +214,14 @@ class HttpRouter:
         wait_timeout_seconds: float = 90.0,
     ) -> Optional[Dict]:
         """
-        Wait for an external endpoint to be assigned
+        Wait for an external endpoint to be assigned.
 
-        :param wait_interval_seconds: The poll frequency when waiting for the endpoint
+        :param wait_interval_seconds: The poll frequency when waiting for the endpoint.
         :param wait_timeout_seconds: If this timeout is exceeded while waiting for the endpoint,
-            the method will no longer wait
+            the method will no longer wait.
 
-        :return: If no endpoint could be found while waiting, this method returns None. Otherwise, it returns a dictionary containing the following values:
+        :return: If no endpoint could be found while waiting, this method returns ``None``. Otherwise, it
+            returns a dictionary containing the following values:
 
             - ``endpoint`` - raw endpoint. One might need to authenticate in order to use this endpoint
             - ``browser_endpoint`` - endpoint to be used in browser. Authentication will be handled via the browser
@@ -234,7 +236,7 @@ class HttpRouter:
 
     def list_external_endpoints(self) -> List[Dict]:
         """
-        List all external endpoints assigned
+        List all external endpoints assigned.
 
         :return: A list of dictionaries. Each dictionary contains the following values:
 
