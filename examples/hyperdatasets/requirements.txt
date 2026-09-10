@@ -6,5 +6,5 @@ sentence-transformers==5.3.0
 torch==2.10.0+cu130
 torchaudio==2.10.0+cu130
 torchvision==0.25.0+cu130
-transformers==5.1.0
+transformers==5.10.1
 luqum==1.0.0
