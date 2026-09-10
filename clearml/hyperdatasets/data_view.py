@@ -88,20 +88,22 @@ class HyperDatasetQuery:
         filter_by_roi: Optional[Any] = None,  # Optional[FilterByRoiEnum]
         label_rules: Optional[Any] = None,  # Optional[Sequence[dataviews.FilterLabelRule]]
     ):
-        """Construct a hyper-dataset query filter.
+        """
+        Construct a hyper-dataset query filter.
 
-        When concrete dataset/version IDs are supplied the constructor verifies their existence via
-        `HyperDatasetManagement`. Optional Lucene queries, ROI filtering, and sampling weights can be
+        When concrete dataset/version IDs are supplied, the constructor verifies their existence via
+        ``HyperDatasetManagement``. Lucene queries, ROI filtering, and sampling weights can be
         provided to further refine the query.
 
-        :param project_id: Dataset collection identifier or wildcard
-        :param dataset_id: Dataset identifier or wildcard (legacy) used when version is omitted
-        :param version_id: Dataset version identifier; defaults to `dataset_id` when empty
-        :param source_query: Lucene query applied to frame source metadata
-        :param frame_query: Lucene query applied to frame metadata
-        :param weight: Relative sampling weight for this query
-        :param filter_by_roi: Optional ROI filtering strategy
-        :param label_rules: Optional label-rule dictionaries for ROI filtering
+        :param project_id: Dataset collection identifier or wildcard.
+        :param dataset_id: Dataset identifier or wildcard (legacy), used when version is omitted.
+        :param version_id: Dataset version identifier; defaults to ``dataset_id`` when empty.
+        :param source_query: Lucene query applied to frame source metadata.
+        :param frame_query: Lucene query applied to frame metadata.
+        :param weight: Relative sampling weight for this query.
+        :param filter_by_roi: ROI filtering strategy to apply (see ``FilterByRoiEnum``: ``'disabled'``,
+            ``'no_rois'``, ``'label_rules'``).
+        :param label_rules: Label-rule dictionaries used for ROI filtering.
         """
         Session.verify_feature_set("advanced")
         HyperDatasetQuery._validate_lucene(source_query)
@@ -131,9 +133,9 @@ class HyperDatasetQuery:
         Lucene syntax are not re-validated (no extra server round-trips).
 
         :param rule: `dataviews.FilterRule` (or duck-typed object) fetched from the backend
-        :param dataset_id: Optional concrete dataset id overriding the rule's (used when
+        :param dataset_id: Optional concrete dataset ID overriding the rule's (used when
             expanding a wildcard rule against the dataview's version pool)
-        :param version_id: Optional concrete version id overriding the rule's
+        :param version_id: Optional concrete version ID overriding the rule's
         :return: A `HyperDatasetQuery` instance mirroring the rule
         """
         query = cls.__new__(cls)
@@ -153,7 +155,7 @@ class HyperDatasetQuery:
         """
         Return the dataset identifier targeted by this query.
 
-        :return: Dataset ID string or wildcard marker
+        :return: Dataset ID string or wildcard marker.
         """
         return self._dataset_id
 
@@ -162,7 +164,7 @@ class HyperDatasetQuery:
         """
         Return the dataset collection identifier associated with this query.
 
-        :return: Project ID string or wildcard marker
+        :return: Project ID string or wildcard marker.
         """
         return self._project_id
 
@@ -171,7 +173,7 @@ class HyperDatasetQuery:
         """
         Return the dataset version identifier resolved for this query.
 
-        :return: Version ID string or wildcard marker
+        :return: Version ID string or wildcard marker.
         """
         return self._version_id
 
@@ -180,7 +182,7 @@ class HyperDatasetQuery:
         """
         Return the Lucene query applied to frame source metadata.
 
-        :return: Lucene query string or None
+        :return: Lucene query string, or ``None``.
         """
         return self._source_query
 
@@ -189,7 +191,7 @@ class HyperDatasetQuery:
         """
         Return the Lucene query applied to frame-level metadata.
 
-        :return: Lucene query string or None
+        :return: Lucene query string, or ``None``.
         """
         return self._frame_query
 
@@ -198,7 +200,7 @@ class HyperDatasetQuery:
         """
         Return the relative sampling weight assigned to this query.
 
-        :return: Sampling weight as a float
+        :return: Sampling weight as a float.
         """
         return self._weight
 
@@ -207,7 +209,7 @@ class HyperDatasetQuery:
         """
         Return the ROI filtering strategy configured for this query.
 
-        :return: ROI filter identifier or None
+        :return: ROI filter identifier, or ``None``.
         """
         return self._filter_by_roi
 
@@ -216,7 +218,7 @@ class HyperDatasetQuery:
         """
         Return the label rule definitions used for ROI filtering.
 
-        :return: Sequence of mapping of label rules, or None
+        :return: Sequence of label rule mappings, or ``None``.
         """
         return self._label_rules
 
@@ -260,20 +262,20 @@ class DataView:
         project_name: Optional[str] = None,
     ) -> None:
         """
-        Instantiate a `DataView` wrapper around backend dataview resources.
+        Instantiate a ``DataView`` wrapper around backend dataview resources.
 
         The dataview aggregates query rules and iteration parameters. When running under a ClearML task it
         can optionally auto-connect and restore previously attached definitions.
 
-        :param name: Optional dataview name
-        :param description: Optional descriptive text
-        :param tags: Optional list of tag strings
-        :param iteration_order: Iteration order (`sequential` or `random`)
-        :param iteration_infinite: Whether to iterate indefinitely
-        :param iteration_random_seed: Seed used for random iteration
-        :param iteration_limit: Explicit maximum number of frames to iterate (None means unlimited)
-        :param auto_connect_with_task: Auto-attach to the current ClearML task when True
-        :param project_name: Optional project name under which the DataView will be persisted
+        :param name: Dataview name.
+        :param description: Descriptive text for the dataview.
+        :param tags: List of tag strings.
+        :param iteration_order: Iteration order, ``'sequential'`` or ``'random'``.
+        :param iteration_infinite: If ``True``, iterate indefinitely.
+        :param iteration_random_seed: Seed used for random iteration.
+        :param iteration_limit: Explicit maximum number of frames to iterate (``None`` means unlimited).
+        :param auto_connect_with_task: If ``True``, auto-attach to the current ClearML task.
+        :param project_name: Project name under which the DataView will be persisted
             when stored. If omitted, falls back to the current Task's project. Required on
             servers with project-scoped RBAC for the auto-store to succeed.
         """
@@ -345,7 +347,7 @@ class DataView:
         """
         Return the backend identifier of the materialised DataView.
 
-        :return: DataView ID string or None when not yet created
+        :return: DataView ID string, or ``None`` when not yet created.
         """
         return self._id
 
@@ -354,7 +356,7 @@ class DataView:
         """
         Return the human-readable name assigned to this DataView.
 
-        :return: DataView name string or None
+        :return: DataView name string, or ``None``.
         """
         return self._name
 
@@ -363,7 +365,7 @@ class DataView:
         """
         Update the human-readable name associated with this DataView.
 
-        :param value: New DataView name string or None
+        :param value: New DataView name string, or ``None``.
         """
         self._name = value
 
@@ -383,10 +385,10 @@ class DataView:
         :param dataview_name: The name of the DataView. If more than one DataView shares
             the name, the most recently created one is selected (a warning is logged).
 
-        :return: A new DataView object populated from the stored definition
+        :return: A new DataView object populated from the stored definition.
 
         .. note::
-            ``dataview_id`` and ``dataview_name`` are mutually exclusive.
+            ```dataview_id``` and ```dataview_name``` are mutually exclusive.
             Exactly one of them must be provided, otherwise a ValueError is raised.
         """
         mutually_exclusive(_exception_cls=ValueError, dataview_id=dataview_id, dataview_name=dataview_name)
@@ -487,7 +489,11 @@ class DataView:
         self._synthetic_epoch_limit = None
 
     def get_queries(self) -> List[HyperDatasetQuery]:
-        """Return current HyperDatasetQuery objects attached to this dataview."""
+        """
+        Return the ``HyperDatasetQuery`` objects currently attached to this dataview.
+
+        :return: A list of ``HyperDatasetQuery`` objects.
+        """
         return list(self._queries)
 
     def _mutation_allowed(self) -> bool:
@@ -549,7 +555,8 @@ class DataView:
         """
         Replace all existing queries with the supplied collection.
 
-        :param queries: Iterable of `HyperDatasetQuery` objects; pass None or an empty iterable to clear
+        :param queries: Iterable of ``HyperDatasetQuery`` objects. Pass ``None`` or an empty iterable to
+            clear the queries.
         """
         if not self._mutation_allowed():
             return
@@ -588,17 +595,17 @@ class DataView:
         label_rules: Optional[Any] = None,  # Optional[Sequence[dataviews.FilterLabelRule]]
     ) -> HyperDatasetQuery:
         """
-        Construct and append a single `HyperDatasetQuery` without instantiating it externally.
+        Construct and append a single ``HyperDatasetQuery`` without instantiating it externally.
 
-        :param project_id: Dataset collection identifier or wildcard
-        :param dataset_id: Dataset identifier or wildcard
-        :param version_id: Dataset version identifier
-        :param source_query: Lucene query applied to frame sources
-        :param frame_query: Lucene query applied to frame metadata
-        :param weight: Sampling weight when combining multiple queries
-        :param filter_by_roi: ROI filtering strategy name
-        :param label_rules: Optional label rule definitions for ROI filtering
-        :return: The created `HyperDatasetQuery` instance
+        :param project_id: Dataset collection identifier or wildcard.
+        :param dataset_id: Dataset identifier or wildcard.
+        :param version_id: Dataset version identifier.
+        :param source_query: Lucene query applied to frame sources.
+        :param frame_query: Lucene query applied to frame metadata.
+        :param weight: Sampling weight when combining multiple queries.
+        :param filter_by_roi: ROI filtering strategy name.
+        :param label_rules: Label rule definitions for ROI filtering.
+        :return: The created ``HyperDatasetQuery`` instance.
         """
         query = HyperDatasetQuery(
             project_id=project_id,
@@ -616,7 +623,9 @@ class DataView:
 
     def get_iteration_parameters(self):
         """
-        :return: The cached iteration configuration for this dataview.
+        Return the current iteration configuration for this dataview.
+
+        :return: A dictionary with the ``order``, ``infinite``, ``limit``, and ``random_seed`` keys.
         """
         return {
             "order": self._iteration_order,
@@ -633,6 +642,11 @@ class DataView:
     ):
         """
         Persist iteration settings both locally and on the backend if possible.
+
+        :param infinite: If ``True``, iterate indefinitely; if ``False``, respect ``limit``. If omitted,
+            the current setting is left unchanged.
+        :param limit: Maximum number of frames to iterate. Passing ``None`` explicitly clears the limit
+            (unlimited); omitting this parameter leaves the current limit unchanged.
         """
         if (infinite is not None) or (limit is not _UNSET):
             if infinite is not None:
@@ -657,10 +671,10 @@ class DataView:
         """
         Append one or more query rules to the dataview.
 
-        If the dataview already exists on the backend the remote filter rules are updated immediately and
+        If the dataview already exists on the backend, the remote filter rules are updated immediately and
         the attached task is re-synchronised.
 
-        :param queries: A `HyperDatasetQuery` instance or iterable of instances to add
+        :param queries: A ``HyperDatasetQuery`` instance, or an iterable of instances, to add.
         """
         if not self._mutation_allowed():
             return
@@ -691,7 +705,7 @@ class DataView:
 
         :param label_dict: Mapping from a label string to its integer representation,
             e.g. ``{'cat': 0, 'dog': 1, 'hound': 1}``. Pass an empty dict to clear
-            the enumeration
+            the enumeration.
         """
         if not isinstance(label_dict, dict) or not all(
             isinstance(key, str) and isinstance(value, int) and not isinstance(value, bool)
@@ -718,7 +732,7 @@ class DataView:
         Return the current dataview label enumeration (label string to integer).
 
         :return: Dictionary of label string to integer, e.g. ``{'cat': 0, 'dog': 1}``.
-            Empty when no enumeration was set
+            Empty when no enumeration was set.
         """
         return dict(self._labels_enumeration or {})
 
@@ -753,18 +767,18 @@ class DataView:
             according to the dataset's original labels.
 
         :param from_labels: Label or list of labels to map to ``to_label``. An ROI must
-            match *all* of the labels for the mapping to take place
-        :param to_label: Label to change ``from_labels`` to
+            match *all* of the labels for the mapping to take place.
+        :param to_label: Label to change ``from_labels`` to.
         :param dataset_id: The ID of the dataset to apply the mapping rule to.
-            Defaults to '*' (all datasets in the view). Mutually exclusive with ``dataset_name``
-        :param dataset_name: The name of the dataset to apply the mapping rule to
+            Defaults to ``'*'`` (all datasets in the view). Mutually exclusive with ``dataset_name``.
+        :param dataset_name: The name of the dataset to apply the mapping rule to.
         :param version_id: The ID of the dataset version to apply the mapping rule to.
-            Defaults to '*' (all versions of the dataset in the view). Mutually
-            exclusive with ``version_name``
+            Defaults to ``'*'`` (all versions of the dataset in the view). Mutually
+            exclusive with ``version_name``.
         :param version_name: The name of the dataset version to apply the mapping rule to.
-            Requires ``dataset_id`` or ``dataset_name``
-        :param project_name: Optional project filter used when resolving ``dataset_name``
-        :return: The created `dataviews.MappingRule` object
+            Requires ``dataset_id`` or ``dataset_name``.
+        :param project_name: Project filter used when resolving ``dataset_name``.
+        :return: The created ``dataviews.MappingRule`` object.
         """
         if not to_label or not isinstance(to_label, str):
             raise ValueError("add_mapping_rule expects a non-empty to_label string")
@@ -804,7 +818,7 @@ class DataView:
         """
         Return the current label mapping rules attached to this dataview.
 
-        :return: List of `dataviews.MappingRule` objects
+        :return: List of ``dataviews.MappingRule`` objects.
         """
         return list(self._mapping_rules)
 
@@ -858,7 +872,7 @@ class DataView:
         Build a `frames.Dataview` payload from this DataView's current local state.
 
         Used by read paths (count, iteration) so they hit the inline `frames.*ForDataview`
-        endpoints — no stored DataView id required, no project write permission required.
+        endpoints — no stored DataView ID required, no project write permission required.
         """
         version_pairs = self._collect_version_pairs()
 
@@ -895,18 +909,18 @@ class DataView:
 
     def store(self, project_name: Optional[str] = None) -> str:
         """
-        Persist this DataView on the server and return its id.
+        Persist this DataView on the server and return its ID.
 
         DataViews are stored automatically the first time they are iterated, unless
         ``sdk.development.store_dataviews_on_creation`` is set to false in clearml.conf —
         in which case this method is the explicit way to persist one.
 
-        :param project_name: Optional project name to attach the DataView to. Overrides
+        :param project_name: Project name to attach the DataView to. Overrides
             the value passed at construction. If omitted, the constructor's value
             (or the current Task's project as a fallback) is used.
-        :return: The DataView id assigned by the server.
-        :raises: The underlying SendError when the server rejects the create call (for
-            example, when the user lacks write permission to the resolved project).
+        :return: The DataView ID assigned by the server.
+        :raises SendError: When the server rejects the create call (for example, when the user lacks
+            write permission to the resolved project).
         """
         if project_name is not None:
             self._project_name = project_name
@@ -916,7 +930,7 @@ class DataView:
 
     def _ensure_created(self) -> None:
         """
-        Auto-store hook called from read paths that need an id (e.g. iteration).
+        Auto-store hook called from read paths that need an ID (e.g. iteration).
 
         Honors ``sdk.development.store_dataviews_on_creation``: when disabled, returns
         without contacting the server. Errors during the auto-store are caught and
@@ -1175,17 +1189,19 @@ class DataView:
         """
         Return an iterator configured to stream frames for this dataview.
 
-        :param projection: Optional projection list selecting frame fields
-        :param query_cache_size: Number of frames to request per backend batch
-        :param query_queue_depth: Queue depth used by the background fetcher
-        :param allow_repetition: Enable synthetic epoch length balancing across queries
-        :param auto_synthetic_epoch_limit: Legacy flag equivalent to `allow_repetition`
-        :param node_id: Explicit node identifier to send to the backend
-        :param worker_index: Worker index when splitting frames across multiple iterators
-        :param num_workers: Total number of cooperating workers
-        :param cache_in_memory: Reserved flag (currently unused)
+        :param projection: List of frame fields to include. Include ``'*'`` in the list (or omit this
+            parameter) to include all fields.
+        :param query_cache_size: Number of frames to request per backend batch.
+        :param query_queue_depth: Queue depth used by the background fetcher.
+        :param allow_repetition: If ``True``, enable synthetic epoch length balancing across queries.
+        :param auto_synthetic_epoch_limit: Legacy flag, equivalent to ``allow_repetition``.
+        :param node_id: Explicit node identifier to send to the backend.
+        :param worker_index: Worker index when splitting frames across multiple iterators.
+        :param num_workers: Total number of cooperating workers.
+        :param cache_in_memory: If ``True``, cache fetched items in memory so a subsequent full
+            iteration replays them without re-fetching from the backend.
 
-        :return: Iterator streaming `DataEntry`-derived objects
+        :return: Iterator streaming ``DataEntry``-derived objects.
         """
         if query_cache_size is None:
             query_cache_size = self._MAX_BATCH_SIZE if running_remotely() else self._DEFAULT_LOCAL_BATCH_SIZE
@@ -1251,7 +1267,9 @@ class DataView:
         """
         Fetch total frames count from backend and cache it.
 
-        Sends an inline DataView spec — no stored id required.
+        Sends an inline DataView spec — no stored ID required.
+
+        :return: Total number of frames matching this dataview's queries.
         """
         if self._count_cache is not None:
             return self._count_cache
@@ -1278,12 +1296,14 @@ class DataView:
         """
         Prefetch data entry sources (and optionally previews/masks) into the local cache.
 
-        - num_workers: number of worker threads (defaults to cpu count via ThreadPoolExecutor)
-        - wait: block until all prefetch tasks complete
-        - query_cache_size: data entries per backend fetch batch (defaults to iterator default)
-        - get_previews: also prefetch preview URIs if available
-        - get_masks: also prefetch mask URIs if available
-        - force_download: bypass local cache if True
+        :param num_workers: Number of worker threads (defaults to the CPU count via
+            ``ThreadPoolExecutor``).
+        :param wait: If ``True``, block until all prefetch tasks complete.
+        :param query_cache_size: Number of data entries to fetch per backend batch (defaults to the
+            iterator's default).
+        :param get_previews: If ``True``, also prefetch preview URIs, when available.
+        :param get_masks: If ``True``, also prefetch mask URIs, when available.
+        :param force_download: If ``True``, bypass the local cache and re-download sources.
         """
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -1470,7 +1490,7 @@ class DataView:
             """
             Return the effective iteration limit for this iterator instance.
 
-            :return: Maximum number of frames to yield, or None
+            :return: Maximum number of frames to yield, or ``None``.
             """
             return self._limit
 
@@ -1479,13 +1499,18 @@ class DataView:
             """
             Resolve the backend node identifier used for fetching frames.
 
-            :return: Node identifier integer or None
+            :return: Node identifier integer, or ``None``.
             """
             return self._resolve_node_id()
 
         def set_node(self, node_id=None):
             """
             Force the iterator to use a specific node identifier for backend fetches.
+
+            :param node_id: Node identifier to use, or ``None`` to clear it and fall back to
+                auto-detection.
+            :raises ValueError: If called after the iterator has already started, or if ``node_id``
+                cannot be converted to an int.
             """
             if self._started and getattr(self, "_fetch_thread", None) and self._fetch_thread.is_alive():
                 raise ValueError("Cannot change node id after iterator has started")
@@ -1500,6 +1525,13 @@ class DataView:
         def set_concurrency(self, worker_index=None, num_workers=None):
             """
             Configure worker splitting so multiple iterators can share the same dataview.
+
+            :param worker_index: This worker's index among ``num_workers`` cooperating workers. If
+                omitted, falls back to the iterator's node identifier (or an auto-detected one).
+            :param num_workers: Total number of cooperating workers. If omitted, the worker count is
+                auto-detected; when only one worker is detected, concurrency splitting is disabled.
+            :raises ValueError: If called after the iterator has already started, if ``num_workers`` or
+                ``worker_index`` cannot be converted to an int, or if ``worker_index`` is negative.
             """
             if self._started and getattr(self, "_fetch_thread", None) and self._fetch_thread.is_alive():
                 raise ValueError("set_concurrency must be called before the iterator starts")
