@@ -7,9 +7,9 @@ from functools import reduce
 from logging import getLogger
 from sys import platform
 from typing import Optional, Sequence, Union, Tuple, List, Callable, Dict, Any
+from urllib.parse import urlparse
 
 from pathlib2 import Path
-from six.moves.urllib.parse import urlparse
 
 from .args import _Arguments
 from .repo import ScriptInfo
@@ -70,7 +70,7 @@ class CreateAndPopulate:
         :param task_type: Optional, The task type to be created. Supported values: 'training', 'testing', 'inference',
             'data_processing', 'application', 'monitor', 'controller', 'optimizer', 'service', 'qc', 'custom'
         :param repo: Remote URL for the repository to use, OR path to local copy of the git repository
-            Example: 'https://github.com/allegroai/clearml.git' or '~/project/repo'
+            Example: 'https://github.com/clearml/clearml.git' or '~/project/repo'
         :param branch: Select specific repository branch/tag (implies the latest commit from the branch)
         :param commit: Select specific commit id to use (default: latest commit,
             or when used with local repository matching the local commit id)
@@ -851,7 +851,7 @@ if __name__ == '__main__':
         :param auto_connect_frameworks: Control the frameworks auto connect, see `Task.init` auto_connect_frameworks
         :param auto_connect_arg_parser: Control the ArgParser auto connect, see `Task.init` auto_connect_arg_parser
         :param repo: Remote URL for the repository to use, OR path to local copy of the git repository
-            Example: 'https://github.com/allegroai/clearml.git' or '~/project/repo'
+            Example: 'https://github.com/clearml/clearml.git' or '~/project/repo'
         :param branch: Select specific repository branch/tag (implies the latest commit from the branch)
         :param commit: Select specific commit id to use (default: latest commit,
             or when used with local repository matching the local commit id)
