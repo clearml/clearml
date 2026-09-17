@@ -3408,7 +3408,12 @@ class PipelineController:
                         nodes_failed_stop_pipeline.append(node.name)
                 elif node.timeout:
                     started = node.job.task.data.started
-                    if (datetime.now().astimezone(started.tzinfo) - started).total_seconds() > node.timeout:
+                    if started is None:
+                        node.job.task.reload()
+                        started = node.job.task.data.started
+                    if started is not None and (
+                        datetime.now().astimezone(started.tzinfo) - started
+                    ).total_seconds() > node.timeout:
                         node.job.abort()
                         completed_jobs.append(j)
                         node.executed = node.job.task_id()
@@ -4210,7 +4215,12 @@ class PipelineDecorator(PipelineController):
                         nodes_failed_stop_pipeline.append(node.name)
                 elif node.timeout:
                     started = node.job.task.data.started
-                    if (datetime.now().astimezone(started.tzinfo) - started).total_seconds() > node.timeout:
+                    if started is None:
+                        node.job.task.reload()
+                        started = node.job.task.data.started
+                    if started is not None and (
+                        datetime.now().astimezone(started.tzinfo) - started
+                    ).total_seconds() > node.timeout:
                         node.job.abort()
                         completed_jobs.append(j)
                         node.executed = node.job.task_id()
