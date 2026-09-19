@@ -311,7 +311,7 @@ class Version(_BaseVersion):
 
         if not local:
             # Versions without a local segment should sort before those with one.
-            local = inf
+            local = ()
         else:
             # Versions with a local segment need that segment parsed to implement
             # the sorting rules in PEP440.
@@ -320,6 +320,6 @@ class Version(_BaseVersion):
             # - Numeric segments sort numerically
             # - Shorter versions sort before longer versions when the prefixes
             #   match exactly
-            local = local[1]
+            local = tuple((i, "") if isinstance(i, int) else (-inf, i) for i in local)
 
         return epoch, release, pre, post, dev, local
