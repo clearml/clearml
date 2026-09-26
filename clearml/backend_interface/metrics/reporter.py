@@ -4,6 +4,8 @@ import json
 import logging
 import math
 import os
+from contextlib import AbstractContextManager
+from queue import Empty
 from time import sleep, time
 from types import TracebackType
 from typing import Optional, Union, List, Tuple, Type, Dict, TYPE_CHECKING, Any
@@ -16,7 +18,6 @@ import numpy as np
 if TYPE_CHECKING:
     import pandas
 import six
-from six.moves.queue import Empty
 
 from .events import (
     ScalarEvent,
@@ -52,7 +53,6 @@ from ...utilities.process.mp import (
     ForkEvent,
     ForkQueue,
 )
-from ...utilities.py3_interop import AbstractContextManager
 from ...utilities.process.mp import SafeQueue as PrQueue, SafeEvent
 
 try:
