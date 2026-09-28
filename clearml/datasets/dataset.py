@@ -2341,13 +2341,15 @@ class Dataset:
             ]
         )
 
-        # build a lookup table for de-duplication by content hash from previous entries (if provided)
-        prev_hash_lookup: Dict[str, FileEntry] = {}
+        # build a lookup table for de-duplication by content hash from previous entries (if provided).
+        # Key by relative path as well: stored files are extracted by their own relative path,
+        # so a file can only reuse the storage of a previous entry with the same path
+        prev_hash_lookup: Dict[Tuple[str, str], FileEntry] = {}
         if previous_version_file_entries:
             try:
                 # In case the dict contains non-FileEntry objects, guard with getattr
                 prev_hash_lookup = {
-                    fe.hash: fe
+                    (fe.relative_path, fe.hash): fe
                     for fe in previous_version_file_entries.values()
                     if getattr(fe, "hash", None)
                 }
@@ -2368,8 +2370,8 @@ class Dataset:
                         continue
                 # de-duplication: if a previous file (possibly removed earlier in sync) has the same content hash,
                 # reuse its storage reference to avoid re-uploading
-                if f.hash and f.hash in prev_hash_lookup:
-                    prev_fe = prev_hash_lookup[f.hash]
+                if f.hash and (f.relative_path, f.hash) in prev_hash_lookup:
+                    prev_fe = prev_hash_lookup[(f.relative_path, f.hash)]
                     # copy parent/artifact refs so storage is reused when available
                     f.parent_dataset_id = prev_fe.parent_dataset_id or f.parent_dataset_id
                     f.artifact_name = prev_fe.artifact_name
