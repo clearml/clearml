@@ -1,19 +1,33 @@
+from abc import ABC, abstractmethod
 import itertools
 import operator
 
-from abc import abstractproperty
 from typing import Dict, Optional, Any
 
 from pathlib2 import Path
 
 
-class AccessMixin:
+class AccessMixin(ABC):
     """A mixin providing task fields access functionality"""
+    @property
+    @abstractmethod
+    def session(self):
+        raise NotImplementedError()
 
-    session = abstractproperty()
-    data = abstractproperty()
-    cache_dir = abstractproperty()
-    log = abstractproperty()
+    @property
+    @abstractmethod
+    def data(self):
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def cache_dir(self):
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def log(self):
+        raise NotImplementedError()
 
     def _get_task_property(
         self,
