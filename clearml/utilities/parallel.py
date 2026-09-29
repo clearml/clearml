@@ -2,6 +2,11 @@ import os
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from queue import (
+    PriorityQueue,
+    Queue,
+    Empty,
+)
 from tempfile import mkstemp
 from threading import Thread
 from time import sleep
@@ -9,7 +14,6 @@ from typing import Callable, Optional, Union, Generator, List, Type, Dict, Any
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from pathlib2 import Path
-from six.moves.queue import PriorityQueue, Queue, Empty
 
 from ..debugging.log import LoggerRoot
 from ..storage.size import format_size
