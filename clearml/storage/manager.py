@@ -5,7 +5,7 @@ from multiprocessing.pool import ThreadPool
 from random import random
 from time import time
 from typing import Iterator, List, Optional, Union
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 
 from pathlib2 import Path
 
