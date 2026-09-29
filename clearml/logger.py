@@ -3,8 +3,8 @@ import math
 import warnings
 from typing import Sequence, Union, List, Optional, Tuple, Dict, TYPE_CHECKING, Any
 
+import io
 import numpy as np
-import six
 from PIL import Image
 from pathlib2 import Path
 
@@ -1048,7 +1048,7 @@ class Logger:
         series: str,
         iteration: Optional[int] = None,
         local_path: Optional[str] = None,
-        stream: Optional[Union[six.BytesIO, six.StringIO]] = None,
+        stream: Optional[Union[io.BytesIO, io.StringIO]] = None,
         file_extension: Optional[str] = None,
         max_history: Optional[int] = None,
         delete_after_upload: bool = False,
