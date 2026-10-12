@@ -55,6 +55,7 @@ from queue import Queue, Empty
 from urllib.parse import urlparse, urlunparse, quote
 from os.path import expandvars, expanduser
 from heapq import heapify, heappush, heappop
+from functools import lru_cache
 from psutil import disk_usage
 
 from clearml.utilities.hashing import md5_safe_hash
@@ -104,6 +105,25 @@ class StorageError(Exception):
 
 class DownloadError(Exception):
     pass
+
+
+@lru_cache(maxsize=1)
+def _get_user_agent_extra() -> str:
+    from clearml.version import __version__
+
+    return "clearml/{}".format(__version__ or "dev")
+
+
+@lru_cache(maxsize=1)
+def _botocore_supports_user_agent_extra() -> bool:
+    # Probe once whether this botocore's Config accepts user_agent_extra.
+    import botocore.client
+
+    try:
+        botocore.client.Config(user_agent_extra="")
+        return True
+    except TypeError:
+        return False
 
 
 class _Driver(ABC):
@@ -668,21 +688,24 @@ class _Boto3Driver(_Driver):
             verify = None
         elif isinstance(verify, str) and not os.path.exists(verify) and verify.split("://")[0] in driver_schemes:
             verify = _Boto3Driver.download_cert(verify)
+        config_kwargs = {
+            "max_pool_connections": max(
+                int(_Boto3Driver._min_pool_connections),
+                int(_Boto3Driver._pool_connections),
+            ),
+            "connect_timeout": int(_Boto3Driver._connect_timeout),
+            "read_timeout": int(_Boto3Driver._read_timeout),
+            "signature_version": _Boto3Driver._signature_version,
+            "s3": _Boto3Driver._s3,
+        }
+        if _botocore_supports_user_agent_extra():
+            config_kwargs["user_agent_extra"] = _get_user_agent_extra()
         boto_kwargs = {
             "endpoint_url": endpoint,
             "use_ssl": cfg.secure,
             "verify": verify,
             "region_name": cfg.region or None,  # None in case cfg.region is an empty string
-            "config": botocore.client.Config(
-                max_pool_connections=max(
-                    int(_Boto3Driver._min_pool_connections),
-                    int(_Boto3Driver._pool_connections),
-                ),
-                connect_timeout=int(_Boto3Driver._connect_timeout),
-                read_timeout=int(_Boto3Driver._read_timeout),
-                signature_version=_Boto3Driver._signature_version,
-                s3=_Boto3Driver._s3,
-            ),
+            "config": botocore.client.Config(**config_kwargs),
         }
         if not cfg.use_credentials_chain:
             boto_kwargs["aws_access_key_id"] = cfg.key or None
