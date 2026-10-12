@@ -1,8 +1,7 @@
 """Predefined validators."""
 import re
+from functools import reduce
 from typing import Any
-
-from six.moves import reduce
 
 from .errors import ValidationError
 from . import utilities
