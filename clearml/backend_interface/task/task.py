@@ -13,6 +13,7 @@ from operator import itemgetter
 from tempfile import gettempdir
 from threading import Thread
 from typing import Optional, Sequence, Callable, Mapping, Union, List, Set, Dict, Any
+from urllib.parse import quote
 from uuid import uuid4
 
 from pathlib2 import Path
@@ -22,8 +23,6 @@ try:
     from collections.abc import Iterable
 except ImportError:
     from collections import Iterable
-
-from six.moves.urllib.parse import quote
 
 from ...utilities.locks import RLock as FileRLock
 from ...utilities.proxy_object import verify_basic_type, cast_basic_type, get_basic_type
