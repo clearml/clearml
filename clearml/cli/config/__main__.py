@@ -5,12 +5,10 @@ import argparse
 import os
 import urllib
 from typing import Tuple, List, Dict, Optional, Any
-from urllib.parse import ParseResult
+from urllib.parse import ParseResult, urlparse
 
 import six
 from pathlib2 import Path
-from six.moves import input
-from six.moves.urllib.parse import urlparse
 
 from clearml.backend_api.session import Session
 from clearml.backend_api.session.defs import ENV_HOST

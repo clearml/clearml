@@ -3,13 +3,12 @@
 import sys
 import threading
 from copy import deepcopy
+from io import BytesIO
 from tempfile import mkstemp
 from typing import Union, Dict, List, Tuple, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import matplotlib
-
-from six import BytesIO
 
 from .import_bind import PostImportHookPatching
 from ..config import running_remotely
