@@ -250,7 +250,8 @@ class CacheManager:
                     continue
 
                 # check if someone else holds the lock file
-                locks = lock_files.get(f.name, [])
+                locks = lock_files.pop(f.name, [])
+                locked = False
                 for lck in locks:
                     try:
                         a_lock = FileLock(filename=lck)
@@ -260,10 +261,11 @@ class CacheManager:
                         del a_lock
                     except LockException:
                         # someone have the lock skip the file
-                        continue
+                        locked = True
+                        break
 
-                # if we got here we need to pop from the lock_files, later we will delete the leftover entries
-                lock_files.pop(f.name, None)
+                if locked:
+                    continue
 
                 # if we are here we can delete the file
                 if not f.is_dir():
