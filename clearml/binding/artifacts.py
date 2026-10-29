@@ -11,13 +11,12 @@ from tempfile import mkdtemp, mkstemp
 from threading import Thread
 from time import time
 from typing import Dict, Union, Optional, Sequence, Callable, TYPE_CHECKING, Any
+from urllib.parse import quote, urlparse
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import yaml
 from PIL import Image
 from pathlib2 import Path
-from six.moves.urllib.parse import quote
-from six.moves.urllib.parse import urlparse
 
 from ..backend_api import Session
 from ..backend_api.services import tasks

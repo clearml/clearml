@@ -8,6 +8,7 @@ import weakref
 from io import IOBase
 from socket import gethostname
 from time import sleep
+from urllib.parse import urlparse, urlunparse
 
 import jwt
 import requests
@@ -17,7 +18,6 @@ from requests.exceptions import (
     ContentDecodingError,
     StreamConsumedError,
 )
-from six.moves.urllib.parse import urlparse, urlunparse
 from typing import List, Optional, Union, Dict, Iterable, Tuple, Any
 
 from .callresult import CallResult
