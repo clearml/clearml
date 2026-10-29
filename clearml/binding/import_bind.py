@@ -1,6 +1,5 @@
 import sys
 import builtins
-import types
 from collections import defaultdict
 from typing import Callable, Any
 
@@ -16,26 +15,10 @@ class PostImportHookPatching:
         PostImportHookPatching._patched = True
 
         builtins.__org_import__ = builtins.__import__
-        builtins.__import__ = PostImportHookPatching.__patched_import3
+        builtins.__import__ = PostImportHookPatching.__patched_import
 
     @staticmethod
-    def __patched_import2(
-        name: str,
-        globals: dict = {},
-        locals: dict = {},
-        fromlist: list = [],
-        level: int = -1,
-    ) -> types.ModuleType:
-        already_imported = name in sys.modules
-        mod = builtins.__org_import__(name, globals=globals, locals=locals, fromlist=fromlist, level=level)
-
-        if not already_imported and name in PostImportHookPatching._post_import_hooks:
-            for hook in PostImportHookPatching._post_import_hooks[name]:
-                hook()
-        return mod
-
-    @staticmethod
-    def __patched_import3(
+    def __patched_import(
         name: str,
         globals: dict = None,
         locals: dict = None,
