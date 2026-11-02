@@ -5,13 +5,13 @@ import sys
 from contextlib import AbstractContextManager
 from functools import partial
 from multiprocessing import Process, Semaphore, Event as ProcessEvent
+from queue import Empty, Queue as TrQueue
 from threading import Thread, Event as TrEvent, RLock as ThreadRLock
 from time import sleep, time
 from types import TracebackType
 from typing import List, Dict, Optional, Type, TYPE_CHECKING, Any
 
 import psutil
-from six.moves.queue import Empty, Queue as TrQueue
 
 
 if TYPE_CHECKING:
