@@ -97,6 +97,12 @@ try:
 except ImportError:
     is_default_azure_credential_installed = False
 
+try:
+    import fcntl
+except ImportError:
+    # Windows: cache hits and cache cleanup fall back to their unlocked (best effort) behavior
+    fcntl = None
+
 
 class StorageError(Exception):
     pass
@@ -4319,8 +4325,9 @@ class StorageHelper(_StorageHelper):
             if not cache_path:
                 cache_path = self._cache_file_entry_lookup_table.get(canonized_url)
             if cache_path and os.path.isfile(cache_path):
-                self._update_cache_file(cache_path, log=self.log)
-                return str(cache_path)
+                if self._touch_cached_file(cache_path, log=self.log):
+                    return str(cache_path)
+                # evicted by a concurrent cache cleanup, download it again below
         if not cache_path:
             cache_path = self._get_cache_path(canonized_url, force_content_type, force_cache=force_cache)
         if cache_path:
@@ -4332,8 +4339,9 @@ class StorageHelper(_StorageHelper):
             # return the cached file is it's valid
             if not overwrite_existing and os.path.isfile(cache_path) and (
                     not self.cache_zero_file_size_check or os.path.getsize(cache_path) > 0):
-                self._update_cache_file(cache_path, log=self.log)
-                return str(cache_path)
+                if self._touch_cached_file(cache_path, log=self.log):
+                    return str(cache_path)
+                # evicted by a concurrent cache cleanup, download it again below
 
             if not force_cache:
                 # check if we can actually download the file (i.e. a matcher might say we cannot
@@ -4370,9 +4378,15 @@ class StorageHelper(_StorageHelper):
             try:
                 lock.acquire()
                 # check if we still need to download the file (someone might already have done that)
-                if not overwrite_existing and cache_path.is_file() and cache_path.stat().st_size > 0:
-                    self._update_cache_file(cache_path, log=self.log)
-                    return str(cache_path)
+                try:
+                    already_cached = not overwrite_existing and cache_path.is_file() and cache_path.stat().st_size > 0
+                except FileNotFoundError:
+                    # evicted by a concurrent cache cleanup between the two checks
+                    already_cached = False
+                if already_cached:
+                    if self._touch_cached_file(cache_path, log=self.log):
+                        return str(cache_path)
+                    # evicted by a concurrent cache cleanup, download it again below
 
                 # download the file
                 # at this point, we no longer allow direct access because
@@ -4454,9 +4468,129 @@ class StorageHelper(_StorageHelper):
             # update the total cache size
             self._update_cache_size(file_size)
 
+    @staticmethod
+    def _open_for_lock(path):
+        """
+        Open a cache file for advisory locking only (no reading). Return the file descriptor, or None if the
+        file cannot be opened this way (missing, locking unsupported on this platform, special file, ...).
+        In that case the caller falls back to its unlocked, best effort behavior.
+        """
+        if fcntl is None:
+            return None
+        try:
+            # never block on a special file, never follow a symlink out of the cache folder
+            return os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0))
+        except OSError:
+            return None
+
+    def _touch_cached_file(self, cache_path, log=None):
+        """
+        Refresh the access time of a cache hit, so the cache cleanup keeps the file, and return True.
+        Return False if the file was evicted concurrently, in which case the caller must download it again.
+
+        The access time alone cannot protect a cache hit: the cleanup orders its candidates by a snapshot of
+        access times taken while scanning the cache folder, so a cleanup that already scanned (in this process
+        or in another one, e.g. another DataLoader worker) would delete the file after we handed its path to the
+        caller and before the caller opened it. To prevent that, the refresh is done while holding a shared
+        advisory lock on the file, and _delete_cache_candidate() takes an exclusive lock before deciding.
+        Either the deletion happens entirely before this call (the file is missing, we report a miss) or
+        entirely after it (the cleanup sees a fresh access time and keeps the file).
+
+        :param cache_path: full path of the cached file
+        :param log: optional logger
+        :return: True if the path can be returned to the caller, False if the file is gone
+        """
+        cache_path = str(cache_path)
+        fd = self._open_for_lock(cache_path)
+        try:
+            if fd is not None:
+                if fcntl is not None:
+                    try:
+                        # wait for a cleanup that is deciding about this very file right now
+                        fcntl.flock(fd, fcntl.LOCK_SH)
+                    except OSError:
+                        # locking not supported on this file system, best effort below
+                        pass
+                if os.fstat(fd).st_nlink == 0:
+                    # deleted while we were waiting for the lock
+                    return False
+            self._update_cache_file(cache_path, log=log)
+            return True
+        except FileNotFoundError:
+            return False
+        finally:
+            if fd is not None:
+                os.close(fd)
+
+    def _delete_cache_candidate(self, candidate, log=None):
+        """
+        Delete a cache cleanup candidate, unless it was served from the cache since the cleanup scanned the
+        cache folder, or is being served right now (see _touch_cached_file()).
+
+        The candidate is opened and locked exclusively (non blocking) before its access time is re-read and,
+        if still older than the cleanup threshold, the file is unlinked while the lock is held. Processes that
+        already hold the file open keep reading it (POSIX semantics), only the path disappears.
+
+        :param candidate: full path of the cached file
+        :param log: optional logger
+        :return: True if the file is no longer in the cache (deleted here, or already gone), so the caller must
+            subtract its size from the cache size, False if the file was kept
+        """
+        fd = self._open_for_lock(candidate)
+        try:
+            if fd is not None:
+                if fcntl is not None:
+                    try:
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except BlockingIOError:
+                        # someone is serving this file from the cache right now
+                        return False
+                    except OSError:
+                        # locking not supported on this file system, best effort below
+                        pass
+                atime = os.fstat(fd).st_atime
+            else:
+                try:
+                    atime = os.path.getatime(candidate)
+                except FileNotFoundError:
+                    # probably someone else deleted it.
+                    return True
+                except OSError:
+                    atime = 0
+            # the access time we sorted by is a snapshot from the folder scan, decide on the current one
+            if time() - atime < self._cleanup_seconds_threshold:
+                return False
+
+            for client_name in self._pre_delete_hooks:
+                try:
+                    self._pre_delete_hooks[client_name](candidate)
+                except Exception as exc:
+                    if log:
+                        log.error(
+                            f"Pre delete hook of client {client_name} failed: {exc}",
+                            exc_info=log.isEnabledFor(logging.DEBUG),
+                        )
+
+            try:
+                os.remove(candidate)
+            except FileNotFoundError:
+                # probably someone else deleted it.
+                pass
+            except Exception as e:
+                if log:
+                    log.debug("Failed cleaning file from cache: %s" % str(e))
+            return True
+        finally:
+            if fd is not None:
+                os.close(fd)
+
     def _do_clean_cache(self, log=None):
         """ Clean cache until size constraints are satisfied. Not error is raised in case constraints are not satisfied,
             we'll just do our very best.
+
+            Candidates are ordered by the access times collected while scanning the cache folder, but the decision
+            to delete each one is taken by _delete_cache_candidate() against the file's current state, so a file that
+            was served from the cache after the scan (by this or by any other process) is kept.
         """
         try:
             used_bytes_limit_enabled = self.cache_size_max_used_bytes > 0
@@ -4537,25 +4671,9 @@ class StorageHelper(_StorageHelper):
                     if [f for f in self._path_locks.keys() if f.startswith(candidate)]:
                         continue
 
-                for client_name in self._pre_delete_hooks:
-                    try:
-                        self._pre_delete_hooks[client_name](candidate)
-                    except Exception as exc:
-                        if log:
-                            log.error(
-                                f"Pre delete hook of client {client_name} failed: {exc}",
-                                exc_info=log.isEnabledFor(logging.DEBUG),
-                            )
-
-                try:
-                    # Remove file and update cache size
-                    os.remove(candidate)
-                except FileNotFoundError:
-                    # probably someone else deleted it.
-                    pass
-                except Exception as e:
-                    if log:
-                        log.debug("Failed cleaning file from cache: %s" % str(e))
+                if not self._delete_cache_candidate(candidate, log=log):
+                    # served from the cache since the folder scan, or being served right now: keep it
+                    continue
 
                 # No need to lock cache_size we already locked all cache access
                 self._update_cache_size(-size)
