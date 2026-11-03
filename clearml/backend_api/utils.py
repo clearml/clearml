@@ -117,6 +117,34 @@ class SessionWithTimeout(requests.Session):
         return super(SessionWithTimeout, self).send(request, **kwargs)
 
 
+def set_session_adapter(
+    session,
+    total: int = 0,
+    connect: Optional[int] = None,
+    read: Optional[int] = None,
+    redirect: Optional[int] = None,
+    status: Optional[int] = None,
+    status_forcelist: Optional[List[int]] = None,
+    backoff_factor: float = 0,
+    pool_connections: Optional[int] = None,
+    pool_maxsize: Optional[int] = None,
+    **kwargs
+):
+    retry = Retry(
+        total=total,
+        connect=connect,
+        read=read,
+        redirect=redirect,
+        status=status,
+        status_forcelist=status_forcelist,
+        backoff_factor=backoff_factor,
+    )
+
+    adapter = TLSv1HTTPAdapter(max_retries=retry, pool_connections=pool_connections, pool_maxsize=pool_maxsize)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+
+
 def get_http_session_with_retry(
     total: int = 0,
     connect: Optional[int] = None,
@@ -156,7 +184,8 @@ def get_http_session_with_retry(
         else:
             Retry.DEFAULT_BACKOFF_MAX = backoff_max
 
-    retry = Retry(
+    set_session_adapter(
+        session,
         total=total,
         connect=connect,
         read=read,
@@ -164,11 +193,9 @@ def get_http_session_with_retry(
         status=status,
         status_forcelist=status_forcelist,
         backoff_factor=backoff_factor,
+        pool_connections=pool_connections,
+        pool_maxsize=pool_maxsize
     )
-
-    adapter = TLSv1HTTPAdapter(max_retries=retry, pool_connections=pool_connections, pool_maxsize=pool_maxsize)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
 
     # update verify host certificate
     verify = ENV_HOST_VERIFY_CERT.get(default=config.get("api.verify_certificate", True))

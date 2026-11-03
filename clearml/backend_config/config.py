@@ -415,6 +415,13 @@ class Config:
         self._overrides_configs = [d if isinstance(d, ConfigTree) else ConfigFactory.from_dict(d) for d in dicts]
         self.reload()
 
+    def get_overrides_config(self) -> ConfigTree:
+        return functools.reduce(
+            lambda cfg, override: ConfigTree.merge_configs(cfg, override, copy_trees=True),
+            self._overrides_configs,
+            ConfigTree(),
+        )
+
     @property
-    def MISSING(self) -> None:
+    def MISSING(self) -> object:
         return self._MISSING

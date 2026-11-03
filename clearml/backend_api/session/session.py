@@ -5,7 +5,9 @@ import os
 import sys
 import types
 import weakref
+from copy import deepcopy
 from io import IOBase
+import shlex
 from socket import gethostname
 from time import sleep
 from urllib.parse import urlparse, urlunparse
@@ -37,11 +39,12 @@ from .defs import (
     ENV_API_DEFAULT_REQ_METHOD,
     ENV_FORCE_MAX_API_VERSION,
     ENV_IGNORE_MISSING_CONFIG,
+    ENV_API_RETRY_VALUES,
     MissingConfigError,
 )
 from .request import Request, BatchRequest  # noqa: F401
 from .token_manager import TokenManager
-from ..utils import get_http_session_with_retry, urllib_log_warning_setup
+from ..utils import get_http_session_with_retry, urllib_log_warning_setup, set_session_adapter
 from ...backend_config import ConfigurationError
 from ...backend_config.defs import get_config_file
 from ...debugging import get_logger
@@ -118,6 +121,8 @@ class Session(TokenManager):
         requests.codes.too_many_requests,
     ]
 
+    _retries_config_path = "api.http.retries"
+
     @property
     def access_key(self) -> str:
         return self.__access_key
@@ -188,6 +193,30 @@ class Session(TokenManager):
         except Exception:
             pass
 
+    def _load_retry_values(self):
+        config = (
+            self.__init_http_retries_config
+            or self.config.get(self._retries_config_path, ConfigTree()).as_plain_ordered_dict()
+        )
+        if ENV_API_RETRY_VALUES.get():
+            print(
+                f"Applying session retry values override from {ENV_API_RETRY_VALUES.key}: {ENV_API_RETRY_VALUES.get()}"
+            )
+            try:
+                values = {
+                    field: value
+                    for field, value in (
+                        value.partition("=")[:2]
+                        for value in shlex.split(ENV_API_RETRY_VALUES.get())
+                        if "=" in value
+                    )
+                }
+                for field, value in values.items():
+                    config[field] = value
+            except Exception as ex:
+                print(f"Failed applying session retry values override: {ex}")
+        return config
+
     def _connect(self) -> None:
         if self._offline_mode:
             return
@@ -200,11 +229,10 @@ class Session(TokenManager):
         if not self.__host:
             raise ValueError("ClearML host was not set, check your configuration file or environment variable")
         self.__host = self.__host.strip("/")
-        self.__http_retries_config = (
-            self.__init_http_retries_config or self.config.get("api.http.retries", ConfigTree()).as_plain_ordered_dict()
-        )
-
+        self.__http_retries_config = self._load_retry_values()
         self.__http_retries_config["status_forcelist"] = self._get_retry_codes()
+        orig_retries_config = deepcopy(self.__http_retries_config)
+
         self.__http_retries_config["config"] = self.config
         self.__http_session = get_http_session_with_retry(**self.__http_retries_config)
         self.__http_session.write_timeout = self._write_session_timeout
@@ -264,7 +292,7 @@ class Session(TokenManager):
         except (jwt.DecodeError, ValueError):
             local_logger().warning(f"Failed parsing server API level, defaulting to {Session.api_version}")
 
-        # now setup the session reporting, so one consecutive retries will show warning
+        # now set up the session reporting, so one consecutive retries will show warning
         # we do that here, so if we have problems authenticating, we see them immediately
         # notice: this is across the board warning omission
         urllib_log_warning_setup(
@@ -283,6 +311,19 @@ class Session(TokenManager):
 
             ConfigWrapper.set_config_impl(self.config)
             ConfigSDKWrapper.clear_config_impl()
+
+            try:
+                # update retry configurations if different in the vault
+                vault_config = self.config.get_overrides_config()
+                if (
+                    vault_config
+                    and vault_config.get(self._retries_config_path)
+                    and vault_config.get(self._retries_config_path) != orig_retries_config
+                ):
+                    set_session_adapter(self.__http_session, **vault_config.get(self._retries_config_path))
+                    print("Applied override session retry settings from vault")
+            except Exception as ex:
+                print(f"Failed applying override session retry settings from vault: {ex}")
 
         self._apply_config_sections(local_logger)
 
