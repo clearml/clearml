@@ -416,7 +416,7 @@ class Config:
     def get_overrides_config(self) -> ConfigTree:
         return functools.reduce(
             lambda cfg, override: ConfigTree.merge_configs(cfg, override, copy_trees=True),
-            self._overrides_configs,
+            self._overrides_configs or (),
             ConfigTree(),
         )
 

@@ -312,14 +312,12 @@ class Session(TokenManager):
             ConfigSDKWrapper.clear_config_impl()
 
             try:
-                # update retry configurations if different in the vault
+                # update retry configurations if different in the vault.
+                # ConfigTree.get() raises on a missing key, so look the retries up with a default
                 vault_config = self.config.get_overrides_config()
-                if (
-                    vault_config
-                    and vault_config.get(self._retries_config_path)
-                    and vault_config.get(self._retries_config_path) != orig_retries_config
-                ):
-                    set_session_adapter(self.__http_session, **vault_config.get(self._retries_config_path))
+                vault_retries = vault_config.get(self._retries_config_path, None) if vault_config else None
+                if vault_retries and vault_retries != orig_retries_config:
+                    set_session_adapter(self.__http_session, **vault_retries)
                     print("Applied override session retry settings from vault")
             except Exception as ex:
                 print(f"Failed applying override session retry settings from vault: {ex}")
