@@ -1263,6 +1263,47 @@ class DataView:
 
         return iterator
 
+    def to_list(
+        self,
+        allow_repetition: bool = False,
+        auto_synthetic_epoch_limit: Optional[bool] = None,
+    ) -> List[DataEntry]:
+        """
+        Return a list holding all the data entries (frames) of this DataView.
+
+        The returned list holds entries matching the DataView's queries (see `add_query`)
+        and iteration parameters (see `set_iteration_parameters`), fetched with the
+        maximum backend batch size.
+
+        .. note::
+            Every call fetches a fresh list of entries from the backend.
+
+        .. note::
+            Like `get_iterator`, passing ``allow_repetition=True`` updates the DataView's
+            iteration parameters (``infinite`` and ``limit``) to cover a full synthetic epoch.
+
+        :param allow_repetition: Enable synthetic epoch length balancing across weighted
+            queries; entries from smaller queries may repeat so each query contributes
+            proportionally to its weight (see `get_iterator`)
+        :param auto_synthetic_epoch_limit: Legacy flag equivalent to `allow_repetition`
+
+        :return: A list of `DataEntry`-derived objects generated from the DataView's queries
+        :raises ValueError: When the DataView iterates indefinitely (``infinite`` without
+            any limit), as it cannot be serialized into a list
+        """
+        iterator = self.get_iterator(
+            allow_repetition=allow_repetition,
+            auto_synthetic_epoch_limit=auto_synthetic_epoch_limit,
+            query_cache_size=self._MAX_BATCH_SIZE,
+        )
+        if (
+            self._iteration_infinite
+            and self._iteration_limit is None
+            and getattr(iterator, "limit", None) is None
+        ):
+            raise ValueError("Cannot serialize an infinite DataView into a list of entries")
+        return list(iterator)
+
     def get_count(self) -> int:
         """
         Fetch total frames count from backend and cache it.
