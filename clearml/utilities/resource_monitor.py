@@ -4,11 +4,12 @@ import platform
 import sys
 import warnings
 from time import time
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 import psutil
 from pathlib2 import Path
 
+from .cgroup import get_cgroup_cpu_sample
 from .process.mp import BackgroundMonitor
 from ..backend_api import Session
 from ..binding.frameworks.tensorflow_bind import IsTensorboardInit
@@ -85,6 +86,8 @@ class ResourceMonitor(BackgroundMonitor):
         self._gpustat = gpustat
         self._active_gpus = None
         self._process_info = psutil.Process() if report_mem_used_per_process else None
+        self._cgroup_cpu_enabled = True
+        self._cgroup_cpu_last = None  # (timestamp, usage_usec)
         self._last_process_pool = {}
         self._last_process_id_list = []
         self._gpu_memory_per_process = True
@@ -356,9 +359,12 @@ class ResourceMonitor(BackgroundMonitor):
         """
         :return: machine stats dictionary, all values expressed in megabytes
         """
-        cpu_usage = [self._safe_cast(v, float) for v in psutil.cpu_percent(percpu=True)]
+        cpu_usage = self._get_container_cpu_usage()
+        if cpu_usage is None:
+            per_cpu_usage = [self._safe_cast(v, float) for v in psutil.cpu_percent(percpu=True)]
+            cpu_usage = sum(per_cpu_usage) / float(len(per_cpu_usage))
         stats = {
-            "cpu_usage": sum(cpu_usage) / float(len(cpu_usage)),
+            "cpu_usage": cpu_usage,
         }
 
         bytes_per_megabyte = 1024**2
@@ -458,6 +464,41 @@ class ResourceMonitor(BackgroundMonitor):
                 pass
 
         return titles
+
+    def _get_container_cpu_usage(self) -> Optional[float]:
+        """
+        :return: CPU usage of this container as a percentage of its CPU limit, or None when not running in a
+            container (or its cgroup files cannot be read), in which case machine-wide CPU usage is reported
+        """
+        if not self._cgroup_cpu_enabled:
+            return None
+        # noinspection PyBroadException
+        try:
+            sample = get_cgroup_cpu_sample()
+            if sample is None:
+                self._cgroup_cpu_enabled = False
+                logging.getLogger("clearml.resource_monitor").info(
+                    "ClearML Monitor: No container cgroup found, CPU usage is reported for the whole machine"
+                )
+                return None
+            usage, cpus = sample
+            now = time()
+            last, self._cgroup_cpu_last = self._cgroup_cpu_last, (now, usage)
+            if not last:
+                logging.getLogger("clearml.resource_monitor").info(
+                    "ClearML Monitor: Container cgroup found, CPU usage is reported relative to "
+                    f"the container's CPU allocation ({cpus:g} CPUs)"
+                )
+                return None
+            if now <= last[0] or cpus <= 0:
+                return None
+            return min(100.0, max(0.0, (usage - last[1]) / 1e6 / (now - last[0]) / cpus * 100.0))
+        except Exception as ex:
+            self._cgroup_cpu_enabled = False
+            logging.getLogger("clearml.resource_monitor").warning(
+                f"Could not find container CPU stats ({ex}), defaulting to machine stats"
+            )
+            return None
 
     def _get_process_used_memory(self) -> int:
         def mem_usage_children(a_mem_size: int, pr: psutil.Process, parent_mem: psutil.Process = None) -> int:
