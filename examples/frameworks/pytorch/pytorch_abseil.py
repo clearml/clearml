@@ -1,7 +1,5 @@
 # Example of MNIST training with PyTorch and abseil integration
 
-from __future__ import print_function
-
 import os
 from tempfile import gettempdir
 

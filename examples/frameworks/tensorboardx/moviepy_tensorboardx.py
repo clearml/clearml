@@ -1,6 +1,5 @@
 # ClearML - Example of pytorch with tensorboardX add_video.
 #
-from __future__ import print_function
 
 import torch
 from tensorboardX import SummaryWriter

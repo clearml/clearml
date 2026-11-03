@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 import errno
 import getpass
 import itertools

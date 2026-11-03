@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import re
 from copy import deepcopy
 from typing import Callable, Union, List, Optional, Tuple, Any

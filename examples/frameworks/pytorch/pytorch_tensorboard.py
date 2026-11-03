@@ -1,6 +1,5 @@
 # ClearML - Example of pytorch with tensorboard>=v1.14
 #
-from __future__ import print_function
 
 import argparse
 import os
