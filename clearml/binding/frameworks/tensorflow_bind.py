@@ -6,14 +6,13 @@ import sys
 import threading
 from collections import defaultdict
 from functools import partial
-from io import BytesIO
+from io import BytesIO, StringIO
 from mimetypes import guess_extension
 from tempfile import mkstemp
 from typing import Union, List, Dict, Optional, Iterable, Tuple, Callable, Any
 
 import numpy
 import numpy as np
-import six
 from PIL import Image
 
 from ..frameworks import _patched_call, WeightsFileHandler, _Empty
@@ -791,7 +790,7 @@ class EventTrainsWriter:
             title=title,
             series=series,
             iteration=step,
-            stream=six.StringIO(text),
+            stream=StringIO(text),
             file_extension=".txt",
             max_history=self.max_keep_images,
         )
