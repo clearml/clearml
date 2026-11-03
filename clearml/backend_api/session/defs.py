@@ -53,6 +53,13 @@ for a very long time for a non-responding or mis-configured server
 """
 ENV_API_EXTRA_RETRY_CODES = EnvEntry("CLEARML_API_EXTRA_RETRY_CODES")
 
+"""
+Experimental option to allow loading the retry values from an env var.
+Values are loaded using shlex.split and parsed as field=int pairs.
+Supported fields: total, connect, read, redirect, status, backoff_factor, pool_connections, pool_maxsize
+"""
+ENV_API_RETRY_VALUES = EnvEntry("CLEARML_API_RETRY_VALUES")
+
 ENV_FORCE_MAX_API_VERSION = EnvEntry("CLEARML_FORCE_MAX_API_VERSION", type=str)
 
 
