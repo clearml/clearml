@@ -13,6 +13,7 @@ from .remote import running_remotely_task_id as _running_remotely_task_id
 from ..backend_api import load_config
 from ..backend_config import Config
 from ..backend_config.bucket_config import S3BucketConfigurations
+from ..utilities.pyhocon import ConfigTree
 
 # config_obj = load_config(Path(__file__).parent)  # noqa: F405
 # config_obj.initialize_logging()
@@ -39,6 +40,11 @@ class ConfigWrapper:
     def set_overrides(cls, *args: Any, **kwargs: Any) -> None:
         cls._init()
         return cls._config.set_overrides(*args, **kwargs)
+
+    @classmethod
+    def get_overrides_config(cls) -> ConfigTree:
+        cls._init()
+        return cls._config.get_overrides_config()
 
     @classmethod
     def set_config_impl(cls, value: "ConfigWrapper") -> None:
