@@ -1,7 +1,5 @@
 """Builders to generate in memory representation of model and fields tree."""
 
-from __future__ import absolute_import
-
 from collections import defaultdict
 from typing import Any
 

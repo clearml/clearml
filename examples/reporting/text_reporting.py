@@ -1,6 +1,5 @@
 # ClearML - Example of manual graphs and  statistics reporting
 #
-from __future__ import print_function
 
 import io
 import logging

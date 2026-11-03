@@ -8,8 +8,6 @@ the code. This feature is especially helpful if you want to run the first epoch 
 make sure code doesn't crash, and then move to a stronger machine for the entire training.
 """
 
-from __future__ import print_function
-
 import argparse
 import os
 from tempfile import gettempdir

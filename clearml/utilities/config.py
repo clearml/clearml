@@ -1,5 +1,3 @@
-from __future__ import division
-
 import json
 from typing import Union, Any
 
