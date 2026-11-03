@@ -326,7 +326,12 @@ class ParallelZipper:
 
             :param other: ParallelZipper.ZipperObject instance to merge into this one
             """
-            with ZipFile(self.zip_path.as_posix(), "a") as parent_zip:
+            with ZipFile(
+                self.zip_path.as_posix(),
+                "a",
+                allowZip64=self._allow_zip_64,
+                compression=self._compression,
+            ) as parent_zip:
                 with ZipFile(other.zip_path.as_posix(), "r") as child_zip:
                     for child_name in child_zip.namelist():
                         parent_zip.writestr(child_name, child_zip.open(child_name).read())
