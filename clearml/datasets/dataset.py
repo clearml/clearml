@@ -35,7 +35,7 @@ from ..debugging.log import LoggerRoot
 from ..storage.archive import flag_path_traversal_vulnerability
 from ..storage.cache import CacheManager
 from ..storage.helper import StorageHelper, cloud_driver_schemes
-from ..storage.util import is_windows
+from ..storage.util import get_configured_zip_compression, is_windows
 from ..storage.size import format_size
 from ..storage.hashing import sha256sum, md5text
 from ..utilities.files import is_path_traversal
@@ -764,7 +764,8 @@ class Dataset:
         :param verbose: If ``True``, print verbose progress report
         :param output_url: Target storage location for the compressed dataset. Defaults to the file server.
             Examples: ``s3://bucket/data``, ``gs://bucket/data`` , ``azure://bucket/data`` , ``/mnt/share/data``
-        :param compression: Compression algorithm for the Zipped dataset file (default: ``ZIP_DEFLATED``)
+        :param compression: Compression algorithm for the Zipped dataset file. When ``None`` (default),
+            uses the ``sdk.storage.zip_compression`` configuration entry (``ZIP_DEFLATED`` if not configured)
         :param chunk_size: Artifact chunk size (MB) for the compressed dataset.
             If ``None`` (default), uses 512 MB. Pass ``-1`` to store the entire dataset changeset in a single zip.
         :param max_workers: Numbers of threads to be spawned when zipping and uploading the files.
@@ -873,7 +874,7 @@ class Dataset:
                 compression=(
                     compression
                     if compression is not None
-                    else ZIP_DEFLATED
+                    else get_configured_zip_compression(default=ZIP_DEFLATED)
                 ),
                 zip_prefix=f"dataset.{self._id}.",
                 zip_suffix=".zip",

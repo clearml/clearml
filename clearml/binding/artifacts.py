@@ -27,6 +27,7 @@ from ..debugging.log import LoggerRoot
 from ..storage.helper import remote_driver_schemes
 from ..storage.filepaths import get_common_path
 from ..storage.size import format_size
+from ..storage.util import get_configured_zip_compression
 from ..storage.hashing import sha256sum
 from ..utilities.process.mp import SafeEvent, ForkSafeRLock
 from ..utilities.proxy_object import LazyEvalWrapper
@@ -775,7 +776,7 @@ class Artifacts:
                     artifact_type_data.content_type = "application/zip"
                     archive_preview = f"Archive content {artifact_object.as_posix()}:\n"
 
-                    with ZipFile(zip_file, "w", allowZip64=True, compression=ZIP_DEFLATED) as zf:
+                    with ZipFile(zip_file, "w", allowZip64=True, compression=get_configured_zip_compression(default=ZIP_DEFLATED)) as zf:
                         for filename in sorted(files):
                             if filename.is_file():
                                 relative_file_name = filename.relative_to(folder).as_posix()
@@ -820,7 +821,7 @@ class Artifacts:
                 artifact_type_data.content_type = "application/zip"
                 archive_preview = "Archive content:\n"
 
-                with ZipFile(zip_file, "w", allowZip64=True, compression=ZIP_DEFLATED) as zf:
+                with ZipFile(zip_file, "w", allowZip64=True, compression=get_configured_zip_compression(default=ZIP_DEFLATED)) as zf:
                     for filename in sorted(list_files):
                         if filename.is_file():
                             relative_file_name = (

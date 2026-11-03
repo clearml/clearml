@@ -5200,7 +5200,11 @@ class Task(_Task):
                 # create zip file
                 offline_folder = self.get_offline_mode_folder()
                 zip_file = offline_folder.as_posix() + ".zip"
-                with ZipFile(zip_file, "w", allowZip64=True, compression=ZIP_DEFLATED) as zf:
+                from .storage.util import get_configured_zip_compression
+
+                with ZipFile(
+                    zip_file, "w", allowZip64=True, compression=get_configured_zip_compression(default=ZIP_DEFLATED)
+                ) as zf:
                     for filename in offline_folder.rglob("*"):
                         if filename.is_file():
                             relative_file_name = filename.relative_to(offline_folder).as_posix()
