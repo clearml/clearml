@@ -107,6 +107,7 @@ def _get_or_create_project(
     project_id: Optional[str] = None,
 ) -> Optional[str]:
     """Return the ID of an existing project, or if it does not exist, make a new one and return that ID instead."""
+    project_name = project_name.lstrip("/")
     project_system_tags = []
     if not project_id:
         res = session.send(
