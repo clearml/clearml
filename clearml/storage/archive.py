@@ -1,10 +1,45 @@
 import os
 import tarfile
-from typing import Union, Any
+from typing import Union, Any, Optional
 from pathlib import Path
 from zipfile import ZipFile
 
 from .filepaths import is_within_directory
+from ..debugging.log import LoggerRoot
+
+
+def create_zip_directories(
+    zipfile: Any,
+    path: Optional[Union[str, os.PathLike]] = None,
+) -> None:
+    try:
+        path = os.getcwd() if path is None else os.fspath(path)
+        for member in zipfile.namelist():
+            arcname = member.replace("/", os.path.sep)
+            if os.path.altsep:
+                arcname = arcname.replace(os.path.altsep, os.path.sep)
+            # interpret absolute pathname as relative, remove drive letter or
+            # UNC path, redundant separators, "." and ".." components.
+            arcname = os.path.splitdrive(arcname)[1]
+            invalid_path_parts = ("", os.path.curdir, os.path.pardir)
+            arcname = os.path.sep.join(x for x in arcname.split(os.path.sep) if x not in invalid_path_parts)
+            if os.path.sep == "\\":
+                # noinspection PyBroadException
+                try:
+                    # filter illegal characters on Windows
+                    # noinspection PyProtectedMember
+                    arcname = zipfile._sanitize_windows_name(arcname, os.path.sep)
+                except Exception:
+                    pass
+
+            targetpath = os.path.normpath(os.path.join(path, arcname))
+
+            # Create all upper directories if necessary.
+            upperdirs = os.path.dirname(targetpath)
+            if upperdirs:
+                os.makedirs(upperdirs, exist_ok=True)
+    except Exception as e:
+        LoggerRoot.get_base_logger().warning("Failed creating zip directories: " + str(e))
 
 
 def extract_zip_archive(
@@ -26,6 +61,8 @@ def extract_zip_archive(
             )
             # No need to run flag_symlink_escape_vulnerability
             # zip_file.extractall does not create symlinks
+
+        create_zip_directories(zip_file, base_directory)
 
         zip_file.extractall(path=target)
 
