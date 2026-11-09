@@ -293,8 +293,9 @@ class Dataset:
                     project_id=task.project,
                     system_tags=[self.__hidden_tag, self.__tag],
                 )
-            # set default output_uri
-            task.output_uri = True
+            # File server remains the fallback when neither the caller nor the project set a destination.
+            if not task.output_uri:
+                task.output_uri = True
             task.set_system_tags([
                 *(task.get_system_tags() or []),
                 self.__tag,
