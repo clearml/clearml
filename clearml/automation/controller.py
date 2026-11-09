@@ -419,7 +419,9 @@ class PipelineController:
 
         if output_uri is not None:
             self._task.output_uri = output_uri
-        self._output_uri = output_uri
+            self._output_uri = output_uri
+        else:
+            self._output_uri = self._task.output_uri
         self._task.set_base_docker(
             docker_image=docker,
             docker_arguments=docker_args,
@@ -1907,6 +1909,8 @@ class PipelineController:
             pipeline_object._deserialize(pipeline_task._get_configuration_dict(cls._config_section), force=True)
         except Exception:
             pass
+        if getattr(pipeline_object, "_output_uri", None) is None and pipeline_task.output_uri:
+            pipeline_object._output_uri = pipeline_task.output_uri
         return pipeline_object
 
     @property
