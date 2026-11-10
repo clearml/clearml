@@ -358,7 +358,7 @@ class Reporter(InterfaceBase, AbstractContextManager, SetupUploadMixin, AsyncMan
     def _handle_program_exit(self) -> None:
         try:
             self.flush()
-            self.wait_for_events()
+            self.wait_for_events(timeout=10)
             self.stop()
         except Exception as e:
             logging.getLogger("clearml.reporter").warning(
