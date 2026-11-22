@@ -253,7 +253,7 @@ def flatten_dictionary(a_dict: dict, prefix: str = "", sep: str = "/") -> dict:
             if nested_flat_dict:
                 flat_dict.update(nested_flat_dict)
             else:
-                flat_dict[k] = {}
+                flat_dict[prefix + k] = {}
         else:
             # this is a mixture of list and dict, or any other object,
             # leave it as is, we have nothing to do with it.
