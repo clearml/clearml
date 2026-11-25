@@ -47,6 +47,10 @@ VCS_BRANCH = EnvEntry("CLEARML_VCS_BRANCH", "TRAINS_VCS_BRANCH")
 VCS_ROOT = EnvEntry("CLEARML_VCS_ROOT", "TRAINS_VCS_ROOT")
 VCS_WORK_DIR = EnvEntry("CLEARML_VCS_WORK_DIR")
 VCS_ENTRY_POINT = EnvEntry("CLEARML_VCS_ENTRY_POINT")
+# When a script lives inside a git submodule, climb to the outermost super-project and record
+# that as the task's repository (entry point / working dir become relative to the super-project).
+# None = unset -> fall back to the `sdk.development.vcs_detect_superproject` config (default: false).
+VCS_DETECT_SUPERPROJECT = EnvEntry("CLEARML_VCS_DETECT_SUPERPROJECT", type=bool, default=None)
 VCS_STATUS = EnvEntry("CLEARML_VCS_STATUS", "TRAINS_VCS_STATUS", converter=base64_to_text)
 VCS_DIFF = EnvEntry("CLEARML_VCS_DIFF", "TRAINS_VCS_DIFF", converter=base64_to_text)
 """
