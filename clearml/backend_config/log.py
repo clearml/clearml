@@ -42,5 +42,9 @@ def initialize(
         Logger.manager.loggerClass = _Logger
 
     if logging_config is not None:
-        # Use deepcopy since Python's logging infrastructure might modify the dict
-        logging.config.dictConfig(deepcopy(dict(logging_config)))
+        root_logger = logging.getLogger()
+        #added a check to avoid calling dictConfig
+        #if the root user has already set up their own logging.
+        #prevents ClearML from closing their handlers.
+        if not root_logger.handlers:
+            logging.config.dictConfig(deepcopy(dict(logging_config)))
