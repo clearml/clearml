@@ -2,7 +2,7 @@ import getpass
 import re
 from _socket import gethostname
 from datetime import datetime, timezone
-from typing import Optional, Any, Tuple, Union
+from typing import List, Optional, Any, Tuple, Union
 
 from ..backend_api.services import projects, queues
 from ..debugging.log import get_logger, LoggerRoot
@@ -30,6 +30,51 @@ def make_message(s: str, **kwargs: Any) -> str:
     args = dict(user=user, host=host, time=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
     args.update(kwargs)
     return s % args
+
+
+def project_names_for_default_output(project_name: Optional[str]) -> List[str]:
+    """Project names to search for ``default_output_destination``, nearest first.
+
+    A task that lives in ``{project}/.pipelines/...`` or ``{project}/.datasets/...``
+    starts at ``{project}``. Each parent of that project follows.
+    """
+    if not project_name:
+        return []
+    name = str(project_name).strip("/")
+    for marker in ("/.pipelines/", "/.datasets/"):
+        marker_at = name.find(marker)
+        if marker_at >= 0:
+            name = name[:marker_at]
+            break
+    else:
+        for suffix in ("/.pipelines", "/.datasets"):
+            if name.endswith(suffix):
+                name = name[: -len(suffix)]
+                break
+    name = name.strip("/")
+    if not name:
+        return []
+    parts = [part for part in name.split("/") if part]
+    return ["/".join(parts[:index]) for index in range(len(parts), 0, -1)]
+
+
+def get_project_default_output_destination(session: Any, project_name: Optional[str]) -> Optional[str]:
+    """Return the first ``default_output_destination`` set on the project or its parents."""
+    for name in project_names_for_default_output(project_name):
+        res = session.send(
+            projects.GetAllRequest(
+                name=exact_match_regex(name),
+                only_fields=["id", "default_output_destination"],
+                search_hidden=True,
+                _allow_extra_fields_=True,
+            )
+        )
+        if not res or not res.response or not res.response.projects:
+            continue
+        destination = res.response.projects[0].default_output_destination
+        if destination:
+            return destination
+    return None
 
 
 def get_existing_project(session: Any, project_name: str) -> Optional[str]:

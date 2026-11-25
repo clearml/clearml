@@ -611,7 +611,16 @@ class Task(_Task):
             task_type = Task.TaskTypes.__members__[str(task_type)]
 
         def safe_project_default_output_destination(task_, default=None):
+            from .backend_interface.util import get_project_default_output_destination
+
             project_ = task_.get_project_object()
+            project_name_ = project_.name if project_ and getattr(project_, "name", None) else None
+            if not project_name_:
+                project_name_ = task_.get_project_name() if hasattr(task_, "get_project_name") else None
+            if project_name_ and getattr(task_, "session", None):
+                destination = get_project_default_output_destination(task_.session, project_name_)
+                if destination:
+                    return destination
             return project_.default_output_destination if project_ else default
 
         is_deferred = False
@@ -1400,6 +1409,12 @@ class Task(_Task):
             detect_repository=detect_repository
         )
         task = manual_populate.create_task()
+        if task and project_name and not task.output_uri:
+            from .backend_interface.util import get_project_default_output_destination
+
+            destination = get_project_default_output_destination(task.session, project_name)
+            if destination:
+                task.output_uri = destination
         if task and argparse_args:
             manual_populate.update_task_args(argparse_args)
             task.reload()
