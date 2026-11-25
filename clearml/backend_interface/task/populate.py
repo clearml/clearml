@@ -736,10 +736,9 @@ if __name__ == '__main__':
     function_input_artifacts = {function_input_artifacts}
     params = task.get_parameters(cast=True) or dict()
     argspec = inspect.getfullargspec({function_name})
-    if argspec.varkw is not None or argspec.varargs is not None:
-        for k, v in params.items():
-            if k.startswith('{kwargs_section}/'):
-                kwargs[k.replace('{kwargs_section}/', '', 1)] = v
+    for k, v in params.items():
+        if k.startswith('{kwargs_section}/'):
+            kwargs[k.replace('{kwargs_section}/', '', 1)] = v
     return_section = '{return_section}'
     for k, v in params.items():
         if not v or not k.startswith('{input_artifact_section}/'):
