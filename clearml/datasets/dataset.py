@@ -3892,57 +3892,39 @@ class Dataset:
         max_workers: int,
         files_of_interest: Optional[Set[str]] = None,
     ) -> bool:
-        def __verify_file_or_link(
-            target_base_folder: Path,
-            file_entry: Union[FileEntry, LinkEntry],
-            part: Optional[int] = None,
-            chunk_selection: Optional[dict] = None,
-        ) -> bool:
-            # check if we need the file for the requested dataset part
-            if part is not None:
-                f_parts = chunk_selection.get(file_entry.parent_dataset_id, [])
-                # file is not in requested dataset part, no need to check it.
-                if self._get_chunk_idx_from_artifact_name(file_entry.artifact_name) not in f_parts:
-                    return True
-
-            # check if the local size and the stored size match (faster than comparing hash)
-            if (target_base_folder / file_entry.relative_path).stat().st_size != file_entry.size:
-                return False
-
-            return True
-
         target_base_folder = Path(target_base_folder)
-        # check dataset file size, if we have a full match no need for parent dataset download / merge
-        verified = True
-        # noinspection PyBroadException
-        tp = None
+
+        def selected_entries():
+            for entry in itertools.chain(self._dataset_file_entries.values(), self._dataset_link_entries.values()):
+                if files_of_interest and entry.relative_path not in files_of_interest:
+                    continue
+                # Only stored files have a chunk index.
+                if part is not None and isinstance(entry, FileEntry):
+                    chunks = chunk_selection.get(entry.parent_dataset_id, [])
+                    if self._get_chunk_idx_from_artifact_name(entry.artifact_name) not in chunks:
+                        continue
+                yield entry
+
+        def verify_batch(entries):
+            return all((target_base_folder / entry.relative_path).stat().st_size == entry.size for entry in entries)
+
+        entries = selected_entries()
         try:
-            futures_ = []
-            with ThreadPoolExecutor(max_workers=max_workers) as tp:
-                for f in self._dataset_file_entries.values():
-                    if files_of_interest and f.relative_path not in files_of_interest:
-                        continue
-                    future = tp.submit(
-                        __verify_file_or_link,
-                        target_base_folder,
-                        f,
-                        part,
-                        chunk_selection,
-                    )
-                    futures_.append(future)
-
-                for f in self._dataset_link_entries.values():
-                    if files_of_interest and f.relative_path not in files_of_interest:
-                        continue
-                    # don't check whether link is in dataset part, hence None for part and chunk_selection
-                    future = tp.submit(__verify_file_or_link, target_base_folder, f, None, None)
-                    futures_.append(future)
-
-                verified = all(f.result() for f in futures_)
+            if max_workers == 1:
+                return verify_batch(entries)
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                workers = max_workers or psutil.cpu_count() or 1
+                # Bound queued work and share even a short final window across the workers.
+                while True:
+                    window = list(itertools.islice(entries, workers * 64))
+                    if not window:
+                        return True
+                    batch_size = (len(window) + workers - 1) // workers
+                    batches = (window[i:i + batch_size] for i in range(0, len(window), batch_size))
+                    if not all(pool.map(verify_batch, batches)):
+                        return False
         except Exception:
-            verified = False
-
-        return verified
+            return False
 
     def _get_dependency_chunk_lookup(self) -> Dict[str, int]:
         """
