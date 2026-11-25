@@ -1256,6 +1256,189 @@ class BaseModel(ABC):
             return None
         return cast_basic_type(metadata[key].get("value"), metadata[key].get("type"))
 
+    # the "clearml_" prefix keeps these entries apart from metadata a user stores under their own names
+    _serving_metadata_prefix = "clearml_serving_"
+
+    def _set_serving_options(self, **options: Any) -> bool:
+        """Store each given serving option as a model metadata entry named ``clearml_serving_<option>``"""
+        import json
+
+        ok = True
+        for name, value in options.items():
+            if value is None:
+                continue
+            if isinstance(value, str):
+                text, v_type = value, "str"
+            else:
+                text, v_type = json.dumps(value), "dict" if isinstance(value, dict) else "list"
+            ok = bool(self.set_metadata(self._serving_metadata_prefix + name, text, v_type=v_type)) and ok
+        return ok
+
+    def set_serving_engine(self, engine: str) -> bool:
+        """
+        Store the ClearML Serving engine this model should be served with: the ``--engine`` option of
+        ``clearml-serving model add`` (for example ``sklearn``, ``xgboost``, ``lightgbm`` or ``triton``).
+
+        The serving options are stored with the model (as model metadata), so they do not have to be given
+        again when the model is deployed. Call the ``set_serving_...`` methods at the end of training, after
+        ``update_weights``. They only store values: nothing is deployed and the model file is not changed.
+
+        :param engine: The serving engine name.
+        :return: ``True`` if the value was stored.
+        """
+        if not engine or not isinstance(engine, str):
+            raise ValueError("engine must be a non-empty string, for example 'sklearn'")
+        return self._set_serving_options(engine=engine)
+
+    def set_serving_endpoint(self, endpoint: str, version: Optional[str] = None) -> bool:
+        """
+        Store the endpoint this model should be served at: the ``--endpoint`` and ``--version`` options of
+        ``clearml-serving model add``. See ``set_serving_engine``.
+
+        :param endpoint: The endpoint name, for example ``"churn"``.
+        :param version: The endpoint version, for example ``"1"``.
+        :return: ``True`` if the values were stored.
+        """
+        if not endpoint or not isinstance(endpoint, str):
+            raise ValueError("endpoint must be a non-empty string, for example 'churn'")
+        return self._set_serving_options(endpoint=endpoint, version=None if version is None else str(version))
+
+    def set_serving_io(
+        self,
+        input_size: Optional[Sequence] = None,
+        input_type: Optional[Union[str, Sequence[str]]] = None,
+        input_name: Optional[Union[str, Sequence[str]]] = None,
+        output_size: Optional[Sequence] = None,
+        output_type: Optional[Union[str, Sequence[str]]] = None,
+        output_name: Optional[Union[str, Sequence[str]]] = None,
+    ) -> bool:
+        """
+        Store the model's input and output tensors: the ``--input-size``, ``--input-type``, ``--input-name``,
+        ``--output-size``, ``--output-type`` and ``--output-name`` options of ``clearml-serving model add``,
+        which the ``triton`` engine needs. See ``set_serving_engine``.
+
+        For a model with several inputs or outputs, pass a list for each: sizes as a list of lists.
+
+        :param input_size: The input size, for example ``[1, 28, 28]``.
+        :param input_type: The input type, for example ``"float32"``.
+        :param input_name: The name of the input layer, for example ``"INPUT__0"``.
+        :param output_size: The output size, for example ``[-1, 10]``.
+        :param output_type: The output type, for example ``"float32"``.
+        :param output_name: The name of the output layer, for example ``"OUTPUT__0"``.
+        :return: ``True`` if the values were stored.
+        """
+        options = dict(
+            input_size=input_size,
+            input_type=input_type,
+            input_name=input_name,
+            output_size=output_size,
+            output_type=output_type,
+            output_name=output_name,
+        )
+        options = {k: (v if isinstance(v, str) else list(v)) for k, v in options.items() if v is not None}
+        if not options:
+            raise ValueError("set_serving_io needs at least one input or output option")
+        return self._set_serving_options(**options)
+
+    def set_serving_aux_config(self, aux_config: Dict[str, Any]) -> bool:
+        """
+        Store engine specific settings: the ``--aux-config`` option of ``clearml-serving model add``, for
+        example ``{"platform": "onnxruntime_onnx"}``. See ``set_serving_engine``.
+
+        :param aux_config: The settings, as a dictionary.
+        :return: ``True`` if the value was stored.
+        """
+        if not isinstance(aux_config, dict) or not aux_config:
+            raise ValueError("aux_config must be a non-empty dictionary")
+        return self._set_serving_options(aux_config=dict(aux_config))
+
+    def set_serving_input_example(self, input_example: Any) -> bool:
+        """
+        Store an example of the model's input, so that whoever deploys or calls the model can see what it
+        takes. See ``set_serving_engine``.
+
+        The example's shape and type are stored, and its column names if it is a pandas DataFrame. Up to five
+        rows of its values are stored too, when they are small.
+
+        :param input_example: One or a few rows of valid input: a numpy array, a pandas DataFrame, a torch tensor
+            or a list of rows.
+        :return: ``True`` if the value was stored.
+        """
+        import json
+
+        described = {}
+        values = input_example
+        if hasattr(values, "columns") and hasattr(values, "to_numpy"):
+            described["columns"] = [str(c) for c in values.columns]
+            values = values.to_numpy()
+        if hasattr(values, "detach"):
+            values = values.detach().cpu().numpy()
+        if hasattr(values, "shape") and hasattr(values, "dtype"):
+            described["shape"] = [int(d) for d in values.shape]
+            described["dtype"] = str(values.dtype)
+            values = values[:5].tolist()
+        elif isinstance(values, (list, tuple)) and values:
+            values = list(values[:5])
+        else:
+            raise ValueError(
+                "input_example must be a numpy array, a pandas DataFrame, a torch tensor or a list of rows, "
+                "not {}".format(type(input_example).__name__)
+            )
+        if len(json.dumps(values, default=str)) <= 32 * 1024:
+            described["data"] = json.loads(json.dumps(values, default=str))
+        return self._set_serving_options(input_example=described)
+
+    def set_serving_preprocess(self, preprocess_code: Union[str, Path]) -> bool:
+        """
+        Store the model's preprocessing code: the ``--preprocess`` option of ``clearml-serving model add``,
+        a ``.py`` file (or a folder) with the ``Preprocess`` class ClearML Serving runs around the model.
+        See ``set_serving_engine``.
+
+        The file is uploaded as an artifact of the model's task, and its address is stored with the model.
+        The code is run by ClearML Serving when the model is served: store only code you would deploy.
+
+        :param preprocess_code: The path of the local ``.py`` file, or of a folder.
+        :return: ``True`` if the code was uploaded and its address stored.
+        """
+        path = Path(preprocess_code)
+        if not path.exists():
+            raise ValueError("Preprocessing code '{}' could not be found".format(preprocess_code))
+        if not self._task or not hasattr(self._task, "upload_artifact"):
+            raise ValueError("set_serving_preprocess needs a model connected to a task, such as an OutputModel")
+        if not self._base_model:
+            self._base_model = self._get_force_base_model()
+        name = "{}preprocess_{}".format(self._serving_metadata_prefix, self.id)
+        if not self._task.upload_artifact(name=name, artifact_object=path, wait_on_upload=True):
+            return False
+        return self._set_serving_options(preprocess=self._task.artifacts[name].url)
+
+    def set_serving_requirements(self, requirements: Union[str, Sequence[str]]) -> bool:
+        """
+        Store the Python packages the model needs when it is served, for example
+        ``["scikit-learn==1.5.2"]``. See ``set_serving_engine``.
+
+        :param requirements: A package specification, or a list of them, as given to ``pip install``.
+        :return: ``True`` if the value was stored.
+        """
+        requirements = [requirements] if isinstance(requirements, str) else list(requirements or [])
+        if not requirements or not all(isinstance(r, str) and r.strip() for r in requirements):
+            raise ValueError("requirements must be a non-empty list of package specifications")
+        return self._set_serving_options(requirements=[r.strip() for r in requirements])
+
+    def get_serving_options(self) -> Dict[str, Any]:
+        """
+        Get the serving options stored with the model by the ``set_serving_...`` methods.
+
+        :return: A dictionary of option name to value, for example
+            ``{"engine": "sklearn", "endpoint": "churn"}``. Empty if none were stored.
+        """
+        prefix = self._serving_metadata_prefix
+        return {
+            key[len(prefix):]: value
+            for key, value in self.get_all_metadata_casted().items()
+            if key.startswith(prefix)
+        }
+
     def get_all_metadata(self) -> Dict[str, Dict[str, str]]:
         """
         Returns all metadata as a ``Dict[key, Dict[value, type]]``,

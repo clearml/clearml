@@ -2346,6 +2346,28 @@ class PatchTensorflowModelIO:
         if saved_model is not None:
             saved_model.save = _patched_call(saved_model.save, PatchTensorflowModelIO._save_model)
 
+        # `tf.saved_model.save` is its own reference to that function, so the patch above does not reach code
+        # that calls the public name (which is what users and Keras' `model.export` do). Without this only the
+        # variables written inside the SavedModel were registered, as a checkpoint, and the model itself was not.
+        # noinspection PyBroadException
+        try:
+            import tensorflow as tf  # noqa
+
+            if getattr(tf.saved_model.save, "__name__", "") != "_inner_patch":
+                tf.saved_model.save = _patched_call(tf.saved_model.save, PatchTensorflowModelIO._save_model)
+        except Exception:
+            pass
+        # Keras 2.x (model.export) reaches the same function through `tensorflow.compat.v2`, a separate module
+        # object with its own reference to it: hook that one too.
+        # noinspection PyBroadException
+        try:
+            import tensorflow.compat.v2 as tf_v2  # noqa
+
+            if getattr(tf_v2.saved_model.save, "__name__", "") != "_inner_patch":
+                tf_v2.saved_model.save = _patched_call(tf_v2.saved_model.save, PatchTensorflowModelIO._save_model)
+        except Exception:
+            pass
+
         # noinspection PyBroadException
         try:
             # make sure we import the correct version of save
