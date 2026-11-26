@@ -1,8 +1,9 @@
+import os
 import sys
 import warnings
 from functools import partial
 from io import IOBase
-from typing import Callable, Union, IO, Any
+from typing import Callable, Union, Any
 
 from pathlib2 import Path
 
@@ -42,13 +43,21 @@ class PatchedJoblib:
                     joblib = None
 
                 if joblib:
+                    # Hook the public dump() / load() as well as the internal functions: joblib >= 1.5 writes
+                    # uncompressed files through a plain open() and removed _read_fileobject, so the internal
+                    # hooks alone no longer register anything. Inside the public calls the internal hooks are
+                    # skipped by _patched_call's recursion guard, so nothing is registered twice.
+                    joblib.dump = _patched_call(joblib.dump, PatchedJoblib._dump)
+                    joblib.load = _patched_call(joblib.load, PatchedJoblib._load_public)
                     joblib.numpy_pickle._write_fileobject = _patched_call(
                         joblib.numpy_pickle._write_fileobject,
                         partial(PatchedJoblib._write_fileobject, joblib.numpy_pickle),
                     )
-                    joblib.numpy_pickle._read_fileobject = _patched_call(
-                        joblib.numpy_pickle._read_fileobject, PatchedJoblib._load
-                    )
+                    # removed in joblib 1.5
+                    if hasattr(joblib.numpy_pickle, "_read_fileobject"):
+                        joblib.numpy_pickle._read_fileobject = _patched_call(
+                            joblib.numpy_pickle._read_fileobject, PatchedJoblib._load
+                        )
                     joblib.numpy_pickle.NumpyPickler.__init__ = _patched_call(
                         joblib.numpy_pickle.NumpyPickler.__init__,
                         PatchedJoblib._numpypickler,
@@ -95,12 +104,33 @@ class PatchedJoblib:
         PatchedJoblib.patch_joblib()
 
     @staticmethod
-    def _dump(original_fn: Callable, obj: Any, f: Union[str, IO], *args: Any, **kwargs: Any) -> Any:
-        ret = original_fn(obj, f, *args, **kwargs)
+    def _dump(original_fn: Callable, *args: Any, **kwargs: Any) -> Any:
+        ret = original_fn(*args, **kwargs)
         if not PatchedJoblib._current_task:
             return ret
-        PatchedJoblib._register_dump(obj, f)
+        # dump(value, filename, ...): either may be passed by keyword, and filename may be a path object
+        obj = args[0] if args else kwargs.get("value")
+        f = args[1] if len(args) > 1 else kwargs.get("filename")
+        if hasattr(f, "__fspath__"):
+            f = os.fspath(f)
+        if f is not None:
+            PatchedJoblib._register_dump(obj, f)
         return ret
+
+    @staticmethod
+    def _load_public(original_fn: Callable, *args: Any, **kwargs: Any) -> Any:
+        # load(filename, mmap_mode=None, ...)
+        f = args[0] if args else kwargs.get("filename")
+        if hasattr(f, "__fspath__"):
+            f = os.fspath(f)
+        if f is None:
+            return original_fn(*args, **kwargs)
+
+        def load_with_original_arguments(*_: Any, **__: Any) -> Any:
+            # _load() calls this with the file name only; load() keeps its own arguments (mmap_mode, ...)
+            return original_fn(*args, **kwargs)
+
+        return PatchedJoblib._load(load_with_original_arguments, f)
 
     @staticmethod
     def _numpypickler(original_fn: Callable, obj: Any, f: Union[str, IOBase], *args: Any, **kwargs: Any) -> Any:

@@ -63,6 +63,14 @@ class PatchPyTorchModelIO(PatchBaseModelIO):
                 )
             except BaseException:
                 pass
+            # ScriptModule holds its own copy of `save`, taken from RecursiveScriptModule when torch was imported.
+            # Traced models (torch.jit.trace) inherit that copy, so the hook above never saw them: hook it as well.
+            # noinspection PyBroadException
+            try:
+                if getattr(torch.jit.ScriptModule.save, "__name__", "") != "_inner_patch":
+                    torch.jit.ScriptModule.save = _patched_call(torch.jit.ScriptModule.save, PatchPyTorchModelIO._save)
+            except BaseException:
+                pass
 
             # no need to worry about recursive calls, _patched_call takes care of that
             if hasattr(torch, "serialization") and hasattr(torch.serialization, "_save"):
