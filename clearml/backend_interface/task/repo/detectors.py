@@ -2,11 +2,12 @@ from abc import ABC
 import logging
 import os
 from subprocess import call, CalledProcessError
-from typing import Any
+from typing import Any, Optional
 
 import attr
 from pathlib2 import Path
 
+from ....config import config
 from ....config.defs import (
     VCS_REPO_TYPE,
     VCS_DIFF,
@@ -15,6 +16,7 @@ from ....config.defs import (
     VCS_BRANCH,
     VCS_COMMIT_ID,
     VCS_REPOSITORY_URL,
+    VCS_DETECT_SUPERPROJECT,
 )
 from ....debugging import get_logger
 from .util import get_command_output
@@ -266,6 +268,48 @@ class GitDetector(Detector):
             ],
         )
 
+    @staticmethod
+    def _detect_superproject_enabled() -> bool:
+        """
+        Should we climb out of a git submodule and detect against the super-project?
+        The CLEARML_VCS_DETECT_SUPERPROJECT env var wins; otherwise fall back to the
+        `sdk.development.vcs_detect_superproject` config value (default: disabled).
+        """
+        env_value = VCS_DETECT_SUPERPROJECT.get()
+        if env_value is not None:
+            return bool(env_value)
+        return bool(config.get("development.vcs_detect_superproject", False))
+
+    @classmethod
+    def _resolve_superproject_root(cls, path: str) -> Optional[str]:
+        """
+        Climb out of (possibly nested) git submodules to the outermost super-project working tree.
+        Returns the outermost super-project path, or None if `path` is not inside a submodule.
+        """
+        root = str(path)
+        outermost = None
+        # hard cap to guard against any pathological loop
+        for _ in range(32):
+            # noinspection PyBroadException
+            try:
+                parent = get_command_output(
+                    ["git", "rev-parse", "--show-superproject-working-tree"], root, strip=True
+                )
+            except Exception:
+                # non-zero exit / old git without the flag -> treat as "no super-project"
+                break
+            # empty => not a submodule. require a real directory that actually contains us, so an
+            # echoed-back flag (older git) or a stale path can never be mistaken for a super-project.
+            if (
+                not parent
+                or not os.path.isdir(parent)
+                or os.path.realpath(parent) == os.path.realpath(root)
+            ):
+                break
+            outermost = parent
+            root = parent
+        return outermost
+
     def get_info(
         self,
         path: str,
@@ -279,6 +323,18 @@ class GitDetector(Detector):
         :param diff_from_remote: Whether to store the remote diff/commit based on the remote commit (not local commit)
         :return: RepoInfo instance
         """
+        # if enabled and the script lives inside a git submodule, detect against the outermost
+        # super-project instead. git is still executed from that root, so url/commit/branch and the
+        # "git diff --submodule=diff" uncommitted-changes capture all keep working.
+        if self._detect_superproject_enabled():
+            # noinspection PyBroadException
+            try:
+                superproject_root = self._resolve_superproject_root(path)
+            except Exception:
+                superproject_root = None
+            if superproject_root:
+                path = superproject_root
+
         info = super(GitDetector, self).get_info(
             path=path, include_diff=include_diff, diff_from_remote=diff_from_remote
         )
