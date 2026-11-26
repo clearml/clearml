@@ -138,6 +138,7 @@ class Dataset:
     """
     __private_magic = 42 * 1337
     __state_entry_name = "state"
+    _VERIFY_BATCH_PER_WORKER = 64
     __default_data_entry_name = "data"
     __data_entry_name_prefix = "data_"
     __cache_context = "datasets"
@@ -3909,14 +3910,15 @@ class Dataset:
             return all((target_base_folder / entry.relative_path).stat().st_size == entry.size for entry in entries)
 
         entries = selected_entries()
+        workers = max_workers or psutil.cpu_count() or 1
+        # noinspection PyBroadException
         try:
             if max_workers == 1:
                 return verify_batch(entries)
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                workers = max_workers or psutil.cpu_count() or 1
                 # Bound queued work and share even a short final window across the workers.
                 while True:
-                    window = list(itertools.islice(entries, workers * 64))
+                    window = list(itertools.islice(entries, workers * self._VERIFY_BATCH_PER_WORKER))
                     if not window:
                         return True
                     batch_size = (len(window) + workers - 1) // workers
