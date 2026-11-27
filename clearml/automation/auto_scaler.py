@@ -336,7 +336,7 @@ class AutoScaler:
                         resource_conf=resource_conf,
                     )
                     instance_id = self.driver.spin_up_worker(
-                        resource=resource_conf,
+                        resource_conf,
                         worker_prefix=worker_prefix,
                         queue_name=queue,
                         task_id=task_id,
